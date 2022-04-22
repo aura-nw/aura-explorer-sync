@@ -45,3 +45,25 @@ export enum CONST_CHAR {
   MESSAGE = 'message',
   ACTION = 'action',
 }
+
+export enum CONST_MSG_TYPE {
+  MSG_VOTE = 'MsgVote',
+  MSG_SUBMIT_PROPOSAL = 'MsgSubmitProposal',
+  MSG_DEPOSIT = 'MsgDeposit',
+  MSG_DELEGATE = 'MsgDelegate',
+  MSG_UNDELEGATE = 'MsgUndelegate',
+  MSG_REDELEGATE = 'MsgBeginRedelegate',
+  MSG_WITHDRAW_DELEGATOR_REWARD = 'MsgWithdrawDelegatorReward'
+}
+
+export enum CONST_PROPOSAL_TYPE {
+  SOFTWARE_UPGRADE_PROPOSAL = 'SoftwareUpgradeProposal',
+  COMMUNITY_POOL_SPEND_PROPOSAL = 'CommunityPoolSpendProposal',
+  PARAMETER_CHANGE_PROPOSAL = 'ParameterChangeProposal'
+}
+
+export enum CONST_DELEGATE_TYPE {
+  DELEGATE = 'Delegate',
+  UNDELEGATE = 'Undelegate',
+  REDELEGATE = 'Redelegate'
+}

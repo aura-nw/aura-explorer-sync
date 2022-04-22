@@ -6,7 +6,7 @@ export interface IBaseRepository {
    * findOne
    * @param id
    */
-  findOne(id: any): Promise<any>;
+  findOne(id?: any): Promise<any>;
 
   /**
    * findByCondition

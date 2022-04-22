@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
-import { CONST_CHAR, CONST_PUBKEY_ADDR, NODE_API } from "src/common/constants/app.constant";
+import { CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, NODE_API } from "src/common/constants/app.constant";
 import { Block, BlockSyncError, MissedBlock, Transaction, Validator } from "src/entities";
 import { ConfigService } from "src/shared/services/config.service";
 import { CommonUtil } from "src/utils/common.util";
@@ -14,6 +14,17 @@ import { IMissedBlockRepository } from "src/repositories/imissed-block.repositor
 import { IBlockSyncErrorRepository } from "src/repositories/iblock-sync-error.repository";
 import { IBlockRepository } from "src/repositories/iblock.repository";
 import { ITransactionRepository } from "src/repositories/itransaction.repository";
+import { ISyncStatusRepository } from "src/repositories/isync-status.repository";
+import { IProposalDepositRepository } from "src/repositories/iproposal-deposit.repository";
+import { IProposalVoteRepository } from "src/repositories/iproposal-vote.repository";
+import { ProposalVote } from "src/entities/proposal-vote.entity";
+import { HistoryProposal } from "src/entities/history-proposal.entity";
+import { IHistoryProposalRepository } from "src/repositories/ihistory-proposal.repository";
+import { IDelegationRepository } from "src/repositories/idelegation.repository";
+import { ProposalDeposit } from "src/entities/proposal-deposit.entity";
+import { Delegation } from "src/entities/delegation.entity";
+import { DelegatorReward } from "src/entities/delegator-reward.entity";
+import { IDelegatorRewardRepository } from "src/repositories/idelegator-reward.repository";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -39,6 +50,18 @@ export class SyncTaskService implements ISyncTaskService {
         private blockRepository: IBlockRepository,
         @Inject(REPOSITORY_INTERFACE.ITRANSACTION_REPOSITORY)
         private txRepository: ITransactionRepository,
+        @Inject(REPOSITORY_INTERFACE.ISYNC_STATUS_REPOSITORY)
+        private statusRepository: ISyncStatusRepository,
+        @Inject(REPOSITORY_INTERFACE.IPROPOSAL_DEPOSIT_REPOSITORY)
+        private proposalDepositRepository: IProposalDepositRepository,
+        @Inject(REPOSITORY_INTERFACE.IPROPOSAL_VOTE_REPOSITORY)
+        private proposalVoteRepository: IProposalVoteRepository,
+        @Inject(REPOSITORY_INTERFACE.IHISTORY_PROPOSAL_REPOSITORY)
+        private historyProposalRepository: IHistoryProposalRepository,
+        @Inject(REPOSITORY_INTERFACE.IDELEGATION_REPOSITORY)
+        private delegationRepository: IDelegationRepository,
+        @Inject(REPOSITORY_INTERFACE.IDELEGATOR_REWARD_REPOSITORY)
+        private delegatorRewardRepository: IDelegatorRewardRepository,
     ) {
         this._logger.log(
             '============== Constructor Sync Task Service ==============',
@@ -541,7 +564,7 @@ export class SyncTaskService implements ISyncTaskService {
                     if (findVote) {
                         findVote.option = option;
                         findVote.updated_at = new Date(txData.tx_response.timestamp);
-                        await this.proposalVoteRepository.save(findVote);
+                        await this.proposalVoteRepository.create(findVote);
                     } else {
                         let proposalVote = new ProposalVote();
                         proposalVote.proposal_id = proposalId;
@@ -550,7 +573,7 @@ export class SyncTaskService implements ISyncTaskService {
                         proposalVote.option = option;
                         proposalVote.created_at = new Date(txData.tx_response.timestamp);
                         proposalVote.updated_at = new Date(txData.tx_response.timestamp);
-                        await this.proposalVoteRepository.save(proposalVote);
+                        await this.proposalVoteRepository.create(proposalVote);
                     }
                 } else if (txType === CONST_MSG_TYPE.MSG_SUBMIT_PROPOSAL) {
                     let historyProposal = new HistoryProposal();
@@ -582,9 +605,9 @@ export class SyncTaskService implements ISyncTaskService {
                     historyProposal.proposer = message.proposer;
                     historyProposal.created_at = new Date(txData.tx_response.timestamp);
                     try {
-                        await this.historyProposalRepository.save(historyProposal);
+                        await this.historyProposalRepository.create(historyProposal);
                     } catch (error) {
-                        this.logger.error(null, `History proposal is already existed!`);
+                        this._logger.error(null, `History proposal is already existed!`);
                     }
                 } else if (txType === CONST_MSG_TYPE.MSG_DEPOSIT) {
                     let proposalDeposit = new ProposalDeposit();
@@ -594,9 +617,9 @@ export class SyncTaskService implements ISyncTaskService {
                     proposalDeposit.amount = Number(message.amount[0].amount);
                     proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
                     try {
-                        await this.proposalDepositRepository.save(proposalDeposit);
+                        await this.proposalDepositRepository.create(proposalDeposit);
                     } catch (error) {
-                        this.logger.error(null, `Proposal deposit is already existed!`);
+                        this._logger.error(null, `Proposal deposit is already existed!`);
                     }
                 } else if (txType === CONST_MSG_TYPE.MSG_DELEGATE) {
                     let delegation = new Delegation();
@@ -617,9 +640,9 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation.type
                     );
                     try {
-                        await this.delegationRepository.save(delegation);
+                        await this.delegationRepository.create(delegation);
                     } catch (error) {
-                        this.logger.error(null, `Delegation is already existed!`);
+                        this._logger.error(null, `Delegation is already existed!`);
                     }
                 } else if (txType === CONST_MSG_TYPE.MSG_UNDELEGATE) {
                     let delegation = new Delegation();
@@ -640,9 +663,9 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation.type
                     );
                     try {
-                        await this.delegationRepository.save(delegation);
+                        await this.delegationRepository.create(delegation);
                     } catch (error) {
-                        this.logger.error(null, `Delegation is already existed!`);
+                        this._logger.error(null, `Delegation is already existed!`);
                     }
                 } else if (txType === CONST_MSG_TYPE.MSG_REDELEGATE) {
                     let delegation1 = new Delegation();
@@ -680,10 +703,10 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation2.type
                     );
                     try {
-                        await this.delegationRepository.save(delegation1);
-                        await this.delegationRepository.save(delegation2);
+                        await this.delegationRepository.create(delegation1);
+                        await this.delegationRepository.create(delegation2);
                     } catch (error) {
-                        this.logger.error(null, `Delegation is already existed!`);
+                        this._logger.error(null, `Delegation is already existed!`);
                     }
                 } else if (txType === CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD) {
                     let reward = new DelegatorReward();
@@ -705,9 +728,9 @@ export class SyncTaskService implements ISyncTaskService {
                     reward.tx_hash = txData.tx_response.txhash;
                     reward.created_at = new Date(txData.tx_response.timestamp);
                     try {
-                        await this.delegatorRewardRepository.save(reward);
+                        await this.delegatorRewardRepository.create(reward);
                     } catch (error) {
-                        this.logger.error(null, `Delegator reward is already existed!`);
+                        this._logger.error(null, `Delegator reward is already existed!`);
                     }
                 }
             }

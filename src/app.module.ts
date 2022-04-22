@@ -16,9 +16,30 @@ import { BlockSyncErrorRepository } from './repositories/impls/block-sync-error.
 import { MissedBlockRepository } from './repositories/impls/missed-block.repository';
 import { ProposalRepository } from './repositories/impls/proposal.repository';
 import { ValidatorRepository } from './repositories/impls/validator.repository';
+import { BlockRepository } from './repositories/impls/block.repository';
+import { DelegationRepository } from './repositories/impls/delegation.repository';
+import { DelegatorRewardRepository } from './repositories/impls/delegator-reward.repository';
+import { HistoryProposalRepository } from './repositories/impls/history-proposal.repository';
+import { ProposalDepositRepository } from './repositories/impls/proposal-deposit.repository';
+import { ProposalVoteRepository } from './repositories/impls/proposal-vote.repository';
+import { SyncStatusRepository } from './repositories/impls/sync-status.repository';
+import { TransactionRepository } from './repositories/impls/transaction.repository';
 
 const controllers = [];
-const entities = [ENTITIES_CONFIG.BLOCK_SYNC_ERROR, ENTITIES_CONFIG.MISSED_BLOCK, ENTITIES_CONFIG.PROPOSAL, ENTITIES_CONFIG.VALIDATOR];
+const entities = [
+  ENTITIES_CONFIG.BLOCK_SYNC_ERROR, 
+  ENTITIES_CONFIG.MISSED_BLOCK, 
+  ENTITIES_CONFIG.PROPOSAL, 
+  ENTITIES_CONFIG.VALIDATOR,
+  ENTITIES_CONFIG.BLOCK,
+  ENTITIES_CONFIG.DELEGATION,
+  ENTITIES_CONFIG.DELEGATOR_REWARD,
+  ENTITIES_CONFIG.HISTORY_PROPOSAL,
+  ENTITIES_CONFIG.PROPOSAL_DEPOSIT,
+  ENTITIES_CONFIG.PROPOSAL_VOTE,
+  ENTITIES_CONFIG.SYNC_STATUS,
+  ENTITIES_CONFIG.TRANSACTION,
+];
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -55,6 +76,38 @@ const entities = [ENTITIES_CONFIG.BLOCK_SYNC_ERROR, ENTITIES_CONFIG.MISSED_BLOCK
     {
       provide: REPOSITORY_INTERFACE.IVALIDATOR_REPOSITORY,
       useClass: ValidatorRepository,
+    },
+    {
+      provide: REPOSITORY_INTERFACE.IBLOCK_REPOSITORY,
+      useClass: BlockRepository,
+    },
+    {
+      provide: REPOSITORY_INTERFACE.IDELEGATION_REPOSITORY,
+      useClass: DelegationRepository,
+    },
+    {
+      provide: REPOSITORY_INTERFACE.IDELEGATOR_REWARD_REPOSITORY,
+      useClass: DelegatorRewardRepository,
+    },
+    {
+      provide: REPOSITORY_INTERFACE.IHISTORY_PROPOSAL_REPOSITORY,
+      useClass: HistoryProposalRepository,
+    },
+    {
+      provide: REPOSITORY_INTERFACE.IPROPOSAL_DEPOSIT_REPOSITORY,
+      useClass: ProposalDepositRepository,
+    },
+    {
+      provide: REPOSITORY_INTERFACE.IPROPOSAL_VOTE_REPOSITORY,
+      useClass: ProposalVoteRepository,
+    },
+    {
+      provide: REPOSITORY_INTERFACE.ISYNC_STATUS_REPOSITORY,
+      useClass: SyncStatusRepository,
+    },
+    {
+      provide: REPOSITORY_INTERFACE.ITRANSACTION_REPOSITORY,
+      useClass: TransactionRepository,
     },
     //service
     {
