@@ -1,0 +1,3 @@
+[submodule "artaverse-submodule"]
+	path = artaverse-submodule
+	url = https://github.com/aura-nw/artaverse-submodule
