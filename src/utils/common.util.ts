@@ -7,6 +7,7 @@ import { CONST_CHAR } from "src/common/constants/app.constant";
 import { BlockSyncError } from "src/entities";
 import { REPOSITORY_INTERFACE } from "src/module.config";
 import { IBlockSyncErrorRepository } from "src/repositories/iblock-sync-error.repository";
+import { ISyncStatusRepository } from "src/repositories/isync-status.repository";
 
 @Injectable()
 export class CommonUtil {
@@ -14,6 +15,8 @@ export class CommonUtil {
     private httpService: HttpService,
     @Inject(REPOSITORY_INTERFACE.IBLOCK_SYNC_ERROR_REPOSITORY)
     private blockSyncErrorRepository: IBlockSyncErrorRepository,
+    @Inject(REPOSITORY_INTERFACE.ISYNC_STATUS_REPOSITORY)
+    private statusRepository: ISyncStatusRepository,
   ) { }
 
   makeFileObjects(img) {
@@ -66,8 +69,8 @@ export class CommonUtil {
   }
 
   async updateStatus(newHeight) {
-    const status = await this.statusRepository.find();
+    const status = await this.statusRepository.findAll();
     status[0].current_block = newHeight;
-    await this.statusRepository.save(status[0]);
+    await this.statusRepository.create(status[0]);
   }
 }
