@@ -10,9 +10,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: 'true'
-          token: ${{ secrets.REGISTRY_PASSWORD }}
       - name: Set environment variable
         run: |
           SHORT_SHA_COMMIT=$(git rev-parse --short HEAD)
