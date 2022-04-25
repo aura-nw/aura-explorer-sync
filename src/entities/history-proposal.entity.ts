@@ -3,28 +3,28 @@ import { BaseEntityIncrementId } from "./base/base.entity";
 
 @Entity('history_proposals')
 export class HistoryProposal extends BaseEntityIncrementId {
-    @Column()
+    @Column({ name: 'proposal_id' })
     proposal_id: number;
 
-    @Column()
+    @Column({ name: 'tx_hash' })
     tx_hash: string;
 
-    @Column()
+    @Column({ name: 'title' })
     title: string;
 
-    @Column()
+    @Column({ name: 'description' })
     description: string;
 
-    @Column()
+    @Column({ name: 'recipient' })
     recipient: string;
 
-    @Column()
+    @Column({ name: 'amount' })
     amount: number;
 
-    @Column()
+    @Column({ name: 'initial_deposit' })
     initial_deposit: number;
 
-    @Column()
+    @Column({ name: 'proposer' })
     proposer: string;
 }
 

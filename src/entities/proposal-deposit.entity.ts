@@ -3,15 +3,15 @@ import { BaseEntityIncrementId } from "./base/base.entity";
 
 @Entity('proposal_deposits')
 export class ProposalDeposit extends BaseEntityIncrementId {
-    @Column()
+    @Column({ name: 'proposal_id' })
     proposal_id: number;
 
-    @Column()
+    @Column({ name: 'tx_hash' })
     tx_hash: string;
 
-    @Column()
+    @Column({ name: 'depositor' })
     depositor: string;
 
-    @Column()
+    @Column({ name: 'amount' })
     amount: number;
 }

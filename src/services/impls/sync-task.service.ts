@@ -1,11 +1,13 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
 import { CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, NODE_API } from "src/common/constants/app.constant";
-import { Block, BlockSyncError, MissedBlock, Transaction, Validator } from "src/entities";
+import { Block, BlockSyncError, MissedBlock, SyncStatus, Transaction, Validator } from "src/entities";
 import { ConfigService } from "src/shared/services/config.service";
 import { CommonUtil } from "src/utils/common.util";
 import { ISyncTaskService } from "../isync-task.service";
-import bech32 from 'bech32';
+import { InjectSchedule, Schedule } from 'nest-schedule';
+import { v4 as uuidv4 } from 'uuid';
+import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { REPOSITORY_INTERFACE } from "src/module.config";
 import { IValidatorRepository } from "src/repositories/ivalidator.repository";
@@ -35,6 +37,8 @@ export class SyncTaskService implements ISyncTaskService {
     private isSyncing = false;
     private isSyncValidator = false;
     private isSyncMissBlock = false;
+    private currentBlock: number;
+    private threads = 0;
     private schedulesSync: Array<number> = [];
 
     constructor(
@@ -62,18 +66,283 @@ export class SyncTaskService implements ISyncTaskService {
         private delegationRepository: IDelegationRepository,
         @Inject(REPOSITORY_INTERFACE.IDELEGATOR_REWARD_REPOSITORY)
         private delegatorRewardRepository: IDelegatorRewardRepository,
+        @InjectSchedule() private readonly schedule: Schedule
     ) {
         this._logger.log(
             '============== Constructor Sync Task Service ==============',
         );
         this.rpc = this.configService.get('RPC');
         this.api = this.configService.get('API');
+
         this.influxDbClient = new InfluxDBClient(
             this.configService.get('INFLUXDB_BUCKET'),
             this.configService.get('INFLUXDB_ORG'),
             this.configService.get('INFLUXDB_URL'),
             this.configService.get('INFLUXDB_TOKEN'),
         );
+
+        // Get number thread from config
+        this.threads = Number(this.configService.get('THREADS') || 15);
+
+        // Call worker to process
+        this.workerProcess();
+    }
+
+    /**
+     * scheduleTimeoutJob
+     * @param height 
+     */
+    scheduleTimeoutJob(height: number) {
+        this._logger.log(null, `Class ${SyncTaskService.name}, call scheduleTimeoutJob method with prameters: {currentBlk: ${height}}`);
+
+        this.schedule.scheduleTimeoutJob(`schedule_sync_block_${uuidv4()}`, 100, async () => {
+            //Update code sync data
+            await this.handleSyncData(height);
+
+            // Close thread
+            return true;
+        });
+    }
+
+    /**
+    * threadProcess
+    * @param currentBlk Current block
+    * @param blockLatest The final block
+    */
+    threadProcess(currentBlk: number, latestBlk: number) {
+        let loop = 0;
+        let height = 0;
+        try {
+            let blockNotSync = latestBlk - currentBlk;
+            if (blockNotSync > 0) {
+                if (blockNotSync > this.threads) {
+                    loop = this.threads;
+                } else {
+                    loop = blockNotSync;
+                }
+
+                // Create 10 thread to sync data      
+                for (let i = 1; i <= loop; i++) {
+                    height = currentBlk + i;
+                    this.scheduleTimeoutJob(height);
+                }
+            }
+        } catch (error) {
+            this._logger.log(null, `Call threadProcess method error: $${error.message}`);
+        }
+
+        // If current block not equal latest block when the symtem will call workerProcess method    
+        this.schedule.scheduleIntervalJob(`schedule_recall_${(new Date()).getTime()}`, 1000, async () => {
+            // Update code sync data
+            this._logger.log(null, `Class ${SyncTaskService.name}, recall workerProcess method`);
+            this.workerProcess(height);
+
+            // Close thread
+            return true;
+        });
+    }
+
+    /**
+     * workerProcess
+     * @param height
+     */
+    async workerProcess(height: number = undefined) {
+
+        this._logger.log(null, `Class ${SyncTaskService.name}, call workerProcess method`);
+
+        let currentBlk = 0;
+        // Get blocks latest
+        const blockLatest = await this.getBlockLatest();
+        let latestBlk = Number(blockLatest?.block?.header?.height || 0);
+
+        if (height > 0) {
+            currentBlk = height;
+
+        } else {
+            try {
+                //Get current height
+                const status = await this.statusRepository.findOne();
+                if (status) {
+                    currentBlk = status.current_block;
+                }
+            } catch (err) { }
+        }
+
+        this.threadProcess(currentBlk, latestBlk)
+    }
+
+    // @Interval(500)
+    async handleInterval() {
+        // check status
+        if (this.isSyncing) {
+            this._logger.log(null, 'already syncing... wait');
+            return;
+        } else {
+            this._logger.log(null, 'fetching data...');
+        }
+
+        // get latest block height
+        const payloadStatus = {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'status',
+            params: [],
+        };
+        const status = await this._commonUtil.postDataRPC(this.rpc, payloadStatus);
+        const latestHeight = status
+            ? Number(status.sync_info.latest_block_height)
+            : 0;
+
+        // get current synced block
+        await this.getCurrentStatus();
+
+        // TODO: init write api
+        this.influxDbClient.initWriteApi();
+
+        // get validators
+        const paramsValidator = NODE_API.VALIDATOR;
+        const validatorData = await this._commonUtil.getDataAPI(this.api, paramsValidator);
+
+        if (latestHeight > this.currentBlock) {
+            this.isSyncing = true;
+            const fetchingBlockHeight = this.currentBlock + 1;
+
+            this._logger.log(null, `processing block: ${fetchingBlockHeight}`);
+
+            try {
+                // fetching block from node
+                const paramsBlock = `block?height=${fetchingBlockHeight}`;
+                const blockData = await this._commonUtil.getDataRPC(this.rpc, paramsBlock);
+
+                // create block
+                const newBlock = new Block();
+                newBlock.block_hash = blockData.block_id.hash;
+                newBlock.chainid = blockData.block.header.chain_id;
+                newBlock.height = blockData.block.header.height;
+                newBlock.num_txs = blockData.block.data.txs.length;
+                newBlock.timestamp = blockData.block.header.time;
+                newBlock.round = blockData.block.last_commit.round;
+
+                const operatorAddress = blockData.block.header.proposer_address;
+                let blockGasUsed = 0;
+                let blockGasWanted = 0;
+
+                // set proposer and operator_address from validators
+                for (let key in validatorData.validators) {
+                    const ele = validatorData.validators[key];
+                    const pubkey = this._commonUtil.getAddressFromPubkey(ele.consensus_pubkey.key);
+                    if (pubkey === operatorAddress) {
+                        newBlock.proposer = ele.description.moniker;
+                        newBlock.operator_address = ele.operator_address;
+                    }
+                }
+
+                if (blockData.block.data.txs && blockData.block.data.txs.length > 0) {
+                    // create transaction
+                    for (let key in blockData.block.data.txs) {
+                        const element = blockData.block.data.txs[key];
+
+                        const txHash = sha256(Buffer.from(element, 'base64')).toUpperCase();
+                        this._logger.log(null, `processing tx: ${txHash}`);
+
+                        // fetch tx data
+                        const paramsTx = `/cosmos/tx/v1beta1/txs/${txHash}`
+
+                        const txData = await this._commonUtil.getDataAPI(this.api, paramsTx);
+
+                        let txType = 'FAILED';
+                        if (txData.tx_response.code === 0) {
+                            const txLog = JSON.parse(txData.tx_response.raw_log);
+
+                            const txAttr = txLog[0].events.find(
+                                ({ type }) => type === CONST_CHAR.MESSAGE,
+                            );
+                            const txAction = txAttr.attributes.find(
+                                ({ key }) => key === CONST_CHAR.ACTION,
+                            );
+                            const regex = /_/gi;
+                            txType = txAction.value.replace(regex, ' ');
+                        } else {
+                            const txBody = txData.tx_response.tx.body.messages[0];
+                            txType = txBody['@type'];
+                        }
+                        blockGasUsed += parseInt(txData.tx_response.gas_used);
+                        blockGasWanted += parseInt(txData.tx_response.gas_wanted);
+                        let savedBlock;
+                        if (parseInt(key) === blockData.block.data.txs.length - 1) {
+                            newBlock.gas_used = blockGasUsed;
+                            newBlock.gas_wanted = blockGasWanted;
+                            try {
+                                savedBlock = await this.blockRepository.create(newBlock);
+                            } catch (error) {
+                                savedBlock = await this.blockRepository.findOne({
+                                    where: { block_hash: blockData.block_id.hash },
+                                });
+                            }
+                        }
+                        const newTx = new Transaction();
+                        const fee = txData.tx_response.tx.auth_info.fee.amount[0];
+                        const txFee = (fee[CONST_CHAR.AMOUNT] / 1000000).toFixed(6);
+                        newTx.block = savedBlock;
+                        newTx.code = txData.tx_response.code;
+                        newTx.codespace = txData.tx_response.codespace;
+                        newTx.data =
+                            txData.tx_response.code === 0 ? txData.tx_response.data : '';
+                        newTx.gas_used = txData.tx_response.gas_used;
+                        newTx.gas_wanted = txData.tx_response.gas_wanted;
+                        newTx.height = fetchingBlockHeight;
+                        newTx.info = txData.tx_response.info;
+                        newTx.raw_log = txData.tx_response.raw_log;
+                        newTx.timestamp = blockData.block.header.time;
+                        newTx.tx = JSON.stringify(txData.tx_response);
+                        newTx.tx_hash = txData.tx_response.txhash;
+                        newTx.type = txType;
+                        newTx.fee = txFee;
+                        newTx.messages = txData.tx_response.tx.body.messages;
+                        try {
+                            await this.txRepository.create(newTx);
+                        } catch (error) {
+                            this._logger.error(null, `Transaction is already existed!`);
+                        }
+                        //sync data with transactions
+                        await this.syncDataWithTransactions(txData);
+                        // TODO: Write tx to influxdb
+                        this.influxDbClient.writeTx(
+                            newTx.tx_hash,
+                            newTx.height,
+                            newTx.type,
+                            newTx.timestamp,
+                        );
+                    }
+                } else {
+                    try {
+                        await this.blockRepository.create(newBlock);
+                    } catch (error) {
+                        this._logger.error(null, `Block is already existed!`);
+                    }
+                    // TODO: Write block to influxdb
+                    this.influxDbClient.writeBlock(
+                        newBlock.height,
+                        newBlock.block_hash,
+                        newBlock.num_txs,
+                        newBlock.chainid,
+                        newBlock.timestamp,
+                    );
+                }
+                /**
+                 * TODO: Flush pending writes and close writeApi.
+                 */
+                // this.influxDbClient.closeWriteApi();
+
+                // update current block
+                await this.updateStatus(fetchingBlockHeight);
+                this.isSyncing = false;
+            } catch (error) {
+                this.isSyncing = false;
+                this._logger.error(null, `${error.name}: ${error.message}`);
+                this._logger.error(null, `${error.stack}`);
+            }
+        }
     }
 
     @Interval(500)
@@ -85,6 +354,8 @@ export class SyncTaskService implements ISyncTaskService {
         } else {
             this._logger.log(null, 'fetching data validator...');
         }
+
+        this.influxDbClient.initWriteApi();
 
         // get validators
         const paramsValidator = NODE_API.VALIDATOR;
@@ -400,7 +671,7 @@ export class SyncTaskService implements ISyncTaskService {
 
             //Insert block error table
             if (!recallSync) {
-                await this._commonUtil.insertBlockError(newBlock.block_hash, newBlock.height);
+                await this.insertBlockError(newBlock.block_hash, newBlock.height);
 
                 // Mark schedule is running
                 this.schedulesSync.push(Number(newBlock.height));
@@ -524,7 +795,7 @@ export class SyncTaskService implements ISyncTaskService {
             }
 
             if (syncBlock > currentBlk) {
-                await this._commonUtil.updateStatus(fetchingBlockHeight);
+                await this.updateStatus(fetchingBlockHeight);
             }
 
             // Delete data on Block sync error table
@@ -739,5 +1010,47 @@ export class SyncTaskService implements ISyncTaskService {
 
     async removeBlockError(height: number) {
         await this.blockSyncErrorRepository.remove({ height: height });
+    }
+
+    async insertBlockError(block_hash: string, height: number) {
+        const blockSyncError = new BlockSyncError();
+        blockSyncError.block_hash = block_hash;
+        blockSyncError.height = height;
+        await this.blockSyncErrorRepository.create(blockSyncError);
+    }
+
+    async updateStatus(newHeight) {
+        const status = await this.statusRepository.findAll();
+        status[0].current_block = newHeight;
+        await this.statusRepository.create(status[0]);
+    }
+
+    async getCurrentStatus() {
+        const status = await this.statusRepository.findOne();
+        if (!status[0]) {
+            const newStatus = new SyncStatus();
+            newStatus.current_block = Number(this.configService.get('START_HEIGHT'));
+            await this.statusRepository.create(newStatus);
+            this.currentBlock = Number(this.configService.get('START_HEIGHT'));
+        } else {
+            this.currentBlock = status[0].current_block;
+        }
+    }
+
+    /**
+   * getBlockLatest
+   * @returns 
+   */
+    async getBlockLatest(): Promise<any> {
+        try {
+            this._logger.log(null, `Class ${SyncTaskService.name}, call getBlockLatest method`);
+
+            const paramsBlockLatest = `/blocks/latest`;
+            const results = await this._commonUtil.getDataAPI(this.api, paramsBlockLatest);
+            return results;
+
+        } catch (error) {
+            return null;
+        }
     }
 }

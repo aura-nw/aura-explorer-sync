@@ -4,21 +4,30 @@ import { BaseEntityIncrementId } from './base/base.entity';
 
 @Entity('delegations')
 export class Delegation extends BaseEntityIncrementId {
-  @Column()
+  @Column({ name: 'delegator_address' })
   delegator_address: string;
 
-  @Column({ default: '' })
+  @Column({ 
+    default: '',
+    name: 'validator_address',
+  })
   validator_address: string;
 
-  @Column({ default: '' })
+  @Column({ 
+    default: '',
+    name: 'shares',
+  })
   shares: string;
 
-  @Column({ type: 'float' })
+  @Column({ 
+    type: 'float',
+    name: 'amount',
+  })
   amount: number;
 
-  @Column()
+  @Column({ name: 'tx_hash' })
   tx_hash: string;
 
-  @Column()
+  @Column({ name: 'type' })
   type: string;
 }

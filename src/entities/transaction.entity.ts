@@ -7,51 +7,87 @@ import { Block } from './block.entity';
 @Entity('transactions')
 export class Transaction extends BaseEntityIncrementId {
   @Unique('tx_hash', ['tx_hash'])
-  @Column()
+  @Column({ name: 'tx_hash' })
   tx_hash: string;
 
   // contain an application-specific response code
-  @Column({ default: 0 })
+  @Column({ 
+    default: 0,
+    name: 'code',
+  })
   code: number;
 
   // namespace for the code
-  @Column({ default: '' })
+  @Column({ 
+    default: '',
+    name: 'codespace',
+  })
   codespace: string;
 
-  @Column({ default: '' })
+  @Column({ 
+    default: '',
+    name: 'data',
+  })
   data: string;
 
-  @Column({ default: 0 })
+  @Column({ 
+    default: 0,
+    name: 'gas_used',
+  })
   gas_used: number;
 
-  @Column({ default: 0 })
+  @Column({ 
+    default: 0,
+    name: 'gas_wanted',
+  })
   gas_wanted: number;
 
-  @Column()
+  @Column({ name: 'height' })
   height: number;
 
-  @Column({ default: '' })
+  @Column({ 
+    default: '',
+    name: 'info',
+  })
   info: string;
 
-  @Column({ default: '' })
+  @Column({ 
+    type: 'text',
+    name: 'type',
+  })
   type: string;
 
-  @Column({ type: 'text' })
+  @Column({ 
+    type: 'text',
+    name: 'raw_log',
+  })
   raw_log: string;
 
-  @Column()
+  @Column({ name: 'timestamp' })
   timestamp: Date;
 
-  @Column({ type: 'json' })
+  @Column({ 
+    type: 'json',
+    name: 'tx',
+  })
   tx: any;
 
-  @Column({ type: 'text' })
+  @Column({ 
+    type: 'text',
+    name: 'blockId',
+  })
   blockId: number;
 
-  @Column({ type: 'text' })
+  @Column({ 
+    type: 'text',
+    name: 'fee',
+  })
   fee: string;
 
-  @Column({ type: 'json' })
+  @Column({ 
+    type: 'json',
+    name: 'messages',
+  })
   messages: any;
 
   @ManyToOne(() => Block, (block) => block.txs, { eager: true })

@@ -2,12 +2,12 @@ import { Column, Entity, PrimaryColumn } from "typeorm";
 
 @Entity('missed_block')
 export class MissedBlock {
-  @PrimaryColumn()
+  @PrimaryColumn({ name: 'validator_address' })
   validator_address: string;
 
-  @PrimaryColumn()
+  @PrimaryColumn({ name: 'height' })
   height: number;
 
-  @Column()
+  @Column({ name: 'timestamp' })
   timestamp: Date;
 }

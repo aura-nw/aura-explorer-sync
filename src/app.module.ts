@@ -8,10 +8,9 @@ import {
 } from './module.config';
 import { ConfigService } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
-import { ScheduleModule } from '@nestjs/schedule';
+import { ScheduleModule } from 'nest-schedule';
 import { SyncProposalService } from './services/impls/sync-proposal.service';
 import { SyncTaskService } from './services/impls/sync-task.service';
-import { Repository } from 'typeorm';
 import { BlockSyncErrorRepository } from './repositories/impls/block-sync-error.repository';
 import { MissedBlockRepository } from './repositories/impls/missed-block.repository';
 import { ProposalRepository } from './repositories/impls/proposal.repository';
@@ -42,7 +41,7 @@ const entities = [
 ];
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
+    ScheduleModule.register(),
     HttpModule.registerAsync({
       useFactory: () => ({
         timeout: 5000,

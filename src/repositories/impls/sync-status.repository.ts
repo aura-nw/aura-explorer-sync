@@ -1,4 +1,4 @@
-import { Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ENTITIES_CONFIG } from "src/module.config";
 import { ObjectLiteral, Repository } from "typeorm";
@@ -6,6 +6,7 @@ import { IDelegatorRewardRepository } from "../idelegator-reward.repository";
 import { ISyncStatusRepository } from "../isync-status.repository";
 import { BaseRepository } from "./base.repository";
 
+@Injectable()
 export class SyncStatusRepository extends BaseRepository implements ISyncStatusRepository {
     private readonly _logger = new Logger(SyncStatusRepository.name);
     constructor(

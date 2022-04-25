@@ -3,16 +3,16 @@ import { BaseEntityIncrementId } from "./base/base.entity";
 
 @Entity('proposal_votes')
 export class ProposalVote extends BaseEntityIncrementId {
-    @Column()
+    @Column({ name: 'proposal_id' })
     proposal_id: number;
 
-    @Column()
+    @Column({ name: 'voter' })
     voter: string;
 
-    @Column()
+    @Column({ name: 'tx_hash' })
     tx_hash: string;
 
-    @Column()
+    @Column({ name: 'option' })
     option: string;
 }
 

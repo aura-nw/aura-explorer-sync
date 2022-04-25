@@ -16,11 +16,18 @@ export class BaseRepository implements IBaseRepository {
    * @param condition
    * @returns
    */
-  public async findOne(id: any): Promise<any> {
-    this._log.log(
-      `============== Call method findOne width parameters:${id} ==============`,
-    );
-    return this._repos.findOne(id);
+  public async findOne(id?: any): Promise<any> {
+    if(id) {
+      this._log.log(
+        `============== Call method findOne width parameters:${id} ==============`,
+      );
+      return this._repos.findOne(id);
+    } else {
+      this._log.log(
+        `============== Call method findOne without parameters ==============`,
+      );
+      return this._repos.findOne();
+    }
   }
 
   /**

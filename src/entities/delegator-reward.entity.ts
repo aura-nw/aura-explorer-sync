@@ -3,15 +3,15 @@ import { BaseEntityIncrementId } from "./base/base.entity";
 
 @Entity('delegator_rewards')
 export class DelegatorReward extends BaseEntityIncrementId {
-    @Column()
+    @Column({ name: 'delegator_address' })
     delegator_address: string;
 
-    @Column()
+    @Column({ name: 'validator_address' })
     validator_address: string;
 
-    @Column()
+    @Column({ name: 'amount' })
     amount: number;
 
-    @Column()
+    @Column({ name: 'tx_hash' })
     tx_hash: string;
 }

@@ -2,21 +2,13 @@ import { HttpService } from "@nestjs/axios";
 import { Inject, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { lastValueFrom } from "rxjs";
 import { tmhash } from 'tendermint/lib/hash';
-import bech32 from 'bech32';
+import { bech32 } from 'bech32';
 import { CONST_CHAR } from "src/common/constants/app.constant";
-import { BlockSyncError } from "src/entities";
-import { REPOSITORY_INTERFACE } from "src/module.config";
-import { IBlockSyncErrorRepository } from "src/repositories/iblock-sync-error.repository";
-import { ISyncStatusRepository } from "src/repositories/isync-status.repository";
 
 @Injectable()
 export class CommonUtil {
   constructor(
     private httpService: HttpService,
-    @Inject(REPOSITORY_INTERFACE.IBLOCK_SYNC_ERROR_REPOSITORY)
-    private blockSyncErrorRepository: IBlockSyncErrorRepository,
-    @Inject(REPOSITORY_INTERFACE.ISYNC_STATUS_REPOSITORY)
-    private statusRepository: ISyncStatusRepository,
   ) { }
 
   makeFileObjects(img) {
@@ -61,16 +53,18 @@ export class CommonUtil {
     }
   }
 
-  async insertBlockError(block_hash: string, height: number) {
-    const blockSyncError = new BlockSyncError();
-    blockSyncError.block_hash = block_hash;
-    blockSyncError.height = height;
-    await this.blockSyncErrorRepository.create(blockSyncError);
-  }
+  async postDataRPC(rpc, payload) {
+    const data = await lastValueFrom(this.httpService.post(rpc, payload)).then(
+      (rs) => rs.data,
+    );
 
-  async updateStatus(newHeight) {
-    const status = await this.statusRepository.findAll();
-    status[0].current_block = newHeight;
-    await this.statusRepository.create(status[0]);
+    if (typeof data.error != CONST_CHAR.UNDEFINED) {
+      throw new InternalServerErrorException();
+    }
+    if (typeof data.result != CONST_CHAR.UNDEFINED) {
+      return data.result;
+    } else {
+      return '';
+    }
   }
 }

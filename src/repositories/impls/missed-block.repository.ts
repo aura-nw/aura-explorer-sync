@@ -1,10 +1,11 @@
-import { Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ENTITIES_CONFIG } from "src/module.config";
 import { ObjectLiteral, Repository } from "typeorm";
 import { IMissedBlockRepository } from "../imissed-block.repository";
 import { BaseRepository } from "./base.repository";
 
+@Injectable()
 export class MissedBlockRepository extends BaseRepository implements IMissedBlockRepository {
     private readonly _logger = new Logger(MissedBlockRepository.name);
     constructor(

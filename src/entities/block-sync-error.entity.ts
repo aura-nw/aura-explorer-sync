@@ -3,9 +3,9 @@ import { BaseEntityIncrementId } from "./base/base.entity";
 
 @Entity('block_sync_error')
 export class BlockSyncError extends BaseEntityIncrementId {
-    @Column()
+    @Column({ name: 'height' })
     height: number;
 
-    @Column()
+    @Column({ name: 'block_hash' })
     block_hash: string;
 }
