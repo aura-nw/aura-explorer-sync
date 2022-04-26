@@ -188,7 +188,14 @@ export class SyncTaskService implements ISyncTaskService {
             method: 'status',
             params: [],
         };
-        const status = await this._commonUtil.postDataRPC(this.rpc, payloadStatus);
+        // get validators
+        const paramsValidator = NODE_API.VALIDATOR;
+
+        const [validatorData, status] = await Promise.all([
+            this._commonUtil.getDataAPI(this.api, paramsValidator),
+            this._commonUtil.postDataRPC(this.rpc, payloadStatus)
+        ])
+
         const latestHeight = status
             ? Number(status.sync_info.latest_block_height)
             : 0;
@@ -198,10 +205,6 @@ export class SyncTaskService implements ISyncTaskService {
 
         // TODO: init write api
         this.influxDbClient.initWriteApi();
-
-        // get validators
-        const paramsValidator = NODE_API.VALIDATOR;
-        const validatorData = await this._commonUtil.getDataAPI(this.api, paramsValidator);
 
         if (latestHeight > this.currentBlock) {
             this.isSyncing = true;
@@ -359,19 +362,20 @@ export class SyncTaskService implements ISyncTaskService {
 
         // get validators
         const paramsValidator = NODE_API.VALIDATOR;
-        const validatorData = await this._commonUtil.getDataAPI(this.api, paramsValidator);
-
         // get staking pool
         const paramspool = NODE_API.STAKING_POOL;
-        const poolData = await this._commonUtil.getDataAPI(this.api, paramspool);
-
         // get slashing param
         const paramsSlashing = NODE_API.SLASHING_PARAM;
-        const slashingData = await this._commonUtil.getDataAPI(this.api, paramsSlashing);
-
         // get slashing signing info
         const paramsSigning = NODE_API.SIGNING_INFOS;
-        const signingData = await this._commonUtil.getDataAPI(this.api, paramsSigning);
+
+        const [validatorData, poolData, slashingData, signingData]
+        = await Promise.all([
+            this._commonUtil.getDataAPI(this.api, paramsValidator),
+            this._commonUtil.getDataAPI(this.api, paramspool),
+            this._commonUtil.getDataAPI(this.api, paramsSlashing),
+            this._commonUtil.getDataAPI(this.api, paramsSigning)
+        ])
 
         if (validatorData) {
             this.isSyncValidator = true;
@@ -380,11 +384,13 @@ export class SyncTaskService implements ISyncTaskService {
 
                 // get validator detail
                 const validatorUrl = `/staking/validators/${data.operator_address}`;
-                const validatorResponse = await this._commonUtil.getDataAPI(this.api, validatorUrl);
-
                 // get slashing signing info
                 const paramDelegation = `/cosmos/staking/v1beta1/validators/${data.operator_address}/delegations`;
-                const delegationData = await this._commonUtil.getDataAPI(this.api, paramDelegation);
+
+                const [validatorResponse, delegationData] = await Promise.all([
+                    this._commonUtil.getDataAPI(this.api, validatorUrl),
+                    this._commonUtil.getDataAPI(this.api, paramDelegation)
+                ])
 
                 try {
                     // create validator
@@ -578,11 +584,13 @@ export class SyncTaskService implements ISyncTaskService {
                 const heightLatest = blockLatestData.block.header.height;
                 // get block by height
                 const paramsBlock = `/blocks/${heightLatest}`;
-                const blockData = await this._commonUtil.getDataAPI(this.api, paramsBlock);
-
                 // get validatorsets
                 const paramsValidatorsets = `/cosmos/base/tendermint/v1beta1/validatorsets/${heightLatest}`;
-                const validatorsetsData = await this._commonUtil.getDataAPI(this.api, paramsValidatorsets);
+
+                const [blockData, validatorsetsData] = await Promise.all([
+                    this._commonUtil.getDataAPI(this.api, paramsBlock),
+                    this._commonUtil.getDataAPI(this.api, paramsValidatorsets)
+                ])
 
                 if (validatorsetsData) {
 
