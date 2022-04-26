@@ -42,70 +42,90 @@ export class SyncProposalService implements ISyncProposalService {
         try {
             const param = NODE_API.PROPOSALS;
             const data = await this._commonUtil.getDataAPI(this.api, param);
-            
+
             this.isSync = true;
 
-            if (data && data.proposals && data.proposals.length > 0) {
-                for (let i = 0; i < data.proposals.length; i++) {
-                    const item: any = data.proposals[i];
-                    //create proposal
-                    let proposal = new Proposal();
-                    proposal.pro_id = Number(item.proposal_id);
-                    proposal.pro_title = item.content['title'];
-                    proposal.pro_description = item.content['description'];
-                    proposal.pro_status = item.status;
-                    proposal.pro_proposer_address = '';
-                    proposal.pro_proposer = '';
-                    const paramsProposer = `/gov/proposals/${item.proposal_id}/proposer`;
-                    const dataProposer = await this._commonUtil.getDataAPI(this.api, paramsProposer);
-                    if (dataProposer && dataProposer.result) {
-                        proposal.pro_proposer_address = dataProposer.result.proposer;
-                        //get validator
-                        const validator = await this.validatorRepository.findOne({
-                            where: { acc_address: dataProposer.result.proposer },
-                        });
-                        if (validator) {
-                            proposal.pro_proposer = validator.title;
-                        }
+            if (data && data.length > 0) {
+                for (let i = 0; i < data.length; i++) {
+                  const item: any = data[i];
+                  //create proposal
+                  let proposal = new Proposal();
+                  proposal.pro_id = Number(item.proposal_id);
+                  proposal.pro_title = item.content['title'];
+                  proposal.pro_description = item.content['description'];
+                  proposal.pro_status = item.status;
+                  proposal.pro_proposer_address = '';
+                  proposal.pro_proposer = '';
+                  const paramsProposer = `/gov/proposals/${item.proposal_id}/proposer`;
+                  const dataProposer = await this._commonUtil.getDataAPI(this.api, paramsProposer);
+                  if (dataProposer && dataProposer.result) {
+                    proposal.pro_proposer_address = dataProposer.result.proposer;
+                    //get validator
+                    const validator = await this.validatorRepository.findOne({
+                      where: { acc_address: dataProposer.result.proposer },
+                    });
+                    if (validator) {
+                      proposal.pro_proposer = validator.title;
                     }
-                    proposal.pro_voting_start_time = item.voting_start_time;
-                    proposal.pro_voting_end_time = item.voting_end_time;
-                    proposal.pro_votes_yes = 0.0;
-                    proposal.pro_votes_abstain = 0.0;
-                    proposal.pro_votes_no = 0.0;
-                    proposal.pro_votes_no_with_veto = 0.0;
-                    if (item.final_tally_result) {
-                        proposal.pro_votes_yes = item.final_tally_result.yes;
-                        proposal.pro_votes_abstain = item.final_tally_result.abstain;
-                        proposal.pro_votes_no = item.final_tally_result.no;
-                        proposal.pro_votes_no_with_veto =
-                            item.final_tally_result.no_with_veto;
-                    }
-                    proposal.pro_submit_time = item.submit_time;
-                    proposal.pro_total_deposits = 0.0;
-                    if (item.total_deposit && item.total_deposit.length > 0) {
-                        proposal.pro_total_deposits = item.total_deposit[0].amount;
-                    }
-                    //set value for column not null
-                    proposal.pro_tx_hash = '';
-                    proposal.pro_type = item.content['@type'];
-                    proposal.pro_deposit_end_time = item.deposit_end_time;
-                    proposal.pro_activity = '{"key": "activity", "value": ""}'; //tmp value
-                    // insert into table proposals
-                    try {
-                        await this.proposalRepository.create(proposal);
-                    } catch (error) {
-                        this._logger.error(null, `Proposal is already existed!`);
-                    }
+                  }
+                  proposal.pro_voting_start_time = new Date(item.voting_start_time);
+                  proposal.pro_voting_end_time = new Date(item.voting_end_time);
+                  proposal.pro_votes_yes = 0.0;
+                  proposal.pro_votes_abstain = 0.0;
+                  proposal.pro_votes_no = 0.0;
+                  proposal.pro_votes_no_with_veto = 0.0;
+                  if (item.final_tally_result) {
+                    proposal.pro_votes_yes = item.final_tally_result.yes;
+                    proposal.pro_votes_abstain = item.final_tally_result.abstain;
+                    proposal.pro_votes_no = item.final_tally_result.no;
+                    proposal.pro_votes_no_with_veto =
+                      item.final_tally_result.no_with_veto;
+                  }
+                  proposal.pro_submit_time = new Date(item.submit_time);
+                  proposal.pro_total_deposits = 0.0;
+                  if (item.total_deposit && item.total_deposit.length > 0) {
+                    proposal.pro_total_deposits = item.total_deposit[0].amount;
+                  }
+                  //set value for column not null
+                  proposal.pro_tx_hash = '';
+                  proposal.pro_type = item.content['@type'];
+                  proposal.pro_deposit_end_time = new Date(item.deposit_end_time);
+                  proposal.is_delete = false;
+                  proposal.pro_activity = '{"key": "activity", "value": ""}'; //tmp value
+                  // insert into table proposals
+                  try {
+                    await this.proposalRepository.create(proposal);
+                  } catch (error) {
+                    this._logger.error(null, `Proposal is already existed!`);
+                  }
                 }
                 //delete proposal failed
-                const listId = data.proposals.map((i) => Number(i.proposal_id));
+                const listId = data.map((i) => Number(i.proposal_id));
                 await this.proposalRepository.deleteProposalsByListId(listId);
                 this.isSync = false;
-            }
+              }
         } catch (error) {
             this._logger.error(error, `Sync proposals error`);
             this.isSync = false;
         }
+    }
+
+    /**
+     * getProposalsFromNode
+     * @param rootApi 
+     * @returns 
+     */
+    private async getProposalsFromNode(rootApi: string): Promise<any> {
+        let key: string = '';
+        const params = `/cosmos/gov/v1beta1/proposals`;
+        let result = await this._commonUtil.getDataAPI(rootApi, params);
+        key = result.pagination.next_key;
+        while (key != null) {
+            const params = `/cosmos/gov/v1beta1/proposals?pagination.key=${key}`;
+            let dataProposal = await this._commonUtil.getDataAPI(rootApi, params);
+            key = dataProposal.pagination.next_key;
+            result = [...result.proposals, ...dataProposal.proposals];
+        }
+        return result;
     }
 }
