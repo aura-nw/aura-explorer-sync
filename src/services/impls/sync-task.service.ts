@@ -822,6 +822,7 @@ export class SyncTaskService implements ISyncTaskService {
             if (idxSync > (-1)) {
                 this.schedulesSync.splice(idxSync, 1);
             }
+            throw new Error(error);            
         }
     }
 
