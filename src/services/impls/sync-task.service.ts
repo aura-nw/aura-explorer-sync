@@ -344,6 +344,7 @@ export class SyncTaskService implements ISyncTaskService {
                 this.isSyncing = false;
                 this._logger.error(null, `${error.name}: ${error.message}`);
                 this._logger.error(null, `${error.stack}`);
+                throw new Error(error);
             }
         }
     }
@@ -704,7 +705,7 @@ export class SyncTaskService implements ISyncTaskService {
                     this._logger.log(null, `processing tx: ${txHash}`);
 
                     // fetch tx data
-                    const paramsTx = `/cosmos/tx/v1beta1/txs/${txHash}`
+                    const paramsTx = `/cosmos/tx/v1beta1/txs/${txHash}`;
 
                     const txData = await this._commonUtil.getDataAPI(this.api, paramsTx);
 
