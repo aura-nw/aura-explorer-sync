@@ -125,9 +125,9 @@ export class SyncProposalService implements ISyncProposalService {
       const data = await this.getProposalsFromNode(this.api);
       this.isSync = true;
 
-      if (data && data.length > 0) {
-        for (let i = 0; i < data.length; i++) {
-          const item: any = data[i];
+      if (data && data.proposals.length > 0) {
+        for (let i = 0; i < data.proposals.length; i++) {
+          const item: any = data.proposals[i];
           //create proposal
           let proposal = new Proposal();
           proposal.pro_id = Number(item.proposal_id);
@@ -181,7 +181,7 @@ export class SyncProposalService implements ISyncProposalService {
           }
         }
         //delete proposal failed
-        const listId = data.map((i) => Number(i.proposal_id));
+        const listId = data.proposals.map((i) => Number(i.proposal_id));
         await this.proposalRepository.deleteProposalsByListId(listId);
       }
       this.isSync = false;
