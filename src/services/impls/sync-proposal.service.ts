@@ -183,8 +183,8 @@ export class SyncProposalService implements ISyncProposalService {
         //delete proposal failed
         const listId = data.map((i) => Number(i.proposal_id));
         await this.proposalRepository.deleteProposalsByListId(listId);
-        this.isSync = false;
       }
+      this.isSync = false;
     } catch (error) {
       this._logger.error(error, `Sync proposals error`);
       this.isSync = false;
