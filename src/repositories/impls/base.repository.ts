@@ -119,7 +119,7 @@ export class BaseRepository implements IBaseRepository {
    * @param data
    * @returns
    */
-  public create(data: any): Promise<any> {
+  public async create(data: any): Promise<any> {
     return this._repos.save(data);
   }
 
