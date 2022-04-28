@@ -119,7 +119,7 @@ export class BaseRepository implements IBaseRepository {
    * @param data
    * @returns
    */
-  public async create(data: any): Promise<any> {
+  public create(data: any): Promise<any> {
     return this._repos.save(data);
   }
 
@@ -147,8 +147,7 @@ export class BaseRepository implements IBaseRepository {
    * @returns
    */
   public async remove(id: any): Promise<DeleteResult> {
-    const entity = await this.findOne(id);
-    return this._repos.delete(entity);
+    return this._repos.delete(id);
   }
 
   private convertObjectToJson(obj: any) {
