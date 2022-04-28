@@ -147,8 +147,7 @@ export class BaseRepository implements IBaseRepository {
    * @returns
    */
   public async remove(id: any): Promise<DeleteResult> {
-    const entity = await this.findOne(id);
-    return this._repos.delete(entity);
+    return this._repos.delete(id);
   }
 
   private convertObjectToJson(obj: any) {
