@@ -74,7 +74,7 @@ export class Transaction extends BaseEntityIncrementId {
 
   @Column({ 
     type: 'text',
-    name: 'blockId',
+    name: 'blockid',
   })
   blockId: number;
 
