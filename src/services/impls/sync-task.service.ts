@@ -150,23 +150,23 @@ export class SyncTaskService implements ISyncTaskService {
 
         this._logger.log(null, `Class ${SyncTaskService.name}, call workerProcess method`);
 
-        let currentBlk = 0;
+        let currentBlk = 0, latestBlk = 0;
         // Get blocks latest
-        const blockLatest = await this.getBlockLatest();
-        let latestBlk = Number(blockLatest?.block?.header?.height || 0);
+        try {
+            const blockLatest = await this.getBlockLatest();
+            latestBlk = Number(blockLatest?.block?.header?.height || 0);
 
-        if (height > 0) {
-            currentBlk = height;
+            if (height > 0) {
+                currentBlk = height;
 
-        } else {
-            try {
+            } else {
                 //Get current height
                 const status = await this.statusRepository.findOne();
                 if (status) {
                     currentBlk = status.current_block;
                 }
-            } catch (err) { }
-        }
+            }
+        } catch (err) { }
 
         this.threadProcess(currentBlk, latestBlk)
     }
@@ -1099,15 +1099,10 @@ export class SyncTaskService implements ISyncTaskService {
    * @returns 
    */
     async getBlockLatest(): Promise<any> {
-        try {
-            this._logger.log(null, `Class ${SyncTaskService.name}, call getBlockLatest method`);
+        this._logger.log(null, `Class ${SyncTaskService.name}, call getBlockLatest method`);
 
-            const paramsBlockLatest = `/blocks/latest`;
-            const results = await this._commonUtil.getDataAPI(this.api, paramsBlockLatest);
-            return results;
-
-        } catch (error) {
-            return null;
-        }
+        const paramsBlockLatest = `/blocks/latest`;
+        const results = await this._commonUtil.getDataAPI(this.api, paramsBlockLatest);
+        return results;
     }
 }
