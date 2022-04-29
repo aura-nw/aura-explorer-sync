@@ -124,10 +124,11 @@ export class SyncProposalService implements ISyncProposalService {
       //fetching proposals from node
       const data = await this.getProposalsFromNode(this.api);
       this.isSync = true;
+      console.log(data)
 
-      if (data && data.proposals.length > 0) {
-        for (let i = 0; i < data.proposals.length; i++) {
-          const item: any = data.proposals[i];
+      if (data && data.length > 0) {
+        for (let i = 0; i < data.length; i++) {
+          const item: any = data[i];
           //create proposal
           let proposal = new Proposal();
           proposal.pro_id = Number(item.proposal_id);
@@ -181,7 +182,7 @@ export class SyncProposalService implements ISyncProposalService {
           }
         }
         //delete proposal failed
-        const listId = data.proposals.map((i) => Number(i.proposal_id));
+        const listId = data.map((i) => Number(i.proposal_id));
         await this.proposalRepository.deleteProposalsByListId(listId);
       }
       this.isSync = false;
@@ -201,11 +202,12 @@ export class SyncProposalService implements ISyncProposalService {
     const params = `/cosmos/gov/v1beta1/proposals`;
     let result = await this._commonUtil.getDataAPI(rootApi, params);
     key = result.pagination.next_key;
+    result = result.proposals;
     while (key != null) {
       const params = `/cosmos/gov/v1beta1/proposals?pagination.key=${key}`;
       let dataProposal = await this._commonUtil.getDataAPI(rootApi, params);
       key = dataProposal.pagination.next_key;
-      result = [...result.proposals, ...dataProposal.proposals];
+      result = [...result, ...dataProposal.proposals];
     }
     return result;
   }
