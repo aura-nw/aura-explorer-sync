@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
-import { NODE_API } from "src/common/constants/app.constant";
+import { APP_CONSTANTS, CONST_PROPOSAL_STATUS, NODE_API } from "src/common/constants/app.constant";
 import { Proposal } from "src/entities/proposal.entity";
 import { REPOSITORY_INTERFACE } from "src/module.config";
 import { IProposalRepository } from "src/repositories/iproposal.repository";
@@ -111,7 +111,7 @@ export class SyncProposalService implements ISyncProposalService {
   //     }
   // }
 
-   @Interval(500)
+  @Interval(500)
   async handleInterval() {
     // check status
     if (this.isSync) {
@@ -155,12 +155,19 @@ export class SyncProposalService implements ISyncProposalService {
           proposal.pro_votes_abstain = 0.0;
           proposal.pro_votes_no = 0.0;
           proposal.pro_votes_no_with_veto = 0.0;
-          if (item.final_tally_result) {
+          if (proposal.pro_status === CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_VOTING_PERIOD) {
+            //get proposal tally
+            const paramsTally = `/cosmos/gov/v1beta1/proposals/${item.proposal_id}/tally`;
+            const proposalTally = await this._commonUtil.getDataAPI(this.api, paramsTally);
+            proposal.pro_votes_yes = proposalTally.tally.yes;
+            proposal.pro_votes_abstain = proposalTally.tally.abstain;
+            proposal.pro_votes_no = proposalTally.tally.no;
+            proposal.pro_votes_no_with_veto = proposalTally.tally.no_with_veto;
+          } else {
             proposal.pro_votes_yes = item.final_tally_result.yes;
             proposal.pro_votes_abstain = item.final_tally_result.abstain;
             proposal.pro_votes_no = item.final_tally_result.no;
-            proposal.pro_votes_no_with_veto =
-              item.final_tally_result.no_with_veto;
+            proposal.pro_votes_no_with_veto = item.final_tally_result.no_with_veto;
           }
           proposal.pro_submit_time = new Date(item.submit_time);
           proposal.pro_total_deposits = 0.0;
@@ -173,6 +180,13 @@ export class SyncProposalService implements ISyncProposalService {
           proposal.pro_deposit_end_time = new Date(item.deposit_end_time);
           proposal.is_delete = false;
           proposal.pro_activity = '{"key": "activity", "value": ""}'; //tmp value
+          //sync turnout
+          //get bonded token
+          const paramsBonded = `/cosmos/staking/v1beta1/pool`;
+          const bondedTokens = await this._commonUtil.getDataAPI(this.api, paramsBonded);
+          if (bondedTokens && Number(bondedTokens.pool.bonded_tokens) > 0) {
+            proposal.pro_turnout = ((Number(proposal.pro_votes_yes) + Number(proposal.pro_votes_abstain) + Number(proposal.pro_votes_no) + Number(proposal.pro_votes_no_with_veto)) * 100) / Number(bondedTokens.pool.bonded_tokens);
+          }
           // insert into table proposals
           try {
             await this.proposalRepository.create(proposal);
