@@ -1,4 +1,4 @@
-import { ResponseDto } from "src/dtos/responses/response.dto";
+import { ResponseDto } from "../dtos/responses/response.dto";
 
 export interface IBaseService {
   /**
