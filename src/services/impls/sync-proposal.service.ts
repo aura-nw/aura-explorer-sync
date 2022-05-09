@@ -96,8 +96,8 @@ export class SyncProposalService implements ISyncProposalService {
           proposal.pro_tx_hash = '';
           proposal.pro_type = item.content['@type'];
           proposal.pro_deposit_end_time = new Date(item.deposit_end_time);
+          proposal.pro_activity = null;
           proposal.is_delete = false;
-          proposal.pro_activity = '{"key": "activity", "value": ""}'; //tmp value
           //sync turnout
           //get bonded token
           const bondedTokens = await this._commonUtil.getDataAPI(this.api, NODE_API.STAKING_POOL);
@@ -129,9 +129,8 @@ export class SyncProposalService implements ISyncProposalService {
    * @returns 
    */
   async getProposalsFromNode(rootApi: string): Promise<any> {
-    let key: string = '';
     let result = await this._commonUtil.getDataAPI(rootApi, NODE_API.PROPOSALS);
-    key = result.pagination.next_key;
+    let key = result.pagination.next_key;
     result = result.proposals;
     while (key != null) {
       const params = `cosmos/gov/v1beta1/proposals?pagination.key=${key}`;
