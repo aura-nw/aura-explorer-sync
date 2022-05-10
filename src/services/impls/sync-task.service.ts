@@ -382,11 +382,15 @@ export class SyncTaskService implements ISyncTaskService {
             this.isSyncValidator = true;
             for (let key in validatorData.validators) {
                 const data = validatorData.validators[key];
-
+                // get account address
+                const operator_address = data.operator_address;
+                const decodeAcc = bech32.decode(operator_address, 1023);
+                const wordsByte = bech32.fromWords(decodeAcc.words);
+                const account_address = bech32.encode(CONST_PUBKEY_ADDR.AURA, bech32.toWords(wordsByte));
                 // get validator detail
-                const validatorUrl = `/staking/validators/${data.operator_address}`;
+                const validatorUrl = `staking/validators/${data.operator_address}`;
                 // get slashing signing info
-                const paramDelegation = `/cosmos/staking/v1beta1/validators/${data.operator_address}/delegations`;
+                const paramDelegation = `cosmos/staking/v1beta1/validators/${data.operator_address}/delegations/${account_address}`;
 
                 const [validatorResponse, delegationData] = await Promise.all([
                     this._commonUtil.getDataAPI(this.api, validatorUrl),
@@ -397,10 +401,7 @@ export class SyncTaskService implements ISyncTaskService {
                     // create validator
                     const newValidator = new Validator();
                     newValidator.operator_address = data.operator_address;
-                    const operator_address = data.operator_address;
-                    const decodeAcc = bech32.decode(operator_address, 1023);
-                    const wordsByte = bech32.fromWords(decodeAcc.words);
-                    newValidator.acc_address = bech32.encode(CONST_PUBKEY_ADDR.AURA, bech32.toWords(wordsByte));
+                    newValidator.acc_address = account_address;
                     newValidator.cons_address = this._commonUtil.getAddressFromPubkey(data.consensus_pubkey.key);
                     newValidator.cons_pub_key = data.consensus_pubkey.key;
                     newValidator.title = data.description.moniker;
@@ -428,10 +429,11 @@ export class SyncTaskService implements ISyncTaskService {
                         const missedBlocksCounter = signingInfo[0].missed_blocks_counter;
                         newValidator.up_time = (signedBlocksWindow - missedBlocksCounter) / signedBlocksWindow * 100 + CONST_CHAR.PERCENT;
                     }
-                    const selfBonded = delegationData.delegation_responses.filter(e => e.delegation.delegator_address === newValidator.acc_address);
-                    if (selfBonded.length > 0) {
-                        newValidator.self_bonded = selfBonded[0].balance.amount;
-                        const percentSelfBonded = (selfBonded[0].balance.amount / data.tokens) * 100;
+                    newValidator.self_bonded = 0;
+                    newValidator.percent_self_bonded = '0.00';
+                    if (delegationData && delegationData.delegation_response) {
+                        newValidator.self_bonded = delegationData.delegation_response.balance.amount;
+                        const percentSelfBonded = (delegationData.delegation_response.balance.amount / data.tokens) * 100;
                         newValidator.percent_self_bonded = percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
                     }
 
@@ -455,31 +457,6 @@ export class SyncTaskService implements ISyncTaskService {
                     if (validatorFilter) {
                         this.syncUpdateValidator(newValidator, validatorFilter);
                     }
-
-                    // for (let key in delegationData.delegation_responses) {
-                    //   const dataDel = delegationData.delegation_responses[key];
-                    //   // create delegator by validator address
-                    //   const newDelegator = new Delegation();
-                    //   newDelegator.delegator_address = dataDel.delegation.delegator_address;
-                    //   newDelegator.validator_address = dataDel.delegation.validator_address;
-                    //   newDelegator.shares = dataDel.delegation.shares;
-                    //   const amount = parseInt((dataDel.balance.amount / 1000000).toFixed(5));
-                    //   newDelegator.amount = amount;
-                    //   // insert into table delegation
-                    //   try {
-                    //     await this.delegationRepository.save(newDelegator);
-                    //   } catch (error) {
-                    //     this.logger.error(null, `Delegation is already existed!`);
-                    //   }
-                    //   // TODO: Write delegator to influxdb
-                    //   this.influxDbClient.writeDelegation(
-                    //     newDelegator.delegator_address,
-                    //     newDelegator.validator_address,
-                    //     newDelegator.shares,
-                    //     newDelegator.amount,
-                    //   );
-
-                    // }
                     this.isSyncValidator = false;
                 } catch (error) {
                     this.isSyncValidator = false;
