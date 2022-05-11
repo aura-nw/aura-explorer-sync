@@ -537,42 +537,40 @@ export class SyncTaskService implements ISyncTaskService {
                             });
                         }
                     }
-                    if (savedBlock) {
-                        const newTx = new Transaction();
-                        const fee = txData.tx_response.tx.auth_info.fee.amount[0];
-                        const txFee = (fee[CONST_CHAR.AMOUNT] / APP_CONSTANTS.PRECISION_DIV).toFixed(6);
-                        newTx.blockId = savedBlock.id;
-                        newTx.code = txData.tx_response.code;
-                        newTx.codespace = txData.tx_response.codespace;
-                        newTx.data =
-                            txData.tx_response.code === 0 ? txData.tx_response.data : '';
-                        newTx.gas_used = txData.tx_response.gas_used;
-                        newTx.gas_wanted = txData.tx_response.gas_wanted;
-                        newTx.height = fetchingBlockHeight;
-                        newTx.info = txData.tx_response.info;
-                        newTx.raw_log = txData.tx_response.raw_log;
-                        newTx.timestamp = blockData.block.header.time;
-                        newTx.tx = JSON.stringify(txData.tx_response);
-                        newTx.tx_hash = txData.tx_response.txhash;
-                        newTx.type = txType;
-                        newTx.fee = txFee;
-                        newTx.messages = txData.tx_response.tx.body.messages;
-                        try {
-                            await this.txRepository.create(newTx);
-                        } catch (error) {
-                            this._logger.error(null, `Transaction is already existed!`);
-                        }
-                        // TODO: Write tx to influxdb
-                        this.influxDbClient.writeTx(
-                            newTx.tx_hash,
-                            newTx.height,
-                            newTx.type,
-                            newTx.timestamp,
-                        );
-
-                        //sync data with transactions
-                        await this.syncDataWithTransactions(txData);
+                    const newTx = new Transaction();
+                    const fee = txData.tx_response.tx.auth_info.fee.amount[0];
+                    const txFee = (fee[CONST_CHAR.AMOUNT] / APP_CONSTANTS.PRECISION_DIV).toFixed(6);
+                    newTx.blockId = savedBlock.id;
+                    newTx.code = txData.tx_response.code;
+                    newTx.codespace = txData.tx_response.codespace;
+                    newTx.data =
+                        txData.tx_response.code === 0 ? txData.tx_response.data : '';
+                    newTx.gas_used = txData.tx_response.gas_used;
+                    newTx.gas_wanted = txData.tx_response.gas_wanted;
+                    newTx.height = fetchingBlockHeight;
+                    newTx.info = txData.tx_response.info;
+                    newTx.raw_log = txData.tx_response.raw_log;
+                    newTx.timestamp = blockData.block.header.time;
+                    newTx.tx = JSON.stringify(txData.tx_response);
+                    newTx.tx_hash = txData.tx_response.txhash;
+                    newTx.type = txType;
+                    newTx.fee = txFee;
+                    newTx.messages = txData.tx_response.tx.body.messages;
+                    try {
+                        await this.txRepository.create(newTx);
+                    } catch (error) {
+                        this._logger.error(null, `Transaction is already existed!`);
                     }
+                    // TODO: Write tx to influxdb
+                    this.influxDbClient.writeTx(
+                        newTx.tx_hash,
+                        newTx.height,
+                        newTx.type,
+                        newTx.timestamp,
+                    );
+
+                    //sync data with transactions
+                    await this.syncDataWithTransactions(txData);
                 }
             } else {
                 try {
