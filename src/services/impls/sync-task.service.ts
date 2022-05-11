@@ -286,7 +286,7 @@ export class SyncTaskService implements ISyncTaskService {
                         const newTx = new Transaction();
                         const fee = txData.tx_response.tx.auth_info.fee.amount[0];
                         const txFee = (fee[CONST_CHAR.AMOUNT] / APP_CONSTANTS.PRECISION_DIV).toFixed(6);
-                        newTx.block = savedBlock;
+                        newTx.blockId = savedBlock.id;
                         newTx.code = txData.tx_response.code;
                         newTx.codespace = txData.tx_response.codespace;
                         newTx.data =
@@ -718,7 +718,7 @@ export class SyncTaskService implements ISyncTaskService {
                     const newTx = new Transaction();
                     const fee = txData.tx_response.tx.auth_info.fee.amount[0];
                     const txFee = (fee[CONST_CHAR.AMOUNT] / APP_CONSTANTS.PRECISION_DIV).toFixed(6);
-                    newTx.block = savedBlock;
+                    newTx.blockId = savedBlock.id;
                     newTx.code = txData.tx_response.code;
                     newTx.codespace = txData.tx_response.codespace;
                     newTx.data =
