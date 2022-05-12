@@ -1,32 +1,32 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
-import { CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, NODE_API } from "src/common/constants/app.constant";
-import { Block, BlockSyncError, MissedBlock, SyncStatus, Transaction, Validator } from "src/entities";
-import { ConfigService } from "src/shared/services/config.service";
-import { CommonUtil } from "src/utils/common.util";
+import { APP_CONSTANTS, CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, NODE_API } from "../../common/constants/app.constant";
+import { Block, BlockSyncError, MissedBlock, SyncStatus, Transaction, Validator } from "../../entities";
+import { ConfigService } from "../../shared/services/config.service";
+import { CommonUtil } from "../../utils/common.util";
 import { ISyncTaskService } from "../isync-task.service";
 import { InjectSchedule, Schedule } from 'nest-schedule';
 import { v4 as uuidv4 } from 'uuid';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
-import { REPOSITORY_INTERFACE } from "src/module.config";
-import { IValidatorRepository } from "src/repositories/ivalidator.repository";
-import { InfluxDBClient } from "src/utils/influxdb-client";
-import { IMissedBlockRepository } from "src/repositories/imissed-block.repository";
-import { IBlockSyncErrorRepository } from "src/repositories/iblock-sync-error.repository";
-import { IBlockRepository } from "src/repositories/iblock.repository";
-import { ITransactionRepository } from "src/repositories/itransaction.repository";
-import { ISyncStatusRepository } from "src/repositories/isync-status.repository";
-import { IProposalDepositRepository } from "src/repositories/iproposal-deposit.repository";
-import { IProposalVoteRepository } from "src/repositories/iproposal-vote.repository";
-import { ProposalVote } from "src/entities/proposal-vote.entity";
-import { HistoryProposal } from "src/entities/history-proposal.entity";
-import { IHistoryProposalRepository } from "src/repositories/ihistory-proposal.repository";
-import { IDelegationRepository } from "src/repositories/idelegation.repository";
-import { ProposalDeposit } from "src/entities/proposal-deposit.entity";
-import { Delegation } from "src/entities/delegation.entity";
-import { DelegatorReward } from "src/entities/delegator-reward.entity";
-import { IDelegatorRewardRepository } from "src/repositories/idelegator-reward.repository";
+import { REPOSITORY_INTERFACE } from "../../module.config";
+import { IValidatorRepository } from "../../repositories/ivalidator.repository";
+import { InfluxDBClient } from "../../utils/influxdb-client";
+import { IMissedBlockRepository } from "../../repositories/imissed-block.repository";
+import { IBlockSyncErrorRepository } from "../../repositories/iblock-sync-error.repository";
+import { IBlockRepository } from "../../repositories/iblock.repository";
+import { ITransactionRepository } from "../../repositories/itransaction.repository";
+import { ISyncStatusRepository } from "../../repositories/isync-status.repository";
+import { IProposalDepositRepository } from "../../repositories/iproposal-deposit.repository";
+import { IProposalVoteRepository } from "../../repositories/iproposal-vote.repository";
+import { ProposalVote } from "../../entities/proposal-vote.entity";
+import { HistoryProposal } from "../../entities/history-proposal.entity";
+import { IHistoryProposalRepository } from "../../repositories/ihistory-proposal.repository";
+import { IDelegationRepository } from "../../repositories/idelegation.repository";
+import { ProposalDeposit } from "../../entities/proposal-deposit.entity";
+import { Delegation } from "../../entities/delegation.entity";
+import { DelegatorReward } from "../../entities/delegator-reward.entity";
+import { IDelegatorRewardRepository } from "../../repositories/idelegator-reward.repository";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -233,7 +233,7 @@ export class SyncTaskService implements ISyncTaskService {
                     newValidator.max_change_rate = data.commission.commission_rates.max_change_rate;
                     newValidator.min_self_delegation = data.min_self_delegation;
                     newValidator.delegator_shares = data.delegator_shares;
-                    newValidator.power = data.tokens;
+                    newValidator.power = Number(data.tokens);
                     newValidator.website = data.description.website;
                     newValidator.details = data.description.details;
                     newValidator.identity = data.description.identity;
@@ -275,7 +275,6 @@ export class SyncTaskService implements ISyncTaskService {
                     );
 
                     const validatorFilter = await this.validatorRepository.findOne({ where: { operator_address: data.operator_address } });
-                    // const validatorFilter = validators.filter(e => e.operator_address === data.operator_address);
                     if (validatorFilter) {
                         this.syncUpdateValidator(newValidator, validatorFilter);
                     }
@@ -308,7 +307,7 @@ export class SyncTaskService implements ISyncTaskService {
         }
 
         if (validatorData.power !== Number(newValidator.power)) {
-            validatorData.power = newValidator.power;
+            validatorData.power = Number(newValidator.power);
             isSave = true;
         }
 
@@ -383,9 +382,9 @@ export class SyncTaskService implements ISyncTaskService {
 
                 const heightLatest = blockLatestData.block.header.height;
                 // get block by height
-                const paramsBlock = `/blocks/${heightLatest}`;
+                const paramsBlock = `blocks/${heightLatest}`;
                 // get validatorsets
-                const paramsValidatorsets = `/cosmos/base/tendermint/v1beta1/validatorsets/${heightLatest}`;
+                const paramsValidatorsets = `cosmos/base/tendermint/v1beta1/validatorsets/${heightLatest}`;
 
                 const [blockData, validatorsetsData] = await Promise.all([
                     this._commonUtil.getDataAPI(this.api, paramsBlock),
@@ -504,7 +503,7 @@ export class SyncTaskService implements ISyncTaskService {
                     this._logger.log(null, `processing tx: ${txHash}`);
 
                     // fetch tx data
-                    const paramsTx = `/cosmos/tx/v1beta1/txs/${txHash}`;
+                    const paramsTx = `cosmos/tx/v1beta1/txs/${txHash}`;
 
                     const txData = await this._commonUtil.getDataAPI(this.api, paramsTx);
 
@@ -540,7 +539,7 @@ export class SyncTaskService implements ISyncTaskService {
                     }
                     const newTx = new Transaction();
                     const fee = txData.tx_response.tx.auth_info.fee.amount[0];
-                    const txFee = (fee[CONST_CHAR.AMOUNT] / 1000000).toFixed(6);
+                    const txFee = (fee[CONST_CHAR.AMOUNT] / APP_CONSTANTS.PRECISION_DIV).toFixed(6);
                     newTx.blockId = savedBlock.id;
                     newTx.code = txData.tx_response.code;
                     newTx.codespace = txData.tx_response.codespace;
@@ -708,7 +707,7 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation.tx_hash = txData.tx_response.txhash;
                         delegation.delegator_address = message.delegator_address;
                         delegation.validator_address = message.validator_address;
-                        delegation.amount = Number(message.amount.amount) / 1000000;
+                        delegation.amount = Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
                         delegation.created_at = new Date(txData.tx_response.timestamp);
                         delegation.type = CONST_DELEGATE_TYPE.DELEGATE;
                         // TODO: Write delegation to influxdb
@@ -733,7 +732,7 @@ export class SyncTaskService implements ISyncTaskService {
                             const claimEvent = events.find(i => i.type === 'transfer');
                             if (claimEvent) {
                                 const attributes = claimEvent.attributes;
-                                reward.amount = Number(attributes[2].value.replace('uaura', ''));
+                                reward.amount = Number(attributes[2].value.replace(CONST_CHAR.UAURA, ''));
                             }
                         }
                         reward.tx_hash = txData.tx_response.txhash;
@@ -743,7 +742,7 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation.tx_hash = txData.tx_response.txhash;
                         delegation.delegator_address = message.delegator_address;
                         delegation.validator_address = message.validator_address;
-                        delegation.amount = (Number(message.amount.amount) * (-1)) / 1000000;
+                        delegation.amount = (Number(message.amount.amount) * (-1)) / APP_CONSTANTS.PRECISION_DIV;
                         delegation.created_at = new Date(txData.tx_response.timestamp);
                         delegation.type = CONST_DELEGATE_TYPE.UNDELEGATE;
                         // TODO: Write delegation to influxdb
@@ -768,7 +767,7 @@ export class SyncTaskService implements ISyncTaskService {
                             const claimEvent = events.find(i => i.type === 'transfer');
                             if (claimEvent) {
                                 const attributes = claimEvent.attributes;
-                                reward.amount = Number(attributes[2].value.replace('uaura', ''));
+                                reward.amount = Number(attributes[2].value.replace(CONST_CHAR.UAURA, ''));
                             }
                         }
                         reward.tx_hash = txData.tx_response.txhash;
@@ -778,7 +777,7 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation1.tx_hash = txData.tx_response.txhash;
                         delegation1.delegator_address = message.delegator_address;
                         delegation1.validator_address = message.validator_src_address;
-                        delegation1.amount = (Number(message.amount.amount) * (-1)) / 1000000;
+                        delegation1.amount = (Number(message.amount.amount) * (-1)) / APP_CONSTANTS.PRECISION_DIV;
                         delegation1.created_at = new Date(txData.tx_response.timestamp);
                         delegation1.type = CONST_DELEGATE_TYPE.REDELEGATE;
                         // TODO: Write delegation to influxdb
@@ -795,7 +794,7 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation2.tx_hash = txData.tx_response.txhash;
                         delegation2.delegator_address = message.delegator_address;
                         delegation2.validator_address = message.validator_dst_address;
-                        delegation2.amount = Number(message.amount.amount) / 1000000;
+                        delegation2.amount = Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
                         delegation2.created_at = new Date(txData.tx_response.timestamp);
                         delegation2.type = CONST_DELEGATE_TYPE.REDELEGATE;
                         // TODO: Write delegation to influxdb
@@ -819,8 +818,8 @@ export class SyncTaskService implements ISyncTaskService {
                             const claimEvent = events.find(i => i.type === 'transfer');
                             if (claimEvent) {
                                 const attributes = claimEvent.attributes;
-                                amount1 = Number(attributes[2].value.replace('uaura', ''));
-                                amount2 = Number(attributes[5].value.replace('uaura', ''));
+                                amount1 = Number(attributes[2].value.replace(CONST_CHAR.UAURA, ''));
+                                amount2 = Number(attributes[5].value.replace(CONST_CHAR.UAURA, ''));
                             }
                         }
                         let reward1 = new DelegatorReward();
@@ -848,7 +847,7 @@ export class SyncTaskService implements ISyncTaskService {
                                 const amount = attributes[0].value;
                                 const findValidator = attributes.find(i => i.value === message.validator_address);
                                 if (findValidator) {
-                                    reward.amount = Number(amount.replace('uaura', ''));
+                                    reward.amount = Number(amount.replace(CONST_CHAR.UAURA, ''));
                                 }
                             }
                         }
@@ -899,7 +898,7 @@ export class SyncTaskService implements ISyncTaskService {
     async getBlockLatest(): Promise<any> {
         this._logger.log(null, `Class ${SyncTaskService.name}, call getBlockLatest method`);
 
-        const paramsBlockLatest = `/blocks/latest`;
+        const paramsBlockLatest = `blocks/latest`;
         const results = await this._commonUtil.getDataAPI(this.api, paramsBlockLatest);
         return results;
     }

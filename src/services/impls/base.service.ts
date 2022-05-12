@@ -1,6 +1,6 @@
 import { IBaseService } from '../ibase.service';
 import { ErrorMap } from '../../common/error.map';
-import { ResponseDto } from 'src/dtos/responses/response.dto';
+import { ResponseDto } from '../../dtos/responses/response.dto';
 
 export class BaseService implements IBaseService {
   private _repos: any;

@@ -1,4 +1,6 @@
-export enum AppConstants {}
+export enum APP_CONSTANTS {
+  PRECISION_DIV = 1000000
+}
 
 export enum ORDER_BY {
   DESC = 'DESC',
@@ -18,14 +20,14 @@ export enum MESSAGE_ACTION {
 }
 
 export enum NODE_API {
-  PROPOSALS = `/cosmos/gov/v1beta1/proposals`,
-  STAKING_POOL = `/cosmos/staking/v1beta1/pool`,
-  INFLATION = `/cosmos/mint/v1beta1/inflation`,
-  COMMUNITY_POOL = `/cosmos/distribution/v1beta1/community_pool`,
-  VALIDATOR = `/cosmos/staking/v1beta1/validators`,
-  SLASHING_PARAM = `/cosmos/slashing/v1beta1/params`,
-  SIGNING_INFOS = `/cosmos/slashing/v1beta1/signing_infos`,
-  LATEST_BLOCK = `/blocks/latest`,
+  PROPOSALS = `cosmos/gov/v1beta1/proposals`,
+  STAKING_POOL = `cosmos/staking/v1beta1/pool`,
+  INFLATION = `cosmos/mint/v1beta1/inflation`,
+  COMMUNITY_POOL = `cosmos/distribution/v1beta1/community_pool`,
+  VALIDATOR = `cosmos/staking/v1beta1/validators`,
+  SLASHING_PARAM = `cosmos/slashing/v1beta1/params`,
+  SIGNING_INFOS = `cosmos/slashing/v1beta1/signing_infos`,
+  LATEST_BLOCK = `blocks/latest`,
 }
 
 export enum CONST_PUBKEY_ADDR {
@@ -66,4 +68,13 @@ export enum CONST_DELEGATE_TYPE {
   DELEGATE = 'Delegate',
   UNDELEGATE = 'Undelegate',
   REDELEGATE = 'Redelegate'
+}
+
+export enum CONST_PROPOSAL_STATUS {
+  PROPOSAL_STATUS_UNSPECIFIED = 'PROPOSAL_STATUS_UNSPECIFIED',
+  PROPOSAL_STATUS_DEPOSIT_PERIOD = 'PROPOSAL_STATUS_DEPOSIT_PERIOD',
+  PROPOSAL_STATUS_VOTING_PERIOD = 'PROPOSAL_STATUS_VOTING_PERIOD',
+  PROPOSAL_STATUS_PASSED = 'PROPOSAL_STATUS_PASSED',
+  PROPOSAL_STATUS_REJECTED = 'PROPOSAL_STATUS_REJECTED',
+  PROPOSAL_STATUS_FAILED = 'PROPOSAL_STATUS_FAILED'
 }
