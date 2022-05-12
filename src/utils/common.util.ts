@@ -3,7 +3,7 @@ import { Inject, Injectable, InternalServerErrorException } from "@nestjs/common
 import { lastValueFrom } from "rxjs";
 import { tmhash } from 'tendermint/lib/hash';
 import { bech32 } from 'bech32';
-import { CONST_CHAR } from "src/common/constants/app.constant";
+import { CONST_CHAR } from "../common/constants/app.constant";
 
 @Injectable()
 export class CommonUtil {
