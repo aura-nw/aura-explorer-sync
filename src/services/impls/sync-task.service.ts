@@ -233,7 +233,7 @@ export class SyncTaskService implements ISyncTaskService {
                     newValidator.max_change_rate = data.commission.commission_rates.max_change_rate;
                     newValidator.min_self_delegation = data.min_self_delegation;
                     newValidator.delegator_shares = data.delegator_shares;
-                    newValidator.power = data.tokens;
+                    newValidator.power = Number(data.tokens);
                     newValidator.website = data.description.website;
                     newValidator.details = data.description.details;
                     newValidator.identity = data.description.identity;
@@ -307,7 +307,7 @@ export class SyncTaskService implements ISyncTaskService {
         }
 
         if (validatorData.power !== Number(newValidator.power)) {
-            validatorData.power = newValidator.power;
+            validatorData.power = Number(newValidator.power);
             isSave = true;
         }
 
