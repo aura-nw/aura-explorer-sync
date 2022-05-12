@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ENTITIES_CONFIG } from "src/module.config";
+import { ENTITIES_CONFIG } from "../../module.config";
 import { ObjectLiteral, Repository } from "typeorm";
 import { IMissedBlockRepository } from "../imissed-block.repository";
 import { BaseRepository } from "./base.repository";
