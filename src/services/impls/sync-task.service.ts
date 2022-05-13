@@ -496,6 +496,7 @@ export class SyncTaskService implements ISyncTaskService {
             }
 
             if (blockData.block.data.txs && blockData.block.data.txs.length > 0) {
+                let transactions = [];
                 // create transaction
                 for (let key in blockData.block.data.txs) {
                     const element = blockData.block.data.txs[key];
@@ -524,24 +525,10 @@ export class SyncTaskService implements ISyncTaskService {
                         const txBody = txData.tx_response.tx.body.messages[0];
                         txType = txBody['@type'];
                     }
-                    blockGasUsed += parseInt(txData.tx_response.gas_used);
-                    blockGasWanted += parseInt(txData.tx_response.gas_wanted);
-                    let savedBlock;
-                    if (parseInt(key) === blockData.block.data.txs.length - 1) {
-                        newBlock.gas_used = blockGasUsed;
-                        newBlock.gas_wanted = blockGasWanted;
-                        try {
-                            savedBlock = await this.blockRepository.create(newBlock);
-                        } catch (error) {
-                            savedBlock = await this.blockRepository.findOne({
-                                where: { block_hash: blockData.block_id.hash },
-                            });
-                        }
-                    }
                     const newTx = new Transaction();
                     const fee = txData.tx_response.tx.auth_info.fee.amount[0];
                     const txFee = (fee[CONST_CHAR.AMOUNT] / APP_CONSTANTS.PRECISION_DIV).toFixed(6);
-                    newTx.blockId = savedBlock.id;
+                    // newTx.blockId = savedBlock.id;
                     newTx.code = txData.tx_response.code;
                     newTx.codespace = txData.tx_response.codespace;
                     newTx.data =
@@ -557,10 +544,23 @@ export class SyncTaskService implements ISyncTaskService {
                     newTx.type = txType;
                     newTx.fee = txFee;
                     newTx.messages = txData.tx_response.tx.body.messages;
-                    try {
-                        await this.txRepository.create(newTx);
-                    } catch (error) {
-                        this._logger.error(null, `Transaction is already existed!`);
+                    transactions.push(newTx);
+                    blockGasUsed += parseInt(txData.tx_response.gas_used);
+                    blockGasWanted += parseInt(txData.tx_response.gas_wanted);
+                    let savedBlock;
+                    if (parseInt(key) === blockData.block.data.txs.length - 1) {
+                        newBlock.gas_used = blockGasUsed;
+                        newBlock.gas_wanted = blockGasWanted;
+                        try {
+                            savedBlock = await this.blockRepository.create(newBlock);
+                            if (savedBlock) {
+                                transactions.map((item) => item.blockId = savedBlock.id);
+                                await this.txRepository.create(transactions);
+                            }
+                        } catch (error) {
+                            this._logger.error(null, `Insert block is error ${error.name}: ${error.message}`);
+                            this._logger.error(null, `${error.stack}`);
+                        }
                     }
                     // TODO: Write tx to influxdb
                     this.influxDbClient.writeTx(
