@@ -471,6 +471,7 @@ export class SyncTaskService implements ISyncTaskService {
             newBlock.num_txs = blockData.block.data.txs.length;
             newBlock.timestamp = blockData.block.header.time;
             newBlock.round = blockData.block.last_commit.round;
+            newBlock.json_data = JSON.stringify(blockData);
 
             const operatorAddress = blockData.block.header.proposer_address;
             let blockGasUsed = 0;
