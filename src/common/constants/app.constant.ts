@@ -40,12 +40,16 @@ export enum CONST_CHAR {
   SECOND = 's',
   UAURA  = 'uaura',
   DELEGATE  = 'delegate',
+  REDELEGATE = 'redelegate',
   UNBOND = 'unbond',
   VALIDATOR = 'validator',
   AMOUNT = 'amount',
   UNDEFINED = 'undefined',
   MESSAGE = 'message',
   ACTION = 'action',
+  WITHDRAW_REWARDS = 'withdraw_rewards',
+  TRANSFER = 'transfer',
+  SOURCE_VALIDATOR = 'source_validator',
 }
 
 export enum CONST_MSG_TYPE {

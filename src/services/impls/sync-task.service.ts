@@ -27,6 +27,7 @@ import { ProposalDeposit } from "../../entities/proposal-deposit.entity";
 import { Delegation } from "../../entities/delegation.entity";
 import { DelegatorReward } from "../../entities/delegator-reward.entity";
 import { IDelegatorRewardRepository } from "../../repositories/idelegator-reward.repository";
+import e from "express";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -525,6 +526,25 @@ export class SyncTaskService implements ISyncTaskService {
                         const txBody = txData.tx_response.tx.body.messages[0];
                         txType = txBody['@type'];
                     }
+                    let txRawLogData;
+                    const txMsgType = txType.substring(txType.lastIndexOf('.') + 1);
+                    if (txMsgType == CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD) {
+                        let amount = txData.tx_response.logs[0].events.find(
+                            ({ type }) => type === CONST_CHAR.WITHDRAW_REWARDS,
+                        );
+                        amount.attributes = amount.attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
+                        txRawLogData = JSON.stringify(amount);
+                    } else if (txMsgType == CONST_MSG_TYPE.MSG_DELEGATE || txMsgType == CONST_MSG_TYPE.MSG_REDELEGATE || txMsgType == CONST_MSG_TYPE.MSG_UNDELEGATE) {
+                        let amount = txData.tx_response.logs[0].events.find(
+                            ({ type }) => type === CONST_CHAR.TRANSFER,
+                        );
+                        amount.attributes = amount.attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
+                        let action = txData.tx_response.logs[0].events.find(
+                            ({ type }) => type === CONST_CHAR.DELEGATE || type === CONST_CHAR.REDELEGATE || CONST_CHAR.UNBOND,
+                        );
+                        action.attributes = action.attributes.filter((x) => x.key == CONST_CHAR.VALIDATOR || x.key == CONST_CHAR.SOURCE_VALIDATOR || x.key == CONST_CHAR.AMOUNT);
+                        txRawLogData = JSON.stringify([amount, action]);
+                    }
                     const newTx = new Transaction();
                     const fee = txData.tx_response.tx.auth_info.fee.amount[0];
                     const txFee = (fee[CONST_CHAR.AMOUNT] / APP_CONSTANTS.PRECISION_DIV).toFixed(6);
@@ -538,6 +558,7 @@ export class SyncTaskService implements ISyncTaskService {
                     newTx.height = fetchingBlockHeight;
                     newTx.info = txData.tx_response.info;
                     newTx.raw_log = txData.tx_response.raw_log;
+                    newTx.raw_log_data = txRawLogData;
                     newTx.timestamp = blockData.block.header.time;
                     newTx.tx = JSON.stringify(txData.tx_response);
                     newTx.tx_hash = txData.tx_response.txhash;
