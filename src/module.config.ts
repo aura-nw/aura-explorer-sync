@@ -5,6 +5,7 @@ import { DelegatorReward } from './entities/delegator-reward.entity';
 import { HistoryProposal } from './entities/history-proposal.entity';
 import { ProposalDeposit } from './entities/proposal-deposit.entity';
 import { ProposalVote } from './entities/proposal-vote.entity';
+import { SmartContract } from './entities/smart-contract.entity';
 import { SyncStatus } from './entities/sync-status.entity';
 
 export const ENTITIES_CONFIG = {
@@ -20,6 +21,7 @@ export const ENTITIES_CONFIG = {
   HISTORY_PROPOSAL: HistoryProposal,
   PROPOSAL_VOTE: ProposalVote,
   SYNC_STATUS: SyncStatus,
+  SMART_CONTRACT: SmartContract,
 };
 
 export const REQUEST_CONFIG = {
@@ -39,6 +41,7 @@ export module MODULE_RESPONSE {
 export const SERVICE_INTERFACE = {
   ISYNC_PROPOSAL_SERVICE: 'ISyncProposalService',
   ISYNC_TASK_SERVICE: 'ISyncTaskService',
+  ISYNC_WEBSOCKET_SERVICE: 'ISyncWebsocketService',
 };
 
 export const REPOSITORY_INTERFACE = {
@@ -54,6 +57,7 @@ export const REPOSITORY_INTERFACE = {
   IPROPOSAL_DEPOSIT_REPOSITORY: 'IProposalDepositRepository',
   IPROPOSAL_VOTE_REPOSITORY: 'IProposalVoteRepository',
   ISYNC_STATUS_REPOSITORY: 'ISyncStatusRepository',
+  ISMART_CONTRACT_REPOSITORY: 'ISmartContractRepository',
 };
 
 export const PROVIDER_INTERFACE = {};
