@@ -531,15 +531,21 @@ export class SyncTaskService implements ISyncTaskService {
                             amount.attributes = amount.attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
                             txRawLogData = JSON.stringify(amount);
                         } else if (txMsgType == CONST_MSG_TYPE.MSG_DELEGATE || txMsgType == CONST_MSG_TYPE.MSG_REDELEGATE || txMsgType == CONST_MSG_TYPE.MSG_UNDELEGATE) {
-                            let amount = txData.tx_response.logs[0].events.find(
+                            let amount = txData.tx_response.tx.body.messages[0].amount;
+                            let reward = txData.tx_response.logs[0].events.find(
                                 ({ type }) => type === CONST_CHAR.TRANSFER,
-                            );
-                            amount.attributes = amount.attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
-                            let action = txData.tx_response.logs[0].events.find(
-                                ({ type }) => type === CONST_CHAR.DELEGATE || type === CONST_CHAR.REDELEGATE || type === CONST_CHAR.UNBOND,
-                            );
-                            action.attributes = action.attributes.filter((x) => x.key == CONST_CHAR.VALIDATOR || x.key == CONST_CHAR.SOURCE_VALIDATOR || x.key == CONST_CHAR.AMOUNT);
-                            txRawLogData = JSON.stringify([amount, action]);
+                            ).attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
+                            // reward.attributes = reward.attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
+                            // let action = txData.tx_response.logs[0].events.find(
+                            //     ({ type }) => type === CONST_CHAR.DELEGATE || type === CONST_CHAR.REDELEGATE || type === CONST_CHAR.UNBOND,
+                            // );
+                            // action.attributes = action.attributes.filter((x) => x.key == CONST_CHAR.VALIDATOR || x.key == CONST_CHAR.SOURCE_VALIDATOR || x.key == CONST_CHAR.AMOUNT);
+                            // txRawLogData = JSON.stringify([amount, action]);
+                            const rawData = {
+                                amount,
+                                reward
+                            };
+                            txRawLogData = JSON.stringify(rawData);
                         }
                     } else {
                         const txBody = txData.tx_response.tx.body.messages[0];
