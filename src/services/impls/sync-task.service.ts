@@ -510,7 +510,7 @@ export class SyncTaskService implements ISyncTaskService {
 
                     const txData = await this._commonUtil.getDataAPI(this.api, paramsTx);
 
-                    let txType = 'FAILED', txRawLogData;;
+                    let txType = 'FAILED', txRawLogData;
                     if (txData.tx_response.code === 0) {
                         const txLog = JSON.parse(txData.tx_response.raw_log);
 
@@ -532,9 +532,14 @@ export class SyncTaskService implements ISyncTaskService {
                             txRawLogData = JSON.stringify(amount);
                         } else if (txMsgType == CONST_MSG_TYPE.MSG_DELEGATE || txMsgType == CONST_MSG_TYPE.MSG_REDELEGATE || txMsgType == CONST_MSG_TYPE.MSG_UNDELEGATE) {
                             let amount = txData.tx_response.tx.body.messages[0].amount;
-                            let reward = txData.tx_response.logs[0].events.find(
-                                ({ type }) => type === CONST_CHAR.TRANSFER,
-                            ).attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
+                            let reward;
+                            try {
+                                reward = txData.tx_response.logs[0].events.find(
+                                    ({ type }) => type === CONST_CHAR.TRANSFER,
+                                ).attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
+                            } catch (error) {
+                                reward = 0;
+                            }
                             // reward.attributes = reward.attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
                             // let action = txData.tx_response.logs[0].events.find(
                             //     ({ type }) => type === CONST_CHAR.DELEGATE || type === CONST_CHAR.REDELEGATE || type === CONST_CHAR.UNBOND,
