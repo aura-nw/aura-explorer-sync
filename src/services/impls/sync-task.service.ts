@@ -211,13 +211,7 @@ export class SyncTaskService implements ISyncTaskService {
                 const account_address = bech32.encode(CONST_PUBKEY_ADDR.AURA, bech32.toWords(wordsByte));
                 // get validator detail
                 const validatorUrl = `staking/validators/${data.operator_address}`;
-                // get slashing signing info
-                const paramDelegation = `cosmos/staking/v1beta1/validators/${data.operator_address}/delegations/${account_address}`;
-
-                const [validatorResponse, delegationData] = await Promise.all([
-                    this._commonUtil.getDataAPI(this.api, validatorUrl),
-                    this._commonUtil.getDataAPI(this.api, paramDelegation)
-                ])
+                const validatorResponse = await this._commonUtil.getDataAPI(this.api, validatorUrl);
 
                 try {
                     // create validator
@@ -253,10 +247,17 @@ export class SyncTaskService implements ISyncTaskService {
                     }
                     newValidator.self_bonded = 0;
                     newValidator.percent_self_bonded = '0.00';
-                    if (delegationData && delegationData.delegation_response) {
-                        newValidator.self_bonded = delegationData.delegation_response.balance.amount;
-                        const percentSelfBonded = (delegationData.delegation_response.balance.amount / data.tokens) * 100;
-                        newValidator.percent_self_bonded = percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
+                    try {
+                        // get delegations
+                        const paramDelegation = `cosmos/staking/v1beta1/validators/${data.operator_address}/delegations/${account_address}`;
+                        const delegationData = await this._commonUtil.getDataAPI(this.api, paramDelegation);
+                        if (delegationData && delegationData.delegation_response) {
+                            newValidator.self_bonded = delegationData.delegation_response.balance.amount;
+                            const percentSelfBonded = (delegationData.delegation_response.balance.amount / data.tokens) * 100;
+                            newValidator.percent_self_bonded = percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
+                        }
+                    } catch(error) {
+                        this._logger.error(null, `Not exist delegations`);
                     }
 
                     // insert into table validator
