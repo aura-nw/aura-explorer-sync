@@ -26,7 +26,7 @@ export class SyncWebsocketService implements ISyncWebsocketService {
 
     async startSyncWebsocket() {
         // Wait for rest service start first
-        // await this.sleep(5000);
+        await this.sleep(5000);
         this._logger.log('syncFromNetwork');
         let websocketUrl = this.websocketSubscriber;
         let self = this;
@@ -90,8 +90,10 @@ export class SyncWebsocketService implements ISyncWebsocketService {
             if (messageAction === MESSAGE_ACTION.MSG_INSTANTIATE_CONTRACT) {
                 let contract_address = response.result.events['instantiate._contract_address'][0] ?? '';
                 let creator_address = response.result.events['message.sender'][0] ?? '';
+                let height = response.result.events['tx.height'][0] ?? null;
 
                 let smartContract = {
+                    height,
                     contract_address,
                     creator_address,
                     schema: '',

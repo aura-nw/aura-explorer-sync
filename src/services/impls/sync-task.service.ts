@@ -28,6 +28,7 @@ import { Delegation } from "../../entities/delegation.entity";
 import { DelegatorReward } from "../../entities/delegator-reward.entity";
 import { IDelegatorRewardRepository } from "../../repositories/idelegator-reward.repository";
 import e from "express";
+import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -67,6 +68,8 @@ export class SyncTaskService implements ISyncTaskService {
         private delegationRepository: IDelegationRepository,
         @Inject(REPOSITORY_INTERFACE.IDELEGATOR_REWARD_REPOSITORY)
         private delegatorRewardRepository: IDelegatorRewardRepository,
+        @Inject(REPOSITORY_INTERFACE.ISMART_CONTRACT_REPOSITORY)
+        private smartContractRepository: ISmartContractRepository,
         @InjectSchedule() private readonly schedule: Schedule
     ) {
         this._logger.log(
@@ -552,6 +555,28 @@ export class SyncTaskService implements ISyncTaskService {
                                 reward
                             };
                             txRawLogData = JSON.stringify(rawData);
+                        } else if (txMsgType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
+                            try {
+                                let height = txData.tx_response.height;
+                                let contract_address = txData.tx_response.logs[0].events.find(
+                                    ({ type }) => type === CONST_CHAR.INSTANTIATE,
+                                ).attributes.find(
+                                    ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
+                                ).value;
+                                let creator_address = txData.body.messages[0].sender;
+
+                                var smartContract = {
+                                    height,
+                                    contract_address,
+                                    creator_address,
+                                    schema: '',
+                                    url: '',
+                                }
+                                await this.smartContractRepository.create(smartContract);
+                            } catch (error) {
+                                this._logger.error(null, `Got error instantiate contract transaction`);
+                                this._logger.error(null, `${error.stack}`);
+                            }
                         }
                     } else {
                         const txBody = txData.tx_response.tx.body.messages[0];

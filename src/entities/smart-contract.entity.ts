@@ -3,6 +3,9 @@ import { BaseEntityIncrementId } from "./base/base.entity";
 
 @Entity('smart_contracts')
 export class SmartContract extends BaseEntityIncrementId {
+    @Column({ name: 'height' })
+    height: number;
+
     @Column({ name: 'contract_address'})
     contract_address: string;
 

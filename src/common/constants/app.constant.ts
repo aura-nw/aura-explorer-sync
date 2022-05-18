@@ -50,6 +50,8 @@ export enum CONST_CHAR {
   WITHDRAW_REWARDS = 'withdraw_rewards',
   TRANSFER = 'transfer',
   SOURCE_VALIDATOR = 'source_validator',
+  INSTANTIATE = 'instantiate',
+  _CONTRACT_ADDRESS = '_contract_address',
 }
 
 export enum CONST_MSG_TYPE {
@@ -59,7 +61,8 @@ export enum CONST_MSG_TYPE {
   MSG_DELEGATE = 'MsgDelegate',
   MSG_UNDELEGATE = 'MsgUndelegate',
   MSG_REDELEGATE = 'MsgBeginRedelegate',
-  MSG_WITHDRAW_DELEGATOR_REWARD = 'MsgWithdrawDelegatorReward'
+  MSG_WITHDRAW_DELEGATOR_REWARD = 'MsgWithdrawDelegatorReward',
+  MSG_INSTANTIATE_CONTRACT = 'MsgInstantiateContract',
 }
 
 export enum CONST_PROPOSAL_TYPE {

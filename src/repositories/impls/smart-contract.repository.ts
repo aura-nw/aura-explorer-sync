@@ -17,4 +17,16 @@ export class SmartContractRepository extends BaseRepository implements ISmartCon
             '============== Constructor Smart Contract Repository ==============',
         );
     }
+
+    async getLatestBlockHeight() {
+        let query = this.repos
+            .createQueryBuilder('smart_contracts')
+            .select('smart_contracts.height as height')
+            .orderBy('smart_contracts.id', 'DESC');
+        let res = await query.getRawOne();
+        if (res) {
+            return res.height;
+        }
+        return 0;
+    }
 }
