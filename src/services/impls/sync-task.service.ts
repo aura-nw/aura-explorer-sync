@@ -878,7 +878,9 @@ export class SyncTaskService implements ISyncTaskService {
                             if (claimEvent) {
                                 const attributes = claimEvent.attributes;
                                 amount1 = Number(attributes[2].value.replace(CONST_CHAR.UAURA, ''));
-                                amount2 = Number(attributes[5].value.replace(CONST_CHAR.UAURA, ''));
+                                if (attributes.length > 3) {
+                                    amount2 = Number(attributes[5].value.replace(CONST_CHAR.UAURA, ''));
+                                }
                             }
                         }
                         let reward1 = new DelegatorReward();
