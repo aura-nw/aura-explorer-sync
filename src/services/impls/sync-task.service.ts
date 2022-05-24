@@ -263,13 +263,11 @@ export class SyncTaskService implements ISyncTaskService {
                     } catch(error) {
                         this._logger.error(null, `Not exist delegations`);
                     }
-
-                    // insert into table validator
-                    try {
+                    const validatorFilter = await this.validatorRepository.findOne({ where: { operator_address: data.operator_address } });
+                    if (validatorFilter) {
+                        this.syncUpdateValidator(newValidator, validatorFilter);
+                    } else {
                         await this.validatorRepository.create(newValidator);
-
-                    } catch (error) {
-                        this._logger.error(null, `Validator is already existed!`);
                     }
                     // TODO: Write validator to influxdb
                     this.influxDbClient.writeValidator(
@@ -279,10 +277,6 @@ export class SyncTaskService implements ISyncTaskService {
                         newValidator.power,
                     );
 
-                    const validatorFilter = await this.validatorRepository.findOne({ where: { operator_address: data.operator_address } });
-                    if (validatorFilter) {
-                        this.syncUpdateValidator(newValidator, validatorFilter);
-                    }
                     this.isSyncValidator = false;
                 } catch (error) {
                     this.isSyncValidator = false;
@@ -684,242 +678,238 @@ export class SyncTaskService implements ISyncTaskService {
     }
 
     async syncDataWithTransactions(txData) {
-        try {
-            const code = txData.tx_response.code;
-            if (code === 0 && txData.tx.body.messages && txData.tx.body.messages.length > 0) {
-                for (let i = 0; i < txData.tx.body.messages.length; i++) {
-                    const message: any = txData.tx.body.messages[i];
-                    //check type to sync data
-                    const txTypeReturn = message['@type'];
-                    const txType = txTypeReturn.substring(txTypeReturn.lastIndexOf('.') + 1);
-                    if (txType === CONST_MSG_TYPE.MSG_VOTE) {
-                        const proposalId = Number(message.proposal_id);
-                        const voter = message.voter;
-                        const option = message.option;
-                        //check exist in db
-                        let findVote = await this.proposalVoteRepository.findOne({
-                            where: { proposal_id: proposalId, voter: voter }
-                        });
-                        if (findVote) {
-                            findVote.option = option;
-                            findVote.updated_at = new Date(txData.tx_response.timestamp);
-                            findVote.tx_hash = txData.tx_response.txhash;
-                            await this.proposalVoteRepository.update(findVote);
-                        } else {
-                            let proposalVote = new ProposalVote();
-                            proposalVote.proposal_id = proposalId;
-                            proposalVote.voter = voter;
-                            proposalVote.tx_hash = txData.tx_response.txhash;
-                            proposalVote.option = option;
-                            proposalVote.created_at = new Date(txData.tx_response.timestamp);
-                            proposalVote.updated_at = new Date(txData.tx_response.timestamp);
-                            await this.proposalVoteRepository.create(proposalVote);
-                        }
-                    } else if (txType === CONST_MSG_TYPE.MSG_SUBMIT_PROPOSAL) {
-                        let historyProposal = new HistoryProposal();
-                        const proposalTypeReturn = message.content['@type'];
-                        const proposalType = proposalTypeReturn.substring(proposalTypeReturn.lastIndexOf('.') + 1);
-                        historyProposal.proposal_id = 0;
-                        if (txData.tx_response.logs && txData.tx_response.logs.length > 0
-                            && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
-                            const events = txData.tx_response.logs[0].events;
-                            const submitEvent = events.find(i => i.type === 'submit_proposal');
-                            const attributes = submitEvent.attributes;
-                            const findId = attributes.find(i => i.key === 'proposal_id');
-                            historyProposal.proposal_id = Number(findId.value);
-                        }
-                        historyProposal.recipient = '';
-                        historyProposal.amount = 0;
-                        historyProposal.initial_deposit = 0;
-                        if (proposalType === CONST_PROPOSAL_TYPE.COMMUNITY_POOL_SPEND_PROPOSAL) {
-                            historyProposal.recipient = message.content.recipient;
-                            historyProposal.amount = Number(message.content.amount[0].amount);
-                        } else {
-                            if (message.initial_deposit.length > 0) {
-                                historyProposal.initial_deposit = Number(message.initial_deposit[0].amount);
-                                //save data to proposal deposit
-                                let proposalDeposit = new ProposalDeposit();
-                                proposalDeposit.proposal_id = historyProposal.proposal_id;
-                                proposalDeposit.tx_hash = txData.tx_response.txhash;
-                                proposalDeposit.depositor = message.proposer;
-                                proposalDeposit.amount = Number(message.initial_deposit[0].amount);
-                                proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
-                                await this.proposalDepositRepository.create(proposalDeposit);
-                            }
-                        }
-                        historyProposal.tx_hash = txData.tx_response.txhash;
-                        historyProposal.title = message.content.title;
-                        historyProposal.description = message.content.description;
-                        historyProposal.proposer = message.proposer;
-                        historyProposal.created_at = new Date(txData.tx_response.timestamp);
-                        await this.historyProposalRepository.create(historyProposal);
-                    } else if (txType === CONST_MSG_TYPE.MSG_DEPOSIT) {
-                        let proposalDeposit = new ProposalDeposit();
-                        proposalDeposit.proposal_id = Number(message.proposal_id);
-                        proposalDeposit.tx_hash = txData.tx_response.txhash;
-                        proposalDeposit.depositor = message.depositor;
-                        proposalDeposit.amount = Number(message.amount[0].amount);
-                        proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
-                        await this.proposalDepositRepository.create(proposalDeposit);
-                    } else if (txType === CONST_MSG_TYPE.MSG_DELEGATE) {
-                        let delegation = new Delegation();
-                        delegation.tx_hash = txData.tx_response.txhash;
-                        delegation.delegator_address = message.delegator_address;
-                        delegation.validator_address = message.validator_address;
-                        delegation.amount = Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
-                        delegation.created_at = new Date(txData.tx_response.timestamp);
-                        delegation.type = CONST_DELEGATE_TYPE.DELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation.delegator_address,
-                            delegation.validator_address,
-                            '',
-                            delegation.amount,
-                            delegation.tx_hash,
-                            delegation.created_at,
-                            delegation.type
-                        );
-                        await this.delegationRepository.create(delegation);
-                        //save data to delegator_rewards table
-                        let reward = new DelegatorReward();
-                        reward.delegator_address = message.delegator_address;
-                        reward.validator_address = message.validator_address;
-                        reward.amount = 0;
-                        if (txData.tx_response.logs && txData.tx_response.logs.length > 0
-                            && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
-                            const events = txData.tx_response.logs[0].events;
-                            const claimEvent = events.find(i => i.type === 'transfer');
-                            if (claimEvent) {
-                                const attributes = claimEvent.attributes;
-                                reward.amount = Number(attributes[2].value.replace(CONST_CHAR.UAURA, ''));
-                            }
-                        }
-                        reward.tx_hash = txData.tx_response.txhash;
-                        await this.delegatorRewardRepository.create(reward);
-                    } else if (txType === CONST_MSG_TYPE.MSG_UNDELEGATE) {
-                        let delegation = new Delegation();
-                        delegation.tx_hash = txData.tx_response.txhash;
-                        delegation.delegator_address = message.delegator_address;
-                        delegation.validator_address = message.validator_address;
-                        delegation.amount = (Number(message.amount.amount) * (-1)) / APP_CONSTANTS.PRECISION_DIV;
-                        delegation.created_at = new Date(txData.tx_response.timestamp);
-                        delegation.type = CONST_DELEGATE_TYPE.UNDELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation.delegator_address,
-                            delegation.validator_address,
-                            '',
-                            delegation.amount,
-                            delegation.tx_hash,
-                            delegation.created_at,
-                            delegation.type
-                        );
-                        await this.delegationRepository.create(delegation);
-                        //save data to delegator_rewards table
-                        let reward = new DelegatorReward();
-                        reward.delegator_address = message.delegator_address;
-                        reward.validator_address = message.validator_address;
-                        reward.amount = 0;
-                        if (txData.tx_response.logs && txData.tx_response.logs.length > 0
-                            && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
-                            const events = txData.tx_response.logs[0].events;
-                            const claimEvent = events.find(i => i.type === 'transfer');
-                            if (claimEvent) {
-                                const attributes = claimEvent.attributes;
-                                reward.amount = Number(attributes[2].value.replace(CONST_CHAR.UAURA, ''));
-                            }
-                        }
-                        reward.tx_hash = txData.tx_response.txhash;
-                        await this.delegatorRewardRepository.create(reward);
-                    } else if (txType === CONST_MSG_TYPE.MSG_REDELEGATE) {
-                        let delegation1 = new Delegation();
-                        delegation1.tx_hash = txData.tx_response.txhash;
-                        delegation1.delegator_address = message.delegator_address;
-                        delegation1.validator_address = message.validator_src_address;
-                        delegation1.amount = (Number(message.amount.amount) * (-1)) / APP_CONSTANTS.PRECISION_DIV;
-                        delegation1.created_at = new Date(txData.tx_response.timestamp);
-                        delegation1.type = CONST_DELEGATE_TYPE.REDELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation1.delegator_address,
-                            delegation1.validator_address,
-                            '',
-                            delegation1.amount,
-                            delegation1.tx_hash,
-                            delegation1.created_at,
-                            delegation1.type
-                        );
-                        let delegation2 = new Delegation();
-                        delegation2.tx_hash = txData.tx_response.txhash;
-                        delegation2.delegator_address = message.delegator_address;
-                        delegation2.validator_address = message.validator_dst_address;
-                        delegation2.amount = Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
-                        delegation2.created_at = new Date(txData.tx_response.timestamp);
-                        delegation2.type = CONST_DELEGATE_TYPE.REDELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation2.delegator_address,
-                            delegation2.validator_address,
-                            '',
-                            delegation2.amount,
-                            delegation2.tx_hash,
-                            delegation2.created_at,
-                            delegation2.type
-                        );
-                        await this.delegationRepository.create(delegation1);
-                        await this.delegationRepository.create(delegation2);
-                        //save data to delegator_rewards table
-                        let amount1 = 0;
-                        let amount2 = 0;
-                        if (txData.tx_response.logs && txData.tx_response.logs.length > 0
-                            && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
-                            const events = txData.tx_response.logs[0].events;
-                            const claimEvent = events.find(i => i.type === 'transfer');
-                            if (claimEvent) {
-                                const attributes = claimEvent.attributes;
-                                amount1 = Number(attributes[2].value.replace(CONST_CHAR.UAURA, ''));
-                                if (attributes.length > 3) {
-                                    amount2 = Number(attributes[5].value.replace(CONST_CHAR.UAURA, ''));
-                                }
-                            }
-                        }
-                        let reward1 = new DelegatorReward();
-                        reward1.delegator_address = message.delegator_address;
-                        reward1.validator_address = message.validator_src_address;
-                        reward1.amount = amount1;
-                        reward1.tx_hash = txData.tx_response.txhash;
-                        await this.delegatorRewardRepository.create(reward1);
-                        let reward2 = new DelegatorReward();
-                        reward2.delegator_address = message.delegator_address;
-                        reward2.validator_address = message.validator_dst_address;
-                        reward2.amount = amount2;
-                        reward2.tx_hash = txData.tx_response.txhash;
-                        await this.delegatorRewardRepository.create(reward2);
-                    } else if (txType === CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD) {
-                        let reward = new DelegatorReward();
-                        reward.delegator_address = message.delegator_address;
-                        reward.validator_address = message.validator_address;
-                        reward.amount = 0;
-                        if (txData.tx_response.logs && txData.tx_response.logs.length > 0) {
-                            for (let i = 0; i < txData.tx_response.logs.length; i++) {
-                                const events = txData.tx_response.logs[i].events;
-                                const rewardEvent = events.find(i => i.type === 'withdraw_rewards');
-                                const attributes = rewardEvent.attributes;
-                                const amount = attributes[0].value;
-                                const findValidator = attributes.find(i => i.value === message.validator_address);
-                                if (findValidator) {
-                                    reward.amount = Number(amount.replace(CONST_CHAR.UAURA, ''));
-                                }
-                            }
-                        }
-                        reward.tx_hash = txData.tx_response.txhash;
-                        reward.created_at = new Date(txData.tx_response.timestamp);
-                        await this.delegatorRewardRepository.create(reward);
+        const code = txData.tx_response.code;
+        if (code === 0 && txData.tx.body.messages && txData.tx.body.messages.length > 0) {
+            for (let i = 0; i < txData.tx.body.messages.length; i++) {
+                const message: any = txData.tx.body.messages[i];
+                //check type to sync data
+                const txTypeReturn = message['@type'];
+                const txType = txTypeReturn.substring(txTypeReturn.lastIndexOf('.') + 1);
+                if (txType === CONST_MSG_TYPE.MSG_VOTE) {
+                    const proposalId = Number(message.proposal_id);
+                    const voter = message.voter;
+                    const option = message.option;
+                    //check exist in db
+                    let findVote = await this.proposalVoteRepository.findOne({
+                        where: { proposal_id: proposalId, voter: voter }
+                    });
+                    if (findVote) {
+                        findVote.option = option;
+                        findVote.updated_at = new Date(txData.tx_response.timestamp);
+                        findVote.tx_hash = txData.tx_response.txhash;
+                        await this.proposalVoteRepository.update(findVote);
+                    } else {
+                        let proposalVote = new ProposalVote();
+                        proposalVote.proposal_id = proposalId;
+                        proposalVote.voter = voter;
+                        proposalVote.tx_hash = txData.tx_response.txhash;
+                        proposalVote.option = option;
+                        proposalVote.created_at = new Date(txData.tx_response.timestamp);
+                        proposalVote.updated_at = new Date(txData.tx_response.timestamp);
+                        await this.proposalVoteRepository.create(proposalVote);
                     }
+                } else if (txType === CONST_MSG_TYPE.MSG_SUBMIT_PROPOSAL) {
+                    let historyProposal = new HistoryProposal();
+                    const proposalTypeReturn = message.content['@type'];
+                    const proposalType = proposalTypeReturn.substring(proposalTypeReturn.lastIndexOf('.') + 1);
+                    historyProposal.proposal_id = 0;
+                    if (txData.tx_response.logs && txData.tx_response.logs.length > 0
+                        && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
+                        const events = txData.tx_response.logs[0].events;
+                        const submitEvent = events.find(i => i.type === 'submit_proposal');
+                        const attributes = submitEvent.attributes;
+                        const findId = attributes.find(i => i.key === 'proposal_id');
+                        historyProposal.proposal_id = Number(findId.value);
+                    }
+                    historyProposal.recipient = '';
+                    historyProposal.amount = 0;
+                    historyProposal.initial_deposit = 0;
+                    if (proposalType === CONST_PROPOSAL_TYPE.COMMUNITY_POOL_SPEND_PROPOSAL) {
+                        historyProposal.recipient = message.content.recipient;
+                        historyProposal.amount = Number(message.content.amount[0].amount);
+                    } else {
+                        if (message.initial_deposit.length > 0) {
+                            historyProposal.initial_deposit = Number(message.initial_deposit[0].amount);
+                            //save data to proposal deposit
+                            let proposalDeposit = new ProposalDeposit();
+                            proposalDeposit.proposal_id = historyProposal.proposal_id;
+                            proposalDeposit.tx_hash = txData.tx_response.txhash;
+                            proposalDeposit.depositor = message.proposer;
+                            proposalDeposit.amount = Number(message.initial_deposit[0].amount);
+                            proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
+                            await this.proposalDepositRepository.create(proposalDeposit);
+                        }
+                    }
+                    historyProposal.tx_hash = txData.tx_response.txhash;
+                    historyProposal.title = message.content.title;
+                    historyProposal.description = message.content.description;
+                    historyProposal.proposer = message.proposer;
+                    historyProposal.created_at = new Date(txData.tx_response.timestamp);
+                    await this.historyProposalRepository.create(historyProposal);
+                } else if (txType === CONST_MSG_TYPE.MSG_DEPOSIT) {
+                    let proposalDeposit = new ProposalDeposit();
+                    proposalDeposit.proposal_id = Number(message.proposal_id);
+                    proposalDeposit.tx_hash = txData.tx_response.txhash;
+                    proposalDeposit.depositor = message.depositor;
+                    proposalDeposit.amount = Number(message.amount[0].amount);
+                    proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
+                    await this.proposalDepositRepository.create(proposalDeposit);
+                } else if (txType === CONST_MSG_TYPE.MSG_DELEGATE) {
+                    let delegation = new Delegation();
+                    delegation.tx_hash = txData.tx_response.txhash;
+                    delegation.delegator_address = message.delegator_address;
+                    delegation.validator_address = message.validator_address;
+                    delegation.amount = Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
+                    delegation.created_at = new Date(txData.tx_response.timestamp);
+                    delegation.type = CONST_DELEGATE_TYPE.DELEGATE;
+                    // TODO: Write delegation to influxdb
+                    this.influxDbClient.writeDelegation(
+                        delegation.delegator_address,
+                        delegation.validator_address,
+                        '',
+                        delegation.amount,
+                        delegation.tx_hash,
+                        delegation.created_at,
+                        delegation.type
+                    );
+                    await this.delegationRepository.create(delegation);
+                    //save data to delegator_rewards table
+                    let reward = new DelegatorReward();
+                    reward.delegator_address = message.delegator_address;
+                    reward.validator_address = message.validator_address;
+                    reward.amount = 0;
+                    if (txData.tx_response.logs && txData.tx_response.logs.length > 0
+                        && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
+                        const events = txData.tx_response.logs[0].events;
+                        const claimEvent = events.find(i => i.type === 'transfer');
+                        if (claimEvent) {
+                            const attributes = claimEvent.attributes;
+                            reward.amount = Number(attributes[2].value.replace(CONST_CHAR.UAURA, ''));
+                        }
+                    }
+                    reward.tx_hash = txData.tx_response.txhash;
+                    await this.delegatorRewardRepository.create(reward);
+                } else if (txType === CONST_MSG_TYPE.MSG_UNDELEGATE) {
+                    let delegation = new Delegation();
+                    delegation.tx_hash = txData.tx_response.txhash;
+                    delegation.delegator_address = message.delegator_address;
+                    delegation.validator_address = message.validator_address;
+                    delegation.amount = (Number(message.amount.amount) * (-1)) / APP_CONSTANTS.PRECISION_DIV;
+                    delegation.created_at = new Date(txData.tx_response.timestamp);
+                    delegation.type = CONST_DELEGATE_TYPE.UNDELEGATE;
+                    // TODO: Write delegation to influxdb
+                    this.influxDbClient.writeDelegation(
+                        delegation.delegator_address,
+                        delegation.validator_address,
+                        '',
+                        delegation.amount,
+                        delegation.tx_hash,
+                        delegation.created_at,
+                        delegation.type
+                    );
+                    await this.delegationRepository.create(delegation);
+                    //save data to delegator_rewards table
+                    let reward = new DelegatorReward();
+                    reward.delegator_address = message.delegator_address;
+                    reward.validator_address = message.validator_address;
+                    reward.amount = 0;
+                    if (txData.tx_response.logs && txData.tx_response.logs.length > 0
+                        && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
+                        const events = txData.tx_response.logs[0].events;
+                        const claimEvent = events.find(i => i.type === 'transfer');
+                        if (claimEvent) {
+                            const attributes = claimEvent.attributes;
+                            reward.amount = Number(attributes[2].value.replace(CONST_CHAR.UAURA, ''));
+                        }
+                    }
+                    reward.tx_hash = txData.tx_response.txhash;
+                    await this.delegatorRewardRepository.create(reward);
+                } else if (txType === CONST_MSG_TYPE.MSG_REDELEGATE) {
+                    let delegation1 = new Delegation();
+                    delegation1.tx_hash = txData.tx_response.txhash;
+                    delegation1.delegator_address = message.delegator_address;
+                    delegation1.validator_address = message.validator_src_address;
+                    delegation1.amount = (Number(message.amount.amount) * (-1)) / APP_CONSTANTS.PRECISION_DIV;
+                    delegation1.created_at = new Date(txData.tx_response.timestamp);
+                    delegation1.type = CONST_DELEGATE_TYPE.REDELEGATE;
+                    // TODO: Write delegation to influxdb
+                    this.influxDbClient.writeDelegation(
+                        delegation1.delegator_address,
+                        delegation1.validator_address,
+                        '',
+                        delegation1.amount,
+                        delegation1.tx_hash,
+                        delegation1.created_at,
+                        delegation1.type
+                    );
+                    let delegation2 = new Delegation();
+                    delegation2.tx_hash = txData.tx_response.txhash;
+                    delegation2.delegator_address = message.delegator_address;
+                    delegation2.validator_address = message.validator_dst_address;
+                    delegation2.amount = Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
+                    delegation2.created_at = new Date(txData.tx_response.timestamp);
+                    delegation2.type = CONST_DELEGATE_TYPE.REDELEGATE;
+                    // TODO: Write delegation to influxdb
+                    this.influxDbClient.writeDelegation(
+                        delegation2.delegator_address,
+                        delegation2.validator_address,
+                        '',
+                        delegation2.amount,
+                        delegation2.tx_hash,
+                        delegation2.created_at,
+                        delegation2.type
+                    );
+                    await this.delegationRepository.create(delegation1);
+                    await this.delegationRepository.create(delegation2);
+                    //save data to delegator_rewards table
+                    let amount1 = 0;
+                    let amount2 = 0;
+                    if (txData.tx_response.logs && txData.tx_response.logs.length > 0
+                        && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
+                        const events = txData.tx_response.logs[0].events;
+                        const claimEvent = events.find(i => i.type === 'transfer');
+                        if (claimEvent) {
+                            const attributes = claimEvent.attributes;
+                            amount1 = Number(attributes[2].value.replace(CONST_CHAR.UAURA, ''));
+                            if (attributes.length > 3) {
+                                amount2 = Number(attributes[5].value.replace(CONST_CHAR.UAURA, ''));
+                            }
+                        }
+                    }
+                    let reward1 = new DelegatorReward();
+                    reward1.delegator_address = message.delegator_address;
+                    reward1.validator_address = message.validator_src_address;
+                    reward1.amount = amount1;
+                    reward1.tx_hash = txData.tx_response.txhash;
+                    await this.delegatorRewardRepository.create(reward1);
+                    let reward2 = new DelegatorReward();
+                    reward2.delegator_address = message.delegator_address;
+                    reward2.validator_address = message.validator_dst_address;
+                    reward2.amount = amount2;
+                    reward2.tx_hash = txData.tx_response.txhash;
+                    await this.delegatorRewardRepository.create(reward2);
+                } else if (txType === CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD) {
+                    let reward = new DelegatorReward();
+                    reward.delegator_address = message.delegator_address;
+                    reward.validator_address = message.validator_address;
+                    reward.amount = 0;
+                    if (txData.tx_response.logs && txData.tx_response.logs.length > 0) {
+                        for (let i = 0; i < txData.tx_response.logs.length; i++) {
+                            const events = txData.tx_response.logs[i].events;
+                            const rewardEvent = events.find(i => i.type === 'withdraw_rewards');
+                            const attributes = rewardEvent.attributes;
+                            const amount = attributes[0].value;
+                            const findValidator = attributes.find(i => i.value === message.validator_address);
+                            if (findValidator) {
+                                reward.amount = Number(amount.replace(CONST_CHAR.UAURA, ''));
+                            }
+                        }
+                    }
+                    reward.tx_hash = txData.tx_response.txhash;
+                    reward.created_at = new Date(txData.tx_response.timestamp);
+                    await this.delegatorRewardRepository.create(reward);
                 }
             }
-        } catch (error) {
-            this._logger.log(null, 'Sync data transaction failed');
         }
     }
 
