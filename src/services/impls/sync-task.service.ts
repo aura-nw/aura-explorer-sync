@@ -259,13 +259,11 @@ export class SyncTaskService implements ISyncTaskService {
                     } catch(error) {
                         this._logger.error(null, `Not exist delegations`);
                     }
-
-                    // insert into table validator
-                    try {
+                    const validatorFilter = await this.validatorRepository.findOne({ where: { operator_address: data.operator_address } });
+                    if (validatorFilter) {
+                        this.syncUpdateValidator(newValidator, validatorFilter);
+                    } else {
                         await this.validatorRepository.create(newValidator);
-
-                    } catch (error) {
-                        this._logger.error(null, `Validator is already existed!`);
                     }
                     // TODO: Write validator to influxdb
                     this.influxDbClient.writeValidator(
@@ -275,10 +273,6 @@ export class SyncTaskService implements ISyncTaskService {
                         newValidator.power,
                     );
 
-                    const validatorFilter = await this.validatorRepository.findOne({ where: { operator_address: data.operator_address } });
-                    if (validatorFilter) {
-                        this.syncUpdateValidator(newValidator, validatorFilter);
-                    }
                     this.isSyncValidator = false;
                 } catch (error) {
                     this.isSyncValidator = false;
