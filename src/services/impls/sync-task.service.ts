@@ -256,7 +256,7 @@ export class SyncTaskService implements ISyncTaskService {
                             const percentSelfBonded = (delegationData.delegation_response.balance.amount / data.tokens) * 100;
                             newValidator.percent_self_bonded = percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
                         }
-                    } catch(error) {
+                    } catch (error) {
                         this._logger.error(null, `Not exist delegations`);
                     }
                     const validatorFilter = await this.validatorRepository.findOne({ where: { operator_address: data.operator_address } });
@@ -574,15 +574,16 @@ export class SyncTaskService implements ISyncTaskService {
                 } catch (error) {
                     this._logger.error(null, `Block is already existed!`);
                 }
-                // TODO: Write block to influxdb
-                this.influxDbClient.writeBlock(
-                    newBlock.height,
-                    newBlock.block_hash,
-                    newBlock.num_txs,
-                    newBlock.chainid,
-                    newBlock.timestamp,
-                );
             }
+            // TODO: Write block to influxdb
+            this.influxDbClient.writeBlock(
+                newBlock.height,
+                newBlock.block_hash,
+                newBlock.num_txs,
+                newBlock.chainid,
+                newBlock.timestamp,
+                newBlock.proposer
+            );
 
             /**
              * TODO: Flush pending writes and close writeApi.
@@ -622,43 +623,35 @@ export class SyncTaskService implements ISyncTaskService {
 
     async syncDataWithTransactions(txData) {
         const code = txData.tx_response.code;
-        if (code === 0 && txData.tx.body.messages && txData.tx.body.messages.length > 0) {
+        if (code === 0 && txData.tx.body.messages && txData.tx.body.messages.length > 0
+            && txData.tx.body.messages.length === txData.tx_response.logs.length) {
+            let proposalVotes = [];
+            let proposalDeposits = [];
+            let historyProposals = [];
+            let delegations = [];
+            let delegatorRewards = [];
             for (let i = 0; i < txData.tx.body.messages.length; i++) {
                 const message: any = txData.tx.body.messages[i];
                 //check type to sync data
                 const txTypeReturn = message['@type'];
                 const txType = txTypeReturn.substring(txTypeReturn.lastIndexOf('.') + 1);
                 if (txType === CONST_MSG_TYPE.MSG_VOTE) {
-                    const proposalId = Number(message.proposal_id);
-                    const voter = message.voter;
-                    const option = message.option;
-                    //check exist in db
-                    let findVote = await this.proposalVoteRepository.findOne({
-                        where: { proposal_id: proposalId, voter: voter }
-                    });
-                    if (findVote) {
-                        findVote.option = option;
-                        findVote.updated_at = new Date(txData.tx_response.timestamp);
-                        findVote.tx_hash = txData.tx_response.txhash;
-                        await this.proposalVoteRepository.update(findVote);
-                    } else {
-                        let proposalVote = new ProposalVote();
-                        proposalVote.proposal_id = proposalId;
-                        proposalVote.voter = voter;
-                        proposalVote.tx_hash = txData.tx_response.txhash;
-                        proposalVote.option = option;
-                        proposalVote.created_at = new Date(txData.tx_response.timestamp);
-                        proposalVote.updated_at = new Date(txData.tx_response.timestamp);
-                        await this.proposalVoteRepository.create(proposalVote);
-                    }
+                    let proposalVote = new ProposalVote();
+                    proposalVote.proposal_id = Number(message.proposal_id);
+                    proposalVote.voter = message.voter;
+                    proposalVote.tx_hash = txData.tx_response.txhash;
+                    proposalVote.option = message.option;
+                    proposalVote.created_at = new Date(txData.tx_response.timestamp);
+                    proposalVote.updated_at = new Date(txData.tx_response.timestamp);
+                    proposalVotes.push(proposalVote);
                 } else if (txType === CONST_MSG_TYPE.MSG_SUBMIT_PROPOSAL) {
                     let historyProposal = new HistoryProposal();
                     const proposalTypeReturn = message.content['@type'];
                     const proposalType = proposalTypeReturn.substring(proposalTypeReturn.lastIndexOf('.') + 1);
                     historyProposal.proposal_id = 0;
                     if (txData.tx_response.logs && txData.tx_response.logs.length > 0
-                        && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
-                        const events = txData.tx_response.logs[0].events;
+                        && txData.tx_response.logs[i].events && txData.tx_response.logs[i].events.length > 0) {
+                        const events = txData.tx_response.logs[i].events;
                         const submitEvent = events.find(i => i.type === 'submit_proposal');
                         const attributes = submitEvent.attributes;
                         const findId = attributes.find(i => i.key === 'proposal_id');
@@ -680,7 +673,7 @@ export class SyncTaskService implements ISyncTaskService {
                             proposalDeposit.depositor = message.proposer;
                             proposalDeposit.amount = Number(message.initial_deposit[0].amount);
                             proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
-                            await this.proposalDepositRepository.create(proposalDeposit);
+                            proposalDeposits.push(proposalDeposit);
                         }
                     }
                     historyProposal.tx_hash = txData.tx_response.txhash;
@@ -688,7 +681,7 @@ export class SyncTaskService implements ISyncTaskService {
                     historyProposal.description = message.content.description;
                     historyProposal.proposer = message.proposer;
                     historyProposal.created_at = new Date(txData.tx_response.timestamp);
-                    await this.historyProposalRepository.create(historyProposal);
+                    historyProposals.push(historyProposal);
                 } else if (txType === CONST_MSG_TYPE.MSG_DEPOSIT) {
                     let proposalDeposit = new ProposalDeposit();
                     proposalDeposit.proposal_id = Number(message.proposal_id);
@@ -696,7 +689,7 @@ export class SyncTaskService implements ISyncTaskService {
                     proposalDeposit.depositor = message.depositor;
                     proposalDeposit.amount = Number(message.amount[0].amount);
                     proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
-                    await this.proposalDepositRepository.create(proposalDeposit);
+                    proposalDeposits.push(proposalDeposit);
                 } else if (txType === CONST_MSG_TYPE.MSG_DELEGATE) {
                     let delegation = new Delegation();
                     delegation.tx_hash = txData.tx_response.txhash;
@@ -715,15 +708,15 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation.created_at,
                         delegation.type
                     );
-                    await this.delegationRepository.create(delegation);
+                    delegations.push(delegation);
                     //save data to delegator_rewards table
                     let reward = new DelegatorReward();
                     reward.delegator_address = message.delegator_address;
                     reward.validator_address = message.validator_address;
                     reward.amount = 0;
                     if (txData.tx_response.logs && txData.tx_response.logs.length > 0
-                        && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
-                        const events = txData.tx_response.logs[0].events;
+                        && txData.tx_response.logs[i].events && txData.tx_response.logs[i].events.length > 0) {
+                        const events = txData.tx_response.logs[i].events;
                         const claimEvent = events.find(i => i.type === 'transfer');
                         if (claimEvent) {
                             const attributes = claimEvent.attributes;
@@ -731,7 +724,7 @@ export class SyncTaskService implements ISyncTaskService {
                         }
                     }
                     reward.tx_hash = txData.tx_response.txhash;
-                    await this.delegatorRewardRepository.create(reward);
+                    delegatorRewards.push(reward);
                 } else if (txType === CONST_MSG_TYPE.MSG_UNDELEGATE) {
                     let delegation = new Delegation();
                     delegation.tx_hash = txData.tx_response.txhash;
@@ -750,15 +743,15 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation.created_at,
                         delegation.type
                     );
-                    await this.delegationRepository.create(delegation);
+                    delegations.push(delegation);
                     //save data to delegator_rewards table
                     let reward = new DelegatorReward();
                     reward.delegator_address = message.delegator_address;
                     reward.validator_address = message.validator_address;
                     reward.amount = 0;
                     if (txData.tx_response.logs && txData.tx_response.logs.length > 0
-                        && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
-                        const events = txData.tx_response.logs[0].events;
+                        && txData.tx_response.logs[i].events && txData.tx_response.logs[i].events.length > 0) {
+                        const events = txData.tx_response.logs[i].events;
                         const claimEvent = events.find(i => i.type === 'transfer');
                         if (claimEvent) {
                             const attributes = claimEvent.attributes;
@@ -766,7 +759,7 @@ export class SyncTaskService implements ISyncTaskService {
                         }
                     }
                     reward.tx_hash = txData.tx_response.txhash;
-                    await this.delegatorRewardRepository.create(reward);
+                    delegatorRewards.push(reward);
                 } else if (txType === CONST_MSG_TYPE.MSG_REDELEGATE) {
                     let delegation1 = new Delegation();
                     delegation1.tx_hash = txData.tx_response.txhash;
@@ -802,14 +795,14 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation2.created_at,
                         delegation2.type
                     );
-                    await this.delegationRepository.create(delegation1);
-                    await this.delegationRepository.create(delegation2);
+                    delegations.push(delegation1);
+                    delegations.push(delegation2);
                     //save data to delegator_rewards table
                     let amount1 = 0;
                     let amount2 = 0;
                     if (txData.tx_response.logs && txData.tx_response.logs.length > 0
-                        && txData.tx_response.logs[0].events && txData.tx_response.logs[0].events.length > 0) {
-                        const events = txData.tx_response.logs[0].events;
+                        && txData.tx_response.logs[i].events && txData.tx_response.logs[i].events.length > 0) {
+                        const events = txData.tx_response.logs[i].events;
                         const claimEvent = events.find(i => i.type === 'transfer');
                         if (claimEvent) {
                             const attributes = claimEvent.attributes;
@@ -824,34 +817,48 @@ export class SyncTaskService implements ISyncTaskService {
                     reward1.validator_address = message.validator_src_address;
                     reward1.amount = amount1;
                     reward1.tx_hash = txData.tx_response.txhash;
-                    await this.delegatorRewardRepository.create(reward1);
+                    delegatorRewards.push(reward1);
                     let reward2 = new DelegatorReward();
                     reward2.delegator_address = message.delegator_address;
                     reward2.validator_address = message.validator_dst_address;
                     reward2.amount = amount2;
                     reward2.tx_hash = txData.tx_response.txhash;
-                    await this.delegatorRewardRepository.create(reward2);
+                    delegatorRewards.push(reward2);
                 } else if (txType === CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD) {
                     let reward = new DelegatorReward();
                     reward.delegator_address = message.delegator_address;
                     reward.validator_address = message.validator_address;
                     reward.amount = 0;
-                    if (txData.tx_response.logs && txData.tx_response.logs.length > 0) {
-                        for (let i = 0; i < txData.tx_response.logs.length; i++) {
-                            const events = txData.tx_response.logs[i].events;
-                            const rewardEvent = events.find(i => i.type === 'withdraw_rewards');
-                            const attributes = rewardEvent.attributes;
-                            const amount = attributes[0].value;
-                            const findValidator = attributes.find(i => i.value === message.validator_address);
-                            if (findValidator) {
-                                reward.amount = Number(amount.replace(CONST_CHAR.UAURA, ''));
-                            }
+                    if (txData.tx_response.logs && txData.tx_response.logs.length > 0
+                        && txData.tx_response.logs[i].events && txData.tx_response.logs[i].events.length > 0) {
+                        const events = txData.tx_response.logs[i].events;
+                        const rewardEvent = events.find(i => i.type === 'withdraw_rewards');
+                        const attributes = rewardEvent.attributes;
+                        const amount = attributes[0].value;
+                        const findValidator = attributes.find(i => i.value === message.validator_address);
+                        if (findValidator) {
+                            reward.amount = Number(amount.replace(CONST_CHAR.UAURA, ''));
                         }
                     }
                     reward.tx_hash = txData.tx_response.txhash;
                     reward.created_at = new Date(txData.tx_response.timestamp);
-                    await this.delegatorRewardRepository.create(reward);
+                    delegatorRewards.push(reward);
                 }
+            }
+            if (proposalVotes.length > 0) {
+                await this.proposalVoteRepository.create(proposalVotes);
+            }
+            if (proposalDeposits.length > 0) {
+                await this.proposalDepositRepository.create(proposalDeposits);
+            }
+            if (historyProposals.length > 0) {
+                await this.historyProposalRepository.create(historyProposals);
+            }
+            if (delegations.length > 0) {
+                await this.delegationRepository.create(delegations);
+            }
+            if (delegatorRewards.length > 0) {
+                await this.delegatorRewardRepository.create(delegatorRewards);
             }
         }
     }
