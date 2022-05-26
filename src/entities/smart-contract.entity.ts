@@ -6,15 +6,24 @@ export class SmartContract extends BaseEntityIncrementId {
     @Column({ name: 'height' })
     height: number;
 
+    @Column({ name: 'code_id' })
+    code_id: number;
+
     @Column({ name: 'contract_address'})
     contract_address: string;
 
     @Column({ name: 'creator_address'})
     creator_address: string;
 
-    @Column({ name: 'schema'})
-    schema: string;
+    @Column({ name: 'contract_hash'})
+    contract_hash: string;
 
     @Column({ name: 'url'})
     url: string;
+
+    @Column({ name: 'contract_match'})
+    contract_match: string;
+
+    @Column({ name: 'contract_verification'})
+    contract_verification: string;
 }

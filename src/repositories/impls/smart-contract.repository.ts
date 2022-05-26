@@ -29,4 +29,17 @@ export class SmartContractRepository extends BaseRepository implements ISmartCon
         }
         return 0;
     }
+
+    async findContractByHash(contract_hash: string) {
+        let query = this.repos
+            .createQueryBuilder('smart_contracts')
+            .where('smart_contracts.contract_hash = :contract_hash', { contract_hash })
+            .select([
+                'smart_contracts.contract_address as contract_address',
+                'smart_contracts.url as url',
+                'smart_contracts.contract_verification as contract_verification',
+            ])
+        let res = await query.getRawMany();
+        return res;
+    }
 }
