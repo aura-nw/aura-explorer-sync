@@ -106,8 +106,8 @@ export class SyncWebsocketService implements ISyncWebsocketService {
                 }
 
                 let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url;
-                if(smartContractResponse || smartContractResponse.Message.length === 64) {
-                    contract_hash = smartContractResponse.Message;
+                if(smartContractResponse) {
+                    contract_hash = smartContractResponse.Message.length === 64 ? smartContractResponse.Message : '';
                 }
                 if(contract_hash !== '') {
                     let existContractHash = await this.smartContractRepository.findContractByHash(contract_hash);
