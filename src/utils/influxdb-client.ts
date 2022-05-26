@@ -58,13 +58,14 @@ export class InfluxDBClient {
     return output;
   }
 
-  writeBlock(height, block_hash, num_txs, chainid, timestamp): void {
+  writeBlock(height, block_hash, num_txs, chainid, timestamp, proposer): void {
     const point = new Point('blocks')
       .tag('chainid', chainid)
       .stringField('block_hash', block_hash)
       .intField('height', height)
       .intField('num_txs', num_txs)
-      .timestamp(this.convertDate(timestamp));
+      .timestamp(this.convertDate(timestamp))
+      .stringField('proposer', proposer);
     this.writeApi.writePoint(point);
   }
 
