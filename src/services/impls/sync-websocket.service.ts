@@ -90,7 +90,6 @@ export class SyncWebsocketService implements ISyncWebsocketService {
             } catch (error) {
                 this._logger.error('Error get message action', error);
             }
-            console.log('Listened a smart contract instantiate message')
             // Check if listened the right transaction
             if (messageAction === MESSAGE_ACTION.MSG_INSTANTIATE_CONTRACT) {
                 let contract_address = response.result.events['instantiate._contract_address'][0] ?? '';
@@ -107,7 +106,7 @@ export class SyncWebsocketService implements ISyncWebsocketService {
                 }
 
                 let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url;
-                if(smartContractResponse.Message.length === 64) {
+                if(smartContractResponse || smartContractResponse.Message.length === 64) {
                     contract_hash = smartContractResponse.Message;
                 }
                 if(contract_hash !== '') {
