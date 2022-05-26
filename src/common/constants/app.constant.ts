@@ -52,6 +52,7 @@ export enum CONST_CHAR {
   SOURCE_VALIDATOR = 'source_validator',
   INSTANTIATE = 'instantiate',
   _CONTRACT_ADDRESS = '_contract_address',
+  CODE_ID = 'code_id',
 }
 
 export enum CONST_MSG_TYPE {

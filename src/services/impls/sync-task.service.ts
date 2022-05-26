@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
-import { APP_CONSTANTS, CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, NODE_API } from "../../common/constants/app.constant";
+import { APP_CONSTANTS, CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, NODE_API, SMART_CONTRACT_VERIFICATION } from "../../common/constants/app.constant";
 import { Block, BlockSyncError, MissedBlock, SyncStatus, Transaction, Validator } from "../../entities";
 import { ConfigService } from "../../shared/services/config.service";
 import { CommonUtil } from "../../utils/common.util";
@@ -42,6 +42,7 @@ export class SyncTaskService implements ISyncTaskService {
     private currentBlock: number;
     private threads = 0;
     private schedulesSync: Array<number> = [];
+    private smartContractService;
 
     constructor(
         private configService: ConfigService,
@@ -84,6 +85,8 @@ export class SyncTaskService implements ISyncTaskService {
             this.configService.get('INFLUXDB_URL'),
             this.configService.get('INFLUXDB_TOKEN'),
         );
+
+        this.smartContractService = this.configService.get('SMART_CONTRACT_SERVICE');
 
         // Get number thread from config
         this.threads = Number(this.configService.get('THREADS') || 15);
@@ -558,13 +561,45 @@ export class SyncTaskService implements ISyncTaskService {
                                     ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
                                 ).value;
                                 let creator_address = txData.body.messages[0].sender;
+                                let code_id = txData.tx_response.logs[0].events.find(
+                                    ({ type }) => type === CONST_CHAR.INSTANTIATE,
+                                ).attributes.find(
+                                    ({ key }) => key === CONST_CHAR.CODE_ID,
+                                ).value;
 
-                                var smartContract = {
+                                let paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
+                                let smartContractResponse;
+                                try {
+                                    smartContractResponse = await this._commonUtil.getDataAPI(this.smartContractService, paramGetHash);
+                                } catch (error) {
+                                    this._logger.error('Can not connect to smart contract verify service', error);
+                                }
+
+                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url;
+                                if (smartContractResponse) {
+                                    contract_hash = smartContractResponse.Message.length === 64 ? smartContractResponse.Message : '';
+                                }
+                                if (contract_hash !== '') {
+                                    let existContractHash = await this.smartContractRepository.findContractByHash(contract_hash);
+                                    if (existContractHash.filter(e => e.contract_verification == SMART_CONTRACT_VERIFICATION.EXACT_MATCH).length > 0) {
+                                        contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
+                                        let exactContract = existContractHash.find(
+                                            (x) => x.contract_verification == SMART_CONTRACT_VERIFICATION.EXACT_MATCH
+                                        )
+                                        contract_match = exactContract.contract_address;
+                                        url = exactContract.url;
+                                    }
+                                }
+
+                                let smartContract = {
                                     height,
+                                    code_id,
                                     contract_address,
                                     creator_address,
-                                    schema: '',
-                                    url: '',
+                                    contract_hash,
+                                    url,
+                                    contract_match,
+                                    contract_verification,
                                 }
                                 await this.smartContractRepository.create(smartContract);
                             } catch (error) {
