@@ -721,15 +721,15 @@ export class SyncTaskService implements ISyncTaskService {
     }
 
     async syncDataWithTransactions(listTransactions) {
+        let proposalVotes = [];
+        let proposalDeposits = [];
+        let historyProposals = [];
+        let delegations = [];
+        let delegatorRewards = [];
         for (let k = 0; k < listTransactions.length; k++) {
             const txData = listTransactions[k];
             if (txData.tx.body.messages && txData.tx.body.messages.length > 0
                 && txData.tx.body.messages.length === txData.tx_response.logs.length) {
-                let proposalVotes = [];
-                let proposalDeposits = [];
-                let historyProposals = [];
-                let delegations = [];
-                let delegatorRewards = [];
                 for (let i = 0; i < txData.tx.body.messages.length; i++) {
                     const message: any = txData.tx.body.messages[i];
                     //check type to sync data
@@ -942,22 +942,22 @@ export class SyncTaskService implements ISyncTaskService {
                         delegatorRewards.push(reward);
                     }
                 }
-                if (proposalVotes.length > 0) {
-                    await this.proposalVoteRepository.create(proposalVotes);
-                }
-                if (proposalDeposits.length > 0) {
-                    await this.proposalDepositRepository.create(proposalDeposits);
-                }
-                if (historyProposals.length > 0) {
-                    await this.historyProposalRepository.create(historyProposals);
-                }
-                if (delegations.length > 0) {
-                    await this.delegationRepository.create(delegations);
-                }
-                if (delegatorRewards.length > 0) {
-                    await this.delegatorRewardRepository.create(delegatorRewards);
-                }
             }
+        }
+        if (proposalVotes.length > 0) {
+            await this.proposalVoteRepository.create(proposalVotes);
+        }
+        if (proposalDeposits.length > 0) {
+            await this.proposalDepositRepository.create(proposalDeposits);
+        }
+        if (historyProposals.length > 0) {
+            await this.historyProposalRepository.create(historyProposals);
+        }
+        if (delegations.length > 0) {
+            await this.delegationRepository.create(delegations);
+        }
+        if (delegatorRewards.length > 0) {
+            await this.delegatorRewardRepository.create(delegatorRewards);
         }
     }
 
