@@ -104,4 +104,15 @@ export class BaseService implements IBaseService {
     const result = await this._repos.remove(id);
     return ResponseDto.response(ErrorMap.SUCCESSFUL, result);
   }
+
+ /**
+  * insertOrIgnore
+  * @param data 
+  * @param conflictCols 
+  * @param primaryKey 
+  * @returns 
+  */
+  public insertOrIgnore(data: Array<any>, conflictCols: string[], primaryKey: string):Promise<any>{
+    return this._repos.insertOrIgnore(data, conflictCols, primaryKey);
+  }
 }

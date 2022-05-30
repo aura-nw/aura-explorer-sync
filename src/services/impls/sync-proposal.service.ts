@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
+import { CONFLICT_COLS, PRIMARY_COLS } from "src/shared/constants/common.const";
 import { CONST_PROPOSAL_STATUS, NODE_API } from "../../common/constants/app.constant";
 import { Proposal } from "../../entities/proposal.entity";
 import { REPOSITORY_INTERFACE } from "../../module.config";
@@ -106,10 +107,10 @@ export class SyncProposalService implements ISyncProposalService {
           }
           // insert into table proposals
           try {
-            await this.proposalRepository.create(proposal);
+            await this.proposalRepository.insertOrIgnore([proposal], [CONFLICT_COLS.PRO_ID], PRIMARY_COLS.PRO_ID);
           } catch (error) {
-            await this.proposalRepository.update(proposal);
-            this._logger.error(null, `Proposal is already existed!`);
+            this._logger.error(null, `Sync Proposol was error, ${error.name}: ${error.message}`);
+            this._logger.error(null, `${error.stack}`);
           }
         }
         //delete proposal failed

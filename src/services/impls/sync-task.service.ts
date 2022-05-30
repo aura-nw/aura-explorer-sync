@@ -29,6 +29,8 @@ import { DelegatorReward } from "../../entities/delegator-reward.entity";
 import { IDelegatorRewardRepository } from "../../repositories/idelegator-reward.repository";
 import e from "express";
 import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
+import { CONFLICT_COLS, PRIMARY_COLS } from "src/shared/constants/common.const";
+import { loadavg } from "os";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -360,7 +362,7 @@ export class SyncTaskService implements ISyncTaskService {
 
         if (isSave) {
             newValidator.id = validatorData.id;
-            this.validatorRepository.create(validatorData);
+            this.validatorRepository.update(validatorData);
         }
     }
 
@@ -412,14 +414,14 @@ export class SyncTaskService implements ISyncTaskService {
                                 // insert into table missed-block
                                 try {
                                     await this.missedBlockRepository.create(newMissedBlock);
+                                    // TODO: Write missed block to influxdb
+                                    this.influxDbClient.writeMissedBlock(
+                                        newMissedBlock.validator_address,
+                                        newMissedBlock.height,
+                                    );
                                 } catch (error) {
                                     this._logger.error(null, `Missed is already existed!`);
                                 }
-                                // TODO: Write missed block to influxdb
-                                this.influxDbClient.writeMissedBlock(
-                                    newMissedBlock.validator_address,
-                                    newMissedBlock.height,
-                                );
 
                             }
                         }
@@ -645,10 +647,10 @@ export class SyncTaskService implements ISyncTaskService {
                         newBlock.gas_used = blockGasUsed;
                         newBlock.gas_wanted = blockGasWanted;
                         try {
-                            savedBlock = await this.blockRepository.create(newBlock);
+                            savedBlock = await this.blockRepository.insertOrIgnore([newBlock], [CONFLICT_COLS.BLOCK_HASH], PRIMARY_COLS.ID);
                             if (savedBlock) {
-                                transactions.map((item) => item.blockId = savedBlock.id);
-                                await this.txRepository.create(transactions);
+                                transactions.map((item) => item.blockId = savedBlock[0].id);
+                                await this.txRepository.insertOrIgnore(transactions, [CONFLICT_COLS.TX_HASH], PRIMARY_COLS.ID);
                             }
                         } catch (error) {
                             this._logger.error(null, `Insert block is error ${error.name}: ${error.message}`);
@@ -668,11 +670,8 @@ export class SyncTaskService implements ISyncTaskService {
                     await this.syncDataWithTransactions(listTransactions);
                 }
             } else {
-                try {
-                    await this.blockRepository.create(newBlock);
-                } catch (error) {
-                    this._logger.error(null, `Block is already existed!`);
-                }
+                //Insert or update Block
+                await this.blockRepository.insertOrIgnore([newBlock], [CONFLICT_COLS.BLOCK_HASH], PRIMARY_COLS.ID);
             }
             // TODO: Write block to influxdb
             this.influxDbClient.writeBlock(
@@ -709,7 +708,7 @@ export class SyncTaskService implements ISyncTaskService {
             }
 
         } catch (error) {
-            this._logger.error(null, `${error.name}: ${error.message}`);
+            this._logger.error(null, `Sync Blocked & Transaction were error, ${error.name}: ${error.message}`);
             this._logger.error(null, `${error.stack}`);
 
             const idxSync = this.schedulesSync.indexOf(fetchingBlockHeight);
@@ -945,19 +944,19 @@ export class SyncTaskService implements ISyncTaskService {
             }
         }
         if (proposalVotes.length > 0) {
-            await this.proposalVoteRepository.create(proposalVotes);
+            await this.proposalVoteRepository.insertOrIgnore(proposalVotes, [CONFLICT_COLS.PROPOSAL_ID, CONFLICT_COLS.VOTER], PRIMARY_COLS.ID);
         }
         if (proposalDeposits.length > 0) {
-            await this.proposalDepositRepository.create(proposalDeposits);
+            await this.proposalDepositRepository.insertOrIgnore(proposalDeposits, [CONFLICT_COLS.TX_HASH], PRIMARY_COLS.ID);
         }
         if (historyProposals.length > 0) {
-            await this.historyProposalRepository.create(historyProposals);
+            await this.historyProposalRepository.insertOrIgnore(historyProposals, [CONFLICT_COLS.TX_HASH], PRIMARY_COLS.ID);
         }
         if (delegations.length > 0) {
-            await this.delegationRepository.create(delegations);
+            await this.delegationRepository.insertOrIgnore(delegations, [CONFLICT_COLS.TX_HASH, CONFLICT_COLS.DELEATOR_ADDRESS, CONFLICT_COLS.VALIDATOR_ADDRESS], PRIMARY_COLS.ID);
         }
         if (delegatorRewards.length > 0) {
-            await this.delegatorRewardRepository.create(delegatorRewards);
+            await this.delegatorRewardRepository.insertOrIgnore(delegatorRewards, [CONFLICT_COLS.TX_HASH, CONFLICT_COLS.DELEATOR_ADDRESS, CONFLICT_COLS.VALIDATOR_ADDRESS], PRIMARY_COLS.ID);
         }
     }
 

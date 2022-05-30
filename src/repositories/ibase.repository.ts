@@ -68,4 +68,12 @@ export interface IBaseRepository {
    * @param id
    */
   remove(id: any): Promise<DeleteResult>;
+
+  /**
+   * insertOrIgnore
+   * @param data 
+   * @param conflictCols 
+   * @param primaryKey 
+   */
+   insertOrIgnore(data: Array<any>, conflictCols: string[], primaryKey: string): Promise<any>;
 }
