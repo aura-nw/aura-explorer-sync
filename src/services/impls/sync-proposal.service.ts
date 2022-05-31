@@ -106,11 +106,8 @@ export class SyncProposalService implements ISyncProposalService {
             proposal.pro_turnout = ((Number(proposal.pro_votes_yes) + Number(proposal.pro_votes_abstain) + Number(proposal.pro_votes_no) + Number(proposal.pro_votes_no_with_veto)) * 100) / Number(bondedTokens.pool.bonded_tokens);
           }
 
-          if(proposal.pro_id === 356){
-            const a = "";
-          }
           // insert into table proposals
-          await this.proposalRepository.insertOrIgnore([proposal]);          
+          await this.proposalRepository.upsert([proposal], []);          
         }
         //delete proposal failed
         const listId = data.map((i) => Number(i.proposal_id));

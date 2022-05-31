@@ -646,10 +646,10 @@ export class SyncTaskService implements ISyncTaskService {
                 // Insert data to Block table
                 newBlock.gas_used = blockGasUsed;
                 newBlock.gas_wanted = blockGasWanted;
-                const savedBlock = await this.blockRepository.insertOrIgnore([newBlock]);
+                const savedBlock = await this.blockRepository.upsert([newBlock], []);
                 if (savedBlock) {
                     transactions.map((item) => item.blockId = savedBlock[0].id);
-                    await this.txRepository.insertOrIgnore(transactions);
+                    await this.txRepository.upsert(transactions, []);
                 }
 
                 //sync data with transactions
@@ -661,7 +661,7 @@ export class SyncTaskService implements ISyncTaskService {
                 }
             } else {
                 //Insert or update Block
-                await this.blockRepository.insertOrIgnore([newBlock]);
+                await this.blockRepository.upsert([newBlock], []);
             }
 
             // TODO: Write block to influxdb
@@ -895,23 +895,23 @@ export class SyncTaskService implements ISyncTaskService {
             }
         }
         if (proposalVotes.length > 0) {
-            await this.proposalVoteRepository.insertOrIgnore(proposalVotes);
+            await this.proposalVoteRepository.upsert(proposalVotes, []);
         }
         if (proposalDeposits.length > 0) {
-            await this.proposalDepositRepository.insertOrIgnore(proposalDeposits);
+            await this.proposalDepositRepository.upsert(proposalDeposits, []);
         }
         if (historyProposals.length > 0) {
-            await this.historyProposalRepository.insertOrIgnore(historyProposals);
+            await this.historyProposalRepository.upsert(historyProposals, []);
         }
         if (delegations.length > 0) {
 
             // TODO: Write delegation to influxdb
             this.influxDbClient.writeDelegations(delegations);
 
-            await this.delegationRepository.insertOrIgnore(delegations);
+            await this.delegationRepository.upsert(delegations, []);
         }
         if (delegatorRewards.length > 0) {
-            await this.delegatorRewardRepository.insertOrIgnore(delegatorRewards);
+            await this.delegatorRewardRepository.upsert(delegatorRewards, []);
         }
     }
 

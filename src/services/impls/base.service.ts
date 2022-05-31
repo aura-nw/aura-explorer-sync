@@ -105,14 +105,13 @@ export class BaseService implements IBaseService {
     return ResponseDto.response(ErrorMap.SUCCESSFUL, result);
   }
 
- /**
-  * insertOrIgnore
-  * @param data 
-  * @param conflictCols 
-  * @param primaryKey 
-  * @returns 
-  */
-  public insertOrIgnore(data: Array<any>):Promise<any>{
-    return this._repos.insertOrIgnore(data);
+  /**
+   * upsert
+   * @param data 
+   * @param conflictPathsOrOptions 
+   * @returns 
+   */
+  public upsert(data: Array<any>, conflictPathsOrOptions: string[]): Promise<any> {
+    return this._repos.upsert(data, conflictPathsOrOptions);
   }
 }

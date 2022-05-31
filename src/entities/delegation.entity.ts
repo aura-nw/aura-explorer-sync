@@ -11,7 +11,7 @@ export class Delegation extends BaseEntityIncrementId {
   @Column({
     default: '',
     name: 'validator_address',
-    update: true
+    update: false
   })
   validator_address: string;
 
@@ -27,7 +27,7 @@ export class Delegation extends BaseEntityIncrementId {
   })
   amount: number;
 
-  @Column({ name: 'tx_hash', update: true })
+  @Column({ name: 'tx_hash', update: false })
   tx_hash: string;
 
   @Column({ name: 'type' })

@@ -59,10 +59,9 @@ export interface IBaseService {
   remove(id: any): Promise<ResponseDto>;
 
   /**
-   * InsertOrIgnore
+   * upsert
    * @param data 
-   * @param conflictCols 
-   * @param overwriteCols 
+   * @param conflictPathsOrOptions 
    */
-   insertOrIgnore(data: Array<any>):Promise<any>;
+  upsert(data: Array<any>, conflictPathsOrOptions: string[]): Promise<any>;
 }
