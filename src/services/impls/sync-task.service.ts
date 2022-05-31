@@ -642,17 +642,6 @@ export class SyncTaskService implements ISyncTaskService {
                     }
                     blockGasUsed += parseInt(txData.tx_response.gas_used);
                     blockGasWanted += parseInt(txData.tx_response.gas_wanted);
-                    let savedBlock;
-                    if (parseInt(key) === blockData.block.data.txs.length - 1) {
-
-                    }
-                    // TODO: Write tx to influxdb
-                    this.influxDbClient.writeTx(
-                        newTx.tx_hash,
-                        newTx.height,
-                        newTx.type,
-                        newTx.timestamp,
-                    );
                 }
 
                 // Insert data to Block table
@@ -666,13 +655,16 @@ export class SyncTaskService implements ISyncTaskService {
 
                 //sync data with transactions
                 if (listTransactions.length > 0) {
+                    // TODO: Write tx to influxdb
+                    this.influxDbClient.writeTxs(listTransactions);
+
                     await this.syncDataWithTransactions(listTransactions);
                 }
             } else {
                 //Insert or update Block
                 await this.blockRepository.insertOrIgnore([newBlock], [CONFLICT_COLS.BLOCK_HASH], PRIMARY_COLS.ID);
             }
-            
+
             // TODO: Write block to influxdb
             this.influxDbClient.writeBlock(
                 newBlock.height,
@@ -797,16 +789,6 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation.amount = Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
                         delegation.created_at = new Date(txData.tx_response.timestamp);
                         delegation.type = CONST_DELEGATE_TYPE.DELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation.delegator_address,
-                            delegation.validator_address,
-                            '',
-                            delegation.amount,
-                            delegation.tx_hash,
-                            delegation.created_at,
-                            delegation.type
-                        );
                         delegations.push(delegation);
                         //save data to delegator_rewards table
                         let reward = new DelegatorReward();
@@ -832,16 +814,6 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation.amount = (Number(message.amount.amount) * (-1)) / APP_CONSTANTS.PRECISION_DIV;
                         delegation.created_at = new Date(txData.tx_response.timestamp);
                         delegation.type = CONST_DELEGATE_TYPE.UNDELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation.delegator_address,
-                            delegation.validator_address,
-                            '',
-                            delegation.amount,
-                            delegation.tx_hash,
-                            delegation.created_at,
-                            delegation.type
-                        );
                         delegations.push(delegation);
                         //save data to delegator_rewards table
                         let reward = new DelegatorReward();
@@ -867,16 +839,6 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation1.amount = (Number(message.amount.amount) * (-1)) / APP_CONSTANTS.PRECISION_DIV;
                         delegation1.created_at = new Date(txData.tx_response.timestamp);
                         delegation1.type = CONST_DELEGATE_TYPE.REDELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation1.delegator_address,
-                            delegation1.validator_address,
-                            '',
-                            delegation1.amount,
-                            delegation1.tx_hash,
-                            delegation1.created_at,
-                            delegation1.type
-                        );
                         let delegation2 = new Delegation();
                         delegation2.tx_hash = txData.tx_response.txhash;
                         delegation2.delegator_address = message.delegator_address;
@@ -884,16 +846,6 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation2.amount = Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
                         delegation2.created_at = new Date(txData.tx_response.timestamp);
                         delegation2.type = CONST_DELEGATE_TYPE.REDELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation2.delegator_address,
-                            delegation2.validator_address,
-                            '',
-                            delegation2.amount,
-                            delegation2.tx_hash,
-                            delegation2.created_at,
-                            delegation2.type
-                        );
                         delegations.push(delegation1);
                         delegations.push(delegation2);
                         //save data to delegator_rewards table
@@ -953,6 +905,10 @@ export class SyncTaskService implements ISyncTaskService {
             await this.historyProposalRepository.insertOrIgnore(historyProposals, [CONFLICT_COLS.TX_HASH], PRIMARY_COLS.ID);
         }
         if (delegations.length > 0) {
+
+            // TODO: Write delegation to influxdb
+            this.influxDbClient.writeDelegations(delegations);
+
             await this.delegationRepository.insertOrIgnore(delegations, [CONFLICT_COLS.TX_HASH, CONFLICT_COLS.DELEATOR_ADDRESS, CONFLICT_COLS.VALIDATOR_ADDRESS], PRIMARY_COLS.ID);
         }
         if (delegatorRewards.length > 0) {
