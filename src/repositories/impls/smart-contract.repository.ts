@@ -38,6 +38,7 @@ export class SmartContractRepository extends BaseRepository implements ISmartCon
                 'smart_contracts.contract_address as contract_address',
                 'smart_contracts.url as url',
                 'smart_contracts.contract_verification as contract_verification',
+                'smart_contracts.compiler_version as compiler_version',
             ])
         let res = await query.getRawMany();
         return res;

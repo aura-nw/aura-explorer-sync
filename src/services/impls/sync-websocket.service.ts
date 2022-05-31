@@ -6,10 +6,13 @@ import { ISyncWebsocketService } from "../isync-websocket.service";
 import { REPOSITORY_INTERFACE } from "src/module.config";
 import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
 import { CommonUtil } from "src/utils/common.util";
+import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
+import { StargateClient } from "@cosmjs/stargate";
 
 @Injectable()
 export class SyncWebsocketService implements ISyncWebsocketService {
     private readonly _logger = new Logger(SyncWebsocketService.name);
+    private lcd;
     private websocketSubscriber;
     private smartContractService;
     private listMessageAction = [MESSAGE_ACTION.MSG_EXECUTE_CONTRACT, MESSAGE_ACTION.MSG_INSTANTIATE_CONTRACT, MESSAGE_ACTION.MSG_MIGRATE_CONTRACT, MESSAGE_ACTION.MSG_SEND, MESSAGE_ACTION.MSG_STORE_CODE];
@@ -23,14 +26,13 @@ export class SyncWebsocketService implements ISyncWebsocketService {
         this._logger.log(
             '============== Constructor Sync Websocket Service ==============',
         );
+        this.lcd = this.configService.get('API');
         this.websocketSubscriber = this.configService.get('WEBSOCKET_URL');
         this.smartContractService = this.configService.get('SMART_CONTRACT_SERVICE');
         this.startSyncWebsocket();
     }
 
     async startSyncWebsocket() {
-        // Wait for rest service start first
-        await this.sleep(5000);
         this._logger.log('syncFromNetwork');
         let websocketUrl = this.websocketSubscriber;
         let self = this;
@@ -98,14 +100,18 @@ export class SyncWebsocketService implements ISyncWebsocketService {
                 let code_id = response.result.events['instantiate.code_id'][0] ?? null;
 
                 let paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
-                let smartContractResponse;
+                let paramLabel = `cosmwasm/wasm/v1/contract/${contract_address}`;
+                let smartContractResponse, lcdResponse;
                 try {
-                    smartContractResponse = await this._commonUtil.getDataAPI(this.smartContractService, paramGetHash);
+                    [smartContractResponse, lcdResponse] = await Promise.all([
+                        this._commonUtil.getDataAPI(this.smartContractService, paramGetHash),
+                        this._commonUtil.getDataAPI(this.lcd, paramLabel),
+                    ]);
                 } catch (error) {
-                    this._logger.error('Can not connect to smart contract verify service', error);
+                    this._logger.error('Can not connect to smart contract verify service or LCD service', error);
                 }
 
-                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url;
+                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url, contract_name, compiler_version;
                 if(smartContractResponse) {
                     contract_hash = smartContractResponse.Message.length === 64 ? smartContractResponse.Message : '';
                 }
@@ -118,18 +124,24 @@ export class SyncWebsocketService implements ISyncWebsocketService {
                         )
                         contract_match = exactContract.contract_address;
                         url = exactContract.url;
+                        compiler_version = exactContract.compiler_version;
                     } 
+                }
+                if(lcdResponse) {
+                    contract_name = lcdResponse.contract_info.label;
                 }
 
                 let smartContract = {
                     height,
                     code_id,
+                    contract_name,
                     contract_address,
                     creator_address,
                     contract_hash,
                     url,
                     contract_match,
                     contract_verification,
+                    compiler_version,
                 }
                 this._logger.log('insert to db');
                 this._logger.debug(response);

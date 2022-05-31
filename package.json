@@ -24,6 +24,7 @@
     "migration:revert": "ts-node node_modules/typeorm/cli.js -f ormconfig migration:revert"
   },
   "dependencies": {
+    "@cosmjs/cosmwasm-stargate": "^0.28.4",
     "@influxdata/influxdb-client": "^1.22.0",
     "@nestjs/axios": "0.0.4",
     "@nestjs/common": "^8.0.0",
