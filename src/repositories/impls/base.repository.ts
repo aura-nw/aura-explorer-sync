@@ -155,71 +155,12 @@ export class BaseRepository implements IBaseRepository {
   }
 
   /**
-   * insertOrIgnore
+   * upsert
    * @param data 
-   * @param conflictCols 
-   * @param primaryKey 
-   * @returns 
+   * @param conflictPathsOrOptions 
    */
-  public async insertOrIgnore(data: Array<any>, conflictCols: string[], primaryKey: string) {
-    const selectColums = [...conflictCols, primaryKey];
-    let queryBuilder = this._repos.createQueryBuilder()
-      .select(selectColums);
-
-    const paras = [];
-
-    // Create conditions to search data
-    let isMany = false;
-    conflictCols.forEach(key => {
-      const conflicValues = [];
-
-      data.forEach(item => {
-        conflicValues.push(item[key]);
-      });
-
-      if (conflicValues.length > 0) {
-        paras.push(conflicValues);
-
-        if (isMany) {
-          queryBuilder.andWhere({ [key]: In(conflicValues) });
-        } else {
-          queryBuilder.where({ [key]: In(conflicValues) });
-        }
-        isMany = true;
-      }
-    });
-
-    //Find data have columns conflict
-    const sqlQuery = queryBuilder.getSql();
-
-    // Find block
-    const findResults = await this._repos.query(sqlQuery, paras);
-
-    // Chek columns conflict hava match with results
-    findResults.forEach(item => {
-      let isExit = true;
-      conflictCols.forEach(col => {
-        const compare = data.find(f => f[col] !== item[col]);
-        if (compare) {
-          isExit = false;
-        }
-      });
-
-      // Check data have exits or not
-      if (isExit) {
-        const dataSetPK = data.find(f => f[primaryKey] !== item[primaryKey]);
-        if (dataSetPK) {
-          dataSetPK[primaryKey] = item[primaryKey];
-        }
-      }
-    });
-
-    // Execute block data
-    const results = await this._repos.createQueryBuilder()
-      .insert()
-      .values(data)
-      .orIgnore()
-      .execute().then(t => t.identifiers);
+  public async upsert(data: Array<any>, conflictPathsOrOptions: string[]) {
+    const results = await this._repos.upsert(data, conflictPathsOrOptions).then(t => t.identifiers);
 
     return results;
   }

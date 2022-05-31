@@ -64,5 +64,5 @@ export interface IBaseService {
    * @param conflictCols 
    * @param overwriteCols 
    */
-   insertOrIgnore(data: Array<any>, conflictCols: string[], primaryKey: string):Promise<any>;
+   insertOrIgnore(data: Array<any>):Promise<any>;
 }

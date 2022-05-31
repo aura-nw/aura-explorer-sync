@@ -1,6 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
-import { CONFLICT_COLS, PRIMARY_COLS } from "src/shared/constants/common.const";
 import { CONST_PROPOSAL_STATUS, NODE_API } from "../../common/constants/app.constant";
 import { Proposal } from "../../entities/proposal.entity";
 import { REPOSITORY_INTERFACE } from "../../module.config";
@@ -74,6 +73,7 @@ export class SyncProposalService implements ISyncProposalService {
           proposal.pro_votes_abstain = 0.0;
           proposal.pro_votes_no = 0.0;
           proposal.pro_votes_no_with_veto = 0.0;
+          
           if (proposal.pro_status === CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_VOTING_PERIOD) {
             //get proposal tally
             const paramsTally = `cosmos/gov/v1beta1/proposals/${item.proposal_id}/tally`;
@@ -105,21 +105,24 @@ export class SyncProposalService implements ISyncProposalService {
           if (bondedTokens && Number(bondedTokens.pool.bonded_tokens) > 0) {
             proposal.pro_turnout = ((Number(proposal.pro_votes_yes) + Number(proposal.pro_votes_abstain) + Number(proposal.pro_votes_no) + Number(proposal.pro_votes_no_with_veto)) * 100) / Number(bondedTokens.pool.bonded_tokens);
           }
-          // insert into table proposals
-          try {
-            await this.proposalRepository.insertOrIgnore([proposal], [CONFLICT_COLS.PRO_ID], PRIMARY_COLS.PRO_ID);
-          } catch (error) {
-            this._logger.error(null, `Sync Proposol was error, ${error.name}: ${error.message}`);
-            this._logger.error(null, `${error.stack}`);
+
+          if(proposal.pro_id === 356){
+            const a = "";
           }
+          // insert into table proposals
+          await this.proposalRepository.insertOrIgnore([proposal]);          
         }
         //delete proposal failed
         const listId = data.map((i) => Number(i.proposal_id));
-        await this.proposalRepository.deleteProposalsByListId(listId);
+        if(listId?.length > 0){
+          await this.proposalRepository.deleteProposalsByListId(listId);
+        }
       }
       this.isSync = false;
     } catch (error) {
-      this._logger.error(error, `Sync proposals error`);
+      // this._logger.error(error, `Sync proposals error`);
+      this._logger.error(null, `Sync Proposol was error, ${error.name}: ${error.message}`);
+      this._logger.error(null, `${error.stack}`);
       this.isSync = false;
     }
   }

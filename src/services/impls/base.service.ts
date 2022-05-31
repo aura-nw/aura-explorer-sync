@@ -112,7 +112,7 @@ export class BaseService implements IBaseService {
   * @param primaryKey 
   * @returns 
   */
-  public insertOrIgnore(data: Array<any>, conflictCols: string[], primaryKey: string):Promise<any>{
-    return this._repos.insertOrIgnore(data, conflictCols, primaryKey);
+  public insertOrIgnore(data: Array<any>):Promise<any>{
+    return this._repos.insertOrIgnore(data);
   }
 }

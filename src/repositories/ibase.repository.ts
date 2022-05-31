@@ -70,10 +70,9 @@ export interface IBaseRepository {
   remove(id: any): Promise<DeleteResult>;
 
   /**
-   * insertOrIgnore
+   * upsert
    * @param data 
-   * @param conflictCols 
-   * @param primaryKey 
+   * @param conflictPathsOrOptions 
    */
-   insertOrIgnore(data: Array<any>, conflictCols: string[], primaryKey: string): Promise<any>;
+  upsert(data: Array<any>, conflictPathsOrOptions: string[]);
 }

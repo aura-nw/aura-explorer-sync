@@ -29,7 +29,6 @@ import { DelegatorReward } from "../../entities/delegator-reward.entity";
 import { IDelegatorRewardRepository } from "../../repositories/idelegator-reward.repository";
 import e from "express";
 import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
-import { CONFLICT_COLS, PRIMARY_COLS } from "src/shared/constants/common.const";
 import { loadavg } from "os";
 
 @Injectable()
@@ -438,7 +437,7 @@ export class SyncTaskService implements ISyncTaskService {
 
     @Interval(2000)
     async blockSyncError() {
-        const result: BlockSyncError = await this.blockSyncErrorRepository.findOne({ order: { id: 'DESC' } });
+        const result: BlockSyncError = await this.blockSyncErrorRepository.findOne();
         if (result) {
             const idxSync = this.schedulesSync.indexOf(result.height);
 
@@ -647,10 +646,10 @@ export class SyncTaskService implements ISyncTaskService {
                 // Insert data to Block table
                 newBlock.gas_used = blockGasUsed;
                 newBlock.gas_wanted = blockGasWanted;
-                const savedBlock = await this.blockRepository.insertOrIgnore([newBlock], [CONFLICT_COLS.BLOCK_HASH], PRIMARY_COLS.ID);
+                const savedBlock = await this.blockRepository.insertOrIgnore([newBlock]);
                 if (savedBlock) {
                     transactions.map((item) => item.blockId = savedBlock[0].id);
-                    await this.txRepository.insertOrIgnore(transactions, [CONFLICT_COLS.TX_HASH], PRIMARY_COLS.ID);
+                    await this.txRepository.insertOrIgnore(transactions);
                 }
 
                 //sync data with transactions
@@ -662,7 +661,7 @@ export class SyncTaskService implements ISyncTaskService {
                 }
             } else {
                 //Insert or update Block
-                await this.blockRepository.insertOrIgnore([newBlock], [CONFLICT_COLS.BLOCK_HASH], PRIMARY_COLS.ID);
+                await this.blockRepository.insertOrIgnore([newBlock]);
             }
 
             // TODO: Write block to influxdb
@@ -896,23 +895,23 @@ export class SyncTaskService implements ISyncTaskService {
             }
         }
         if (proposalVotes.length > 0) {
-            await this.proposalVoteRepository.insertOrIgnore(proposalVotes, [CONFLICT_COLS.PROPOSAL_ID, CONFLICT_COLS.VOTER], PRIMARY_COLS.ID);
+            await this.proposalVoteRepository.insertOrIgnore(proposalVotes);
         }
         if (proposalDeposits.length > 0) {
-            await this.proposalDepositRepository.insertOrIgnore(proposalDeposits, [CONFLICT_COLS.TX_HASH], PRIMARY_COLS.ID);
+            await this.proposalDepositRepository.insertOrIgnore(proposalDeposits);
         }
         if (historyProposals.length > 0) {
-            await this.historyProposalRepository.insertOrIgnore(historyProposals, [CONFLICT_COLS.TX_HASH], PRIMARY_COLS.ID);
+            await this.historyProposalRepository.insertOrIgnore(historyProposals);
         }
         if (delegations.length > 0) {
 
             // TODO: Write delegation to influxdb
             this.influxDbClient.writeDelegations(delegations);
 
-            await this.delegationRepository.insertOrIgnore(delegations, [CONFLICT_COLS.TX_HASH, CONFLICT_COLS.DELEATOR_ADDRESS, CONFLICT_COLS.VALIDATOR_ADDRESS], PRIMARY_COLS.ID);
+            await this.delegationRepository.insertOrIgnore(delegations);
         }
         if (delegatorRewards.length > 0) {
-            await this.delegatorRewardRepository.insertOrIgnore(delegatorRewards, [CONFLICT_COLS.TX_HASH, CONFLICT_COLS.DELEATOR_ADDRESS, CONFLICT_COLS.VALIDATOR_ADDRESS], PRIMARY_COLS.ID);
+            await this.delegatorRewardRepository.insertOrIgnore(delegatorRewards);
         }
     }
 
@@ -928,9 +927,9 @@ export class SyncTaskService implements ISyncTaskService {
     }
 
     async updateStatus(newHeight) {
-        const status = await this.statusRepository.findAll();
-        status[0].current_block = newHeight;
-        await this.statusRepository.create(status[0]);
+        const status = await this.statusRepository.findOne();
+        status.current_block = newHeight;
+        await this.statusRepository.create(status);
     }
 
     async getCurrentStatus() {
