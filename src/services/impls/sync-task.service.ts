@@ -564,6 +564,7 @@ export class SyncTaskService implements ISyncTaskService {
                                 ).value;
                                 let creator_address = txData.tx.body.messages[0].sender;
                                 let code_id = txData.tx.body.messages[0].code_id;
+                                let tx_hash = txData.tx_response.txhash;
 
                                 let paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
                                 let smartContractResponse;
@@ -597,6 +598,7 @@ export class SyncTaskService implements ISyncTaskService {
                                     contract_address,
                                     creator_address,
                                     contract_hash,
+                                    tx_hash,
                                     url,
                                     contract_match,
                                     contract_verification,
