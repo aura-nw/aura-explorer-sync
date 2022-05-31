@@ -644,18 +644,7 @@ export class SyncTaskService implements ISyncTaskService {
                     blockGasWanted += parseInt(txData.tx_response.gas_wanted);
                     let savedBlock;
                     if (parseInt(key) === blockData.block.data.txs.length - 1) {
-                        newBlock.gas_used = blockGasUsed;
-                        newBlock.gas_wanted = blockGasWanted;
-                        try {
-                            savedBlock = await this.blockRepository.insertOrIgnore([newBlock], [CONFLICT_COLS.BLOCK_HASH], PRIMARY_COLS.ID);
-                            if (savedBlock) {
-                                transactions.map((item) => item.blockId = savedBlock[0].id);
-                                await this.txRepository.insertOrIgnore(transactions, [CONFLICT_COLS.TX_HASH], PRIMARY_COLS.ID);
-                            }
-                        } catch (error) {
-                            this._logger.error(null, `Insert block is error ${error.name}: ${error.message}`);
-                            this._logger.error(null, `${error.stack}`);
-                        }
+
                     }
                     // TODO: Write tx to influxdb
                     this.influxDbClient.writeTx(
@@ -665,6 +654,16 @@ export class SyncTaskService implements ISyncTaskService {
                         newTx.timestamp,
                     );
                 }
+
+                // Insert data to Block table
+                newBlock.gas_used = blockGasUsed;
+                newBlock.gas_wanted = blockGasWanted;
+                const savedBlock = await this.blockRepository.insertOrIgnore([newBlock], [CONFLICT_COLS.BLOCK_HASH], PRIMARY_COLS.ID);
+                if (savedBlock) {
+                    transactions.map((item) => item.blockId = savedBlock[0].id);
+                    await this.txRepository.insertOrIgnore(transactions, [CONFLICT_COLS.TX_HASH], PRIMARY_COLS.ID);
+                }
+
                 //sync data with transactions
                 if (listTransactions.length > 0) {
                     await this.syncDataWithTransactions(listTransactions);
@@ -673,6 +672,7 @@ export class SyncTaskService implements ISyncTaskService {
                 //Insert or update Block
                 await this.blockRepository.insertOrIgnore([newBlock], [CONFLICT_COLS.BLOCK_HASH], PRIMARY_COLS.ID);
             }
+            
             // TODO: Write block to influxdb
             this.influxDbClient.writeBlock(
                 newBlock.height,
