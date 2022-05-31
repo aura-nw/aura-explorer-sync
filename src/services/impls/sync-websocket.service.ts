@@ -31,23 +31,7 @@ export class SyncWebsocketService implements ISyncWebsocketService {
         this.websocketSubscriber = this.configService.get('WEBSOCKET_URL');
         this.smartContractService = this.configService.get('SMART_CONTRACT_SERVICE');
         this.startSyncWebsocket();
-        // this.testOrUpdate();
-        // this.testExecuteContract();
     }
-
-    async testOrUpdate() {
-        const client = await SigningCosmWasmClient.connect('https://rpc.dev.aura.network/');
-        var queryMsg = {
-            get_flower: {"id":"f11"}
-        };
-        let resultQuery = await client.queryContractSmart('aura1na9h8y0hpwts5xhkeczmqajm3eyy2n5lssnavp0h02zsxpecz4ks8h59tx', queryMsg);
-            console.log('Query result: ', resultQuery);
-    }
-
-    // async testExecuteContract() {
-    //     const client = await StargateClient.connect('https://rpc.dev.aura.network/');
-    //     let txBroadcast = 
-    // }
 
     async startSyncWebsocket() {
         this._logger.log('syncFromNetwork');
