@@ -555,6 +555,7 @@ export class SyncTaskService implements ISyncTaskService {
                             txRawLogData = JSON.stringify(rawData);
                         } else if (txMsgType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
                             try {
+                                let contract_name = txData.body.messages[0].label;
                                 let height = txData.tx_response.height;
                                 let contract_address = txData.tx_response.logs[0].events.find(
                                     ({ type }) => type === CONST_CHAR.INSTANTIATE,
@@ -562,11 +563,7 @@ export class SyncTaskService implements ISyncTaskService {
                                     ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
                                 ).value;
                                 let creator_address = txData.body.messages[0].sender;
-                                let code_id = txData.tx_response.logs[0].events.find(
-                                    ({ type }) => type === CONST_CHAR.INSTANTIATE,
-                                ).attributes.find(
-                                    ({ key }) => key === CONST_CHAR.CODE_ID,
-                                ).value;
+                                let code_id = txData.body.messages[0].code_id;
 
                                 let paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
                                 let smartContractResponse;
@@ -576,7 +573,7 @@ export class SyncTaskService implements ISyncTaskService {
                                     this._logger.error('Can not connect to smart contract verify service', error);
                                 }
 
-                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url;
+                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url, compiler_version;
                                 if (smartContractResponse) {
                                     contract_hash = smartContractResponse.Message.length === 64 ? smartContractResponse.Message : '';
                                 }
@@ -589,18 +586,21 @@ export class SyncTaskService implements ISyncTaskService {
                                         )
                                         contract_match = exactContract.contract_address;
                                         url = exactContract.url;
+                                        compiler_version = exactContract.compiler_version;
                                     }
                                 }
 
                                 let smartContract = {
                                     height,
                                     code_id,
+                                    contract_name,
                                     contract_address,
                                     creator_address,
                                     contract_hash,
                                     url,
                                     contract_match,
                                     contract_verification,
+                                    compiler_version,
                                 }
                                 await this.smartContractRepository.create(smartContract);
                             } catch (error) {
