@@ -555,15 +555,15 @@ export class SyncTaskService implements ISyncTaskService {
                             txRawLogData = JSON.stringify(rawData);
                         } else if (txMsgType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
                             try {
-                                let contract_name = txData.body.messages[0].label;
+                                let contract_name = txData.tx.body.messages[0].label;
                                 let height = txData.tx_response.height;
                                 let contract_address = txData.tx_response.logs[0].events.find(
                                     ({ type }) => type === CONST_CHAR.INSTANTIATE,
                                 ).attributes.find(
                                     ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
                                 ).value;
-                                let creator_address = txData.body.messages[0].sender;
-                                let code_id = txData.body.messages[0].code_id;
+                                let creator_address = txData.tx.body.messages[0].sender;
+                                let code_id = txData.tx.body.messages[0].code_id;
 
                                 let paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
                                 let smartContractResponse;
