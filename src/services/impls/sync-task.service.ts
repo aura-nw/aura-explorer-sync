@@ -501,6 +501,7 @@ export class SyncTaskService implements ISyncTaskService {
             if (blockData.block.data.txs && blockData.block.data.txs.length > 0) {
                 let transactions = [];
                 let listTransactions = [];
+                const influxdbTrans  = [];
                 // create transaction
                 for (let key in blockData.block.data.txs) {
                     const element = blockData.block.data.txs[key];
@@ -636,6 +637,15 @@ export class SyncTaskService implements ISyncTaskService {
                     newTx.fee = txFee;
                     newTx.messages = txData.tx_response.tx.body.messages;
                     transactions.push(newTx);
+
+                    // Push data to array, it's insert data to Influxd db
+                    influxdbTrans.push({ 
+                        tx_hash: newTx.tx_hash,
+                        height: newTx.height,
+                        type: newTx.type,
+                        timestamp: newTx.timestamp
+                    });
+
                     // check to push into list transaction
                     const txTypeCheck = txType.substring(txType.lastIndexOf('.') + 1);
                     if (txData.tx_response.code === 0 && (<any>Object).values(CONST_MSG_TYPE).includes(txTypeCheck)) {
@@ -657,7 +667,7 @@ export class SyncTaskService implements ISyncTaskService {
                 //sync data with transactions
                 if (listTransactions.length > 0) {
                     // TODO: Write tx to influxdb
-                    this.influxDbClient.writeTxs(listTransactions);
+                    this.influxDbClient.writeTxs([...influxdbTrans]);
 
                     await this.syncDataWithTransactions(listTransactions);
                 }
