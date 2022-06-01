@@ -3,29 +3,31 @@ import { Column, Entity, Unique } from 'typeorm';
 import { BaseEntityIncrementId } from './base/base.entity';
 
 @Entity('delegations')
+@Unique(['tx_hash', 'delegator_address', 'validator_address'])
 export class Delegation extends BaseEntityIncrementId {
-  @Column({ name: 'delegator_address' })
+  @Column({ name: 'delegator_address', update: false })
   delegator_address: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'validator_address',
+    update: false
   })
   validator_address: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'shares',
   })
   shares: string;
 
-  @Column({ 
+  @Column({
     type: 'float',
     name: 'amount',
   })
   amount: number;
 
-  @Column({ name: 'tx_hash' })
+  @Column({ name: 'tx_hash', update: false })
   tx_hash: string;
 
   @Column({ name: 'type' })

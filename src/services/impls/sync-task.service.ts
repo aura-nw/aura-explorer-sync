@@ -29,6 +29,7 @@ import { DelegatorReward } from "../../entities/delegator-reward.entity";
 import { IDelegatorRewardRepository } from "../../repositories/idelegator-reward.repository";
 import e from "express";
 import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
+import { loadavg } from "os";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -360,7 +361,7 @@ export class SyncTaskService implements ISyncTaskService {
 
         if (isSave) {
             newValidator.id = validatorData.id;
-            this.validatorRepository.create(validatorData);
+            this.validatorRepository.update(validatorData);
         }
     }
 
@@ -412,14 +413,14 @@ export class SyncTaskService implements ISyncTaskService {
                                 // insert into table missed-block
                                 try {
                                     await this.missedBlockRepository.create(newMissedBlock);
+                                    // TODO: Write missed block to influxdb
+                                    this.influxDbClient.writeMissedBlock(
+                                        newMissedBlock.validator_address,
+                                        newMissedBlock.height,
+                                    );
                                 } catch (error) {
                                     this._logger.error(null, `Missed is already existed!`);
                                 }
-                                // TODO: Write missed block to influxdb
-                                this.influxDbClient.writeMissedBlock(
-                                    newMissedBlock.validator_address,
-                                    newMissedBlock.height,
-                                );
 
                             }
                         }
@@ -436,7 +437,7 @@ export class SyncTaskService implements ISyncTaskService {
 
     @Interval(2000)
     async blockSyncError() {
-        const result: BlockSyncError = await this.blockSyncErrorRepository.findOne({ order: { id: 'DESC' } });
+        const result: BlockSyncError = await this.blockSyncErrorRepository.findOne();
         if (result) {
             const idxSync = this.schedulesSync.indexOf(result.height);
 
@@ -642,40 +643,29 @@ export class SyncTaskService implements ISyncTaskService {
                     }
                     blockGasUsed += parseInt(txData.tx_response.gas_used);
                     blockGasWanted += parseInt(txData.tx_response.gas_wanted);
-                    let savedBlock;
-                    if (parseInt(key) === blockData.block.data.txs.length - 1) {
-                        newBlock.gas_used = blockGasUsed;
-                        newBlock.gas_wanted = blockGasWanted;
-                        try {
-                            savedBlock = await this.blockRepository.create(newBlock);
-                            if (savedBlock) {
-                                transactions.map((item) => item.blockId = savedBlock.id);
-                                await this.txRepository.create(transactions);
-                            }
-                        } catch (error) {
-                            this._logger.error(null, `Insert block is error ${error.name}: ${error.message}`);
-                            this._logger.error(null, `${error.stack}`);
-                        }
-                    }
-                    // TODO: Write tx to influxdb
-                    this.influxDbClient.writeTx(
-                        newTx.tx_hash,
-                        newTx.height,
-                        newTx.type,
-                        newTx.timestamp,
-                    );
                 }
+
+                // Insert data to Block table
+                newBlock.gas_used = blockGasUsed;
+                newBlock.gas_wanted = blockGasWanted;
+                const savedBlock = await this.blockRepository.upsert([newBlock], []);
+                if (savedBlock) {
+                    transactions.map((item) => item.blockId = savedBlock[0].id);
+                    await this.txRepository.upsert(transactions, []);
+                }
+
                 //sync data with transactions
                 if (listTransactions.length > 0) {
+                    // TODO: Write tx to influxdb
+                    this.influxDbClient.writeTxs(listTransactions);
+
                     await this.syncDataWithTransactions(listTransactions);
                 }
             } else {
-                try {
-                    await this.blockRepository.create(newBlock);
-                } catch (error) {
-                    this._logger.error(null, `Block is already existed!`);
-                }
+                //Insert or update Block
+                await this.blockRepository.upsert([newBlock], []);
             }
+
             // TODO: Write block to influxdb
             this.influxDbClient.writeBlock(
                 newBlock.height,
@@ -711,7 +701,7 @@ export class SyncTaskService implements ISyncTaskService {
             }
 
         } catch (error) {
-            this._logger.error(null, `${error.name}: ${error.message}`);
+            this._logger.error(null, `Sync Blocked & Transaction were error, ${error.name}: ${error.message}`);
             this._logger.error(null, `${error.stack}`);
 
             const idxSync = this.schedulesSync.indexOf(fetchingBlockHeight);
@@ -800,16 +790,6 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation.amount = Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
                         delegation.created_at = new Date(txData.tx_response.timestamp);
                         delegation.type = CONST_DELEGATE_TYPE.DELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation.delegator_address,
-                            delegation.validator_address,
-                            '',
-                            delegation.amount,
-                            delegation.tx_hash,
-                            delegation.created_at,
-                            delegation.type
-                        );
                         delegations.push(delegation);
                         //save data to delegator_rewards table
                         let reward = new DelegatorReward();
@@ -835,16 +815,6 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation.amount = (Number(message.amount.amount) * (-1)) / APP_CONSTANTS.PRECISION_DIV;
                         delegation.created_at = new Date(txData.tx_response.timestamp);
                         delegation.type = CONST_DELEGATE_TYPE.UNDELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation.delegator_address,
-                            delegation.validator_address,
-                            '',
-                            delegation.amount,
-                            delegation.tx_hash,
-                            delegation.created_at,
-                            delegation.type
-                        );
                         delegations.push(delegation);
                         //save data to delegator_rewards table
                         let reward = new DelegatorReward();
@@ -870,16 +840,6 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation1.amount = (Number(message.amount.amount) * (-1)) / APP_CONSTANTS.PRECISION_DIV;
                         delegation1.created_at = new Date(txData.tx_response.timestamp);
                         delegation1.type = CONST_DELEGATE_TYPE.REDELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation1.delegator_address,
-                            delegation1.validator_address,
-                            '',
-                            delegation1.amount,
-                            delegation1.tx_hash,
-                            delegation1.created_at,
-                            delegation1.type
-                        );
                         let delegation2 = new Delegation();
                         delegation2.tx_hash = txData.tx_response.txhash;
                         delegation2.delegator_address = message.delegator_address;
@@ -887,16 +847,6 @@ export class SyncTaskService implements ISyncTaskService {
                         delegation2.amount = Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
                         delegation2.created_at = new Date(txData.tx_response.timestamp);
                         delegation2.type = CONST_DELEGATE_TYPE.REDELEGATE;
-                        // TODO: Write delegation to influxdb
-                        this.influxDbClient.writeDelegation(
-                            delegation2.delegator_address,
-                            delegation2.validator_address,
-                            '',
-                            delegation2.amount,
-                            delegation2.tx_hash,
-                            delegation2.created_at,
-                            delegation2.type
-                        );
                         delegations.push(delegation1);
                         delegations.push(delegation2);
                         //save data to delegator_rewards table
@@ -947,19 +897,23 @@ export class SyncTaskService implements ISyncTaskService {
             }
         }
         if (proposalVotes.length > 0) {
-            await this.proposalVoteRepository.create(proposalVotes);
+            await this.proposalVoteRepository.upsert(proposalVotes, []);
         }
         if (proposalDeposits.length > 0) {
-            await this.proposalDepositRepository.create(proposalDeposits);
+            await this.proposalDepositRepository.upsert(proposalDeposits, []);
         }
         if (historyProposals.length > 0) {
-            await this.historyProposalRepository.create(historyProposals);
+            await this.historyProposalRepository.upsert(historyProposals, []);
         }
         if (delegations.length > 0) {
-            await this.delegationRepository.create(delegations);
+
+            // TODO: Write delegation to influxdb
+            this.influxDbClient.writeDelegations(delegations);
+
+            await this.delegationRepository.upsert(delegations, []);
         }
         if (delegatorRewards.length > 0) {
-            await this.delegatorRewardRepository.create(delegatorRewards);
+            await this.delegatorRewardRepository.upsert(delegatorRewards, []);
         }
     }
 
@@ -975,9 +929,9 @@ export class SyncTaskService implements ISyncTaskService {
     }
 
     async updateStatus(newHeight) {
-        const status = await this.statusRepository.findAll();
-        status[0].current_block = newHeight;
-        await this.statusRepository.create(status[0]);
+        const status = await this.statusRepository.findOne();
+        status.current_block = newHeight;
+        await this.statusRepository.create(status);
     }
 
     async getCurrentStatus() {
