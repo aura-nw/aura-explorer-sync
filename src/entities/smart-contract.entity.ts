@@ -9,6 +9,9 @@ export class SmartContract extends BaseEntityIncrementId {
     @Column({ name: 'code_id' })
     code_id: number;
 
+    @Column({ name: 'token_id' })
+    token_id: number;
+
     @Column({ name: 'contract_name'})
     contract_name: string;
 
@@ -26,6 +29,15 @@ export class SmartContract extends BaseEntityIncrementId {
 
     @Column({ name: 'url'})
     url: string;
+
+    @Column({ name: 'instantiate_msg_schema'})
+    instantiate_msg_schema: string;
+
+    @Column({ name: 'query_msg_schema'})
+    query_msg_schema: string;
+
+    @Column({ name: 'execute_msg_schema'})
+    execute_msg_schema: string;
 
     @Column({ name: 'contract_match'})
     contract_match: string;

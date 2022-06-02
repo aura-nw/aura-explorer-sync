@@ -25,6 +25,7 @@ import { SyncStatusRepository } from './repositories/impls/sync-status.repositor
 import { TransactionRepository } from './repositories/impls/transaction.repository';
 import { SyncWebsocketService } from './services/impls/sync-websocket.service';
 import { SmartContractRepository } from './repositories/impls/smart-contract.repository';
+import { TokenContractRepository } from './repositories/impls/token-contract.repository';
 
 const controllers = [];
 const entities = [
@@ -41,6 +42,7 @@ const entities = [
   ENTITIES_CONFIG.SYNC_STATUS,
   ENTITIES_CONFIG.TRANSACTION,
   ENTITIES_CONFIG.SMART_CONTRACT,
+  ENTITIES_CONFIG.TOKEN_CONTRACT,
 ];
 @Module({
   imports: [
@@ -114,6 +116,10 @@ const entities = [
     {
       provide: REPOSITORY_INTERFACE.ISMART_CONTRACT_REPOSITORY,
       useClass: SmartContractRepository,
+    },
+    {
+      provide: REPOSITORY_INTERFACE.ITOKEN_CONTRACT_REPOSITORY,
+      useClass: TokenContractRepository,
     },
     //service
     {

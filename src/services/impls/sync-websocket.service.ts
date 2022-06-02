@@ -30,7 +30,7 @@ export class SyncWebsocketService implements ISyncWebsocketService {
         this.lcd = this.configService.get('API');
         this.websocketSubscriber = this.configService.get('WEBSOCKET_URL');
         this.smartContractService = this.configService.get('SMART_CONTRACT_SERVICE');
-        this.startSyncWebsocket();
+        // this.startSyncWebsocket();
     }
 
     async startSyncWebsocket() {

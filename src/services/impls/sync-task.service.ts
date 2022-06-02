@@ -29,6 +29,8 @@ import { DelegatorReward } from "../../entities/delegator-reward.entity";
 import { IDelegatorRewardRepository } from "../../repositories/idelegator-reward.repository";
 import e from "express";
 import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
+import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
+import { ITokenContractRepository } from "src/repositories/itoken-contract.repository";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -71,6 +73,8 @@ export class SyncTaskService implements ISyncTaskService {
         private delegatorRewardRepository: IDelegatorRewardRepository,
         @Inject(REPOSITORY_INTERFACE.ISMART_CONTRACT_REPOSITORY)
         private smartContractRepository: ISmartContractRepository,
+        @Inject(REPOSITORY_INTERFACE.ITOKEN_CONTRACT_REPOSITORY)
+        private tokenContractRepository: ITokenContractRepository,
         @InjectSchedule() private readonly schedule: Schedule
     ) {
         this._logger.log(
@@ -542,12 +546,6 @@ export class SyncTaskService implements ISyncTaskService {
                             } catch (error) {
                                 reward = 0;
                             }
-                            // reward.attributes = reward.attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
-                            // let action = txData.tx_response.logs[0].events.find(
-                            //     ({ type }) => type === CONST_CHAR.DELEGATE || type === CONST_CHAR.REDELEGATE || type === CONST_CHAR.UNBOND,
-                            // );
-                            // action.attributes = action.attributes.filter((x) => x.key == CONST_CHAR.VALIDATOR || x.key == CONST_CHAR.SOURCE_VALIDATOR || x.key == CONST_CHAR.AMOUNT);
-                            // txRawLogData = JSON.stringify([amount, action]);
                             const rawData = {
                                 amount,
                                 reward
@@ -567,11 +565,15 @@ export class SyncTaskService implements ISyncTaskService {
                                 let tx_hash = txData.tx_response.txhash;
 
                                 let paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
-                                let smartContractResponse;
+                                let paramConstructor = `/cosmwasm/wasm/v1/contract/${contract_address}/history`;
+                                let smartContractResponse, lcdResponse;
                                 try {
-                                    smartContractResponse = await this._commonUtil.getDataAPI(this.smartContractService, paramGetHash);
+                                    [smartContractResponse, lcdResponse] = await Promise.all([
+                                        this._commonUtil.getDataAPI(this.smartContractService, paramGetHash),
+                                        this._commonUtil.getDataAPI(this.api, paramConstructor),
+                                    ]);
                                 } catch (error) {
-                                    this._logger.error('Can not connect to smart contract verify service', error);
+                                    this._logger.error('Can not connect to smart contract verify service or LCD service', error);
                                 }
 
                                 let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url, compiler_version;
@@ -591,9 +593,42 @@ export class SyncTaskService implements ISyncTaskService {
                                     }
                                 }
 
+                                let tokenResult, token_name, token_symbol, token_decimal, token_image, token_description, max_total_supply;
+                                if (lcdResponse) {
+                                    let msg = lcdResponse.entries[0].msg;
+                                    try {
+                                        const client = await SigningCosmWasmClient.connect(this.rpc);
+                                        var queryMsg = {
+                                            "token_info":{}
+                                        };
+                                        let resultQuery = await client.queryContractSmart(contract_address, queryMsg);
+
+                                        token_name = msg.name;
+                                        token_decimal = msg.decimals;
+                                        token_symbol = msg.symbol;
+                                        max_total_supply = resultQuery.total_supply;
+                                        token_image = msg.marketing.logo.url ?? '';
+                                        token_description = msg.marketing.description ?? '';
+
+                                        let tokenContract = {
+                                            name: token_name,
+                                            symbol: token_symbol,
+                                            image: token_image,
+                                            description: token_description,
+                                            contract_address,
+                                            decimal: token_decimal,
+                                            max_total_supply,
+                                        }
+                                        tokenResult = await this.tokenContractRepository.create(tokenContract);
+                                    } catch (error) {
+                                        this._logger.error('This is not a CW20 contract', error);
+                                    }
+                                }
+
                                 let smartContract = {
                                     height,
                                     code_id,
+                                    token_id: String(tokenResult.id),
                                     contract_name,
                                     contract_address,
                                     creator_address,
@@ -604,7 +639,9 @@ export class SyncTaskService implements ISyncTaskService {
                                     contract_verification,
                                     compiler_version,
                                 }
-                                await this.smartContractRepository.create(smartContract);
+                                const result = await this.smartContractRepository.create(smartContract);
+                                console.log(result);
+                                
                             } catch (error) {
                                 this._logger.error(null, `Got error instantiate contract transaction`);
                                 this._logger.error(null, `${error.stack}`);

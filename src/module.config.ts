@@ -7,6 +7,7 @@ import { ProposalDeposit } from './entities/proposal-deposit.entity';
 import { ProposalVote } from './entities/proposal-vote.entity';
 import { SmartContract } from './entities/smart-contract.entity';
 import { SyncStatus } from './entities/sync-status.entity';
+import { TokenContract } from './entities/token-contract.entity';
 
 export const ENTITIES_CONFIG = {
   PROPOSAL: Proposal,
@@ -22,6 +23,7 @@ export const ENTITIES_CONFIG = {
   PROPOSAL_VOTE: ProposalVote,
   SYNC_STATUS: SyncStatus,
   SMART_CONTRACT: SmartContract,
+  TOKEN_CONTRACT: TokenContract,
 };
 
 export const REQUEST_CONFIG = {
@@ -58,6 +60,7 @@ export const REPOSITORY_INTERFACE = {
   IPROPOSAL_VOTE_REPOSITORY: 'IProposalVoteRepository',
   ISYNC_STATUS_REPOSITORY: 'ISyncStatusRepository',
   ISMART_CONTRACT_REPOSITORY: 'ISmartContractRepository',
+  ITOKEN_CONTRACT_REPOSITORY: 'ITokenContractRepository',
 };
 
 export const PROVIDER_INTERFACE = {};
