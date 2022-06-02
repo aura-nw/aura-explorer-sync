@@ -7,7 +7,7 @@ import { Block } from './block.entity';
 @Entity('transactions')
 export class Transaction extends BaseEntityIncrementId {
   @Unique('tx_hash', ['tx_hash'])
-  @Column({ name: 'tx_hash' })
+  @Column({ name: 'tx_hash', update: false })
   tx_hash: string;
 
   // contain an application-specific response code
