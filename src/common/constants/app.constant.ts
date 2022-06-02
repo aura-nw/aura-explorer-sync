@@ -20,7 +20,7 @@ export enum MESSAGE_ACTION {
 }
 
 export enum NODE_API {
-  PROPOSALS = `cosmos/gov/v1beta1/proposals`,
+  PROPOSALS = `cosmos/gov/v1beta1/proposals?pagination.reverse=true`,
   STAKING_POOL = `cosmos/staking/v1beta1/pool`,
   INFLATION = `cosmos/mint/v1beta1/inflation`,
   COMMUNITY_POOL = `cosmos/distribution/v1beta1/community_pool`,
