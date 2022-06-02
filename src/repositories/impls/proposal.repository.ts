@@ -18,8 +18,8 @@ export class ProposalRepository extends BaseRepository implements IProposalRepos
         );
     }
 
-    async deleteProposalsByListId(listId: []) {
-        const sql = `UPDATE proposals SET is_delete = 1 WHERE pro_id NOT IN (?)`;
-        return await this.repos.query(sql, [listId]);
+    async deleteProposals() {
+        const sql = `UPDATE proposals SET is_delete = 1 WHERE pro_status = 'PROPOSAL_STATUS_DEPOSIT_PERIOD' AND is_delete = 0 AND (current_timestamp()) > pro_deposit_end_time`;
+        return await this.repos.query(sql, []);
     }
 }
