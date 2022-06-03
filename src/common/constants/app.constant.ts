@@ -64,6 +64,7 @@ export enum CONST_MSG_TYPE {
   MSG_REDELEGATE = 'MsgBeginRedelegate',
   MSG_WITHDRAW_DELEGATOR_REWARD = 'MsgWithdrawDelegatorReward',
   MSG_INSTANTIATE_CONTRACT = 'MsgInstantiateContract',
+  MSG_EXECUTE_CONTRACT = 'MsgExecuteContract',
 }
 
 export enum CONST_PROPOSAL_TYPE {

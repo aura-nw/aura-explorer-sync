@@ -58,6 +58,12 @@ export class Transaction extends BaseEntityIncrementId {
   type: string;
 
   @Column({ 
+    default: '',
+    name: 'contract_address',
+  })
+  contract_address: string;
+
+  @Column({ 
     type: 'text',
     name: 'raw_log',
   })

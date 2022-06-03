@@ -518,7 +518,7 @@ export class SyncTaskService implements ISyncTaskService {
 
                     const txData = await this._commonUtil.getDataAPI(this.api, paramsTx);
 
-                    let txType = 'FAILED', txRawLogData;
+                    let txType = 'FAILED', txRawLogData, txContractAddress;
                     if (txData.tx_response.code === 0) {
                         const txLog = JSON.parse(txData.tx_response.raw_log);
 
@@ -653,6 +653,8 @@ export class SyncTaskService implements ISyncTaskService {
                                 this._logger.error(null, `Got error instantiate contract transaction`);
                                 this._logger.error(null, `${error.stack}`);
                             }
+                        } else if (txMsgType == CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
+                            txContractAddress = txData.tx.body.messages[0].contract;
                         }
                     } else {
                         const txBody = txData.tx_response.tx.body.messages[0];
@@ -678,6 +680,7 @@ export class SyncTaskService implements ISyncTaskService {
                     newTx.type = txType;
                     newTx.fee = txFee;
                     newTx.messages = txData.tx_response.tx.body.messages;
+                    newTx.contract_address = txContractAddress;
                     transactions.push(newTx);
 
                     // Push data to array, it's insert data to Influxd db
