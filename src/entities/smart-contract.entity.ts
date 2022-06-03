@@ -8,10 +8,7 @@ export class SmartContract extends BaseEntityIncrementId {
 
     @Column({ name: 'code_id' })
     code_id: number;
-
-    @Column({ name: 'token_id' })
-    token_id: number;
-
+    
     @Column({ name: 'contract_name'})
     contract_name: string;
 

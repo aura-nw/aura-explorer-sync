@@ -505,7 +505,7 @@ export class SyncTaskService implements ISyncTaskService {
             if (blockData.block.data.txs && blockData.block.data.txs.length > 0) {
                 let transactions = [];
                 let listTransactions = [];
-                const influxdbTrans  = [];
+                const influxdbTrans = [];
                 // create transaction
                 for (let key in blockData.block.data.txs) {
                     const element = blockData.block.data.txs[key];
@@ -595,13 +595,13 @@ export class SyncTaskService implements ISyncTaskService {
                                     }
                                 }
 
-                                let tokenResult, token_name, token_symbol, token_decimal, token_image, token_description, max_total_supply;
+                                let tokenContract, token_name, token_symbol, token_decimal, token_image, token_description, max_total_supply;
                                 if (lcdResponse) {
                                     let msg = lcdResponse.entries[0].msg;
                                     try {
                                         const client = await SigningCosmWasmClient.connect(this.rpc);
                                         var queryMsg = {
-                                            "token_info":{}
+                                            "token_info": {}
                                         };
                                         let resultQuery = await client.queryContractSmart(contract_address, queryMsg);
 
@@ -609,10 +609,13 @@ export class SyncTaskService implements ISyncTaskService {
                                         token_decimal = msg.decimals;
                                         token_symbol = msg.symbol;
                                         max_total_supply = resultQuery.total_supply;
-                                        token_image = msg.marketing.logo.url ?? '';
-                                        token_description = msg.marketing.description ?? '';
-
-                                        let tokenContract = {
+                                        try {
+                                            token_image = msg.marketing.logo.url ?? '';
+                                            token_description = msg.marketing.description ?? '';
+                                        } catch (error) {
+                                            this._logger.error('Can not get image and description of token', error);
+                                        }
+                                        tokenContract = {
                                             name: token_name,
                                             symbol: token_symbol,
                                             image: token_image,
@@ -621,7 +624,6 @@ export class SyncTaskService implements ISyncTaskService {
                                             decimal: token_decimal,
                                             max_total_supply,
                                         }
-                                        tokenResult = await this.tokenContractRepository.create(tokenContract);
                                     } catch (error) {
                                         this._logger.error('This is not a CW20 contract', error);
                                     }
@@ -630,7 +632,6 @@ export class SyncTaskService implements ISyncTaskService {
                                 let smartContract = {
                                     height,
                                     code_id,
-                                    token_id: String(tokenResult.id),
                                     contract_name,
                                     contract_address,
                                     creator_address,
@@ -641,9 +642,13 @@ export class SyncTaskService implements ISyncTaskService {
                                     contract_verification,
                                     compiler_version,
                                 }
-                                const result = await this.smartContractRepository.create(smartContract);
-                                console.log(result);
-                                
+
+                                tokenContract ?
+                                    await Promise.all([
+                                        this.smartContractRepository.create(smartContract),
+                                        this.tokenContractRepository.create(tokenContract)
+                                    ]) :
+                                    await this.smartContractRepository.create(smartContract);
                             } catch (error) {
                                 this._logger.error(null, `Got error instantiate contract transaction`);
                                 this._logger.error(null, `${error.stack}`);
@@ -676,7 +681,7 @@ export class SyncTaskService implements ISyncTaskService {
                     transactions.push(newTx);
 
                     // Push data to array, it's insert data to Influxd db
-                    influxdbTrans.push({ 
+                    influxdbTrans.push({
                         tx_hash: newTx.tx_hash,
                         height: newTx.height,
                         type: newTx.type,
