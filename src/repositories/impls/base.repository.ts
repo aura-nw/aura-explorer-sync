@@ -1,4 +1,4 @@
-import { DeleteResult, Repository } from 'typeorm';
+import { DeleteResult, In, Repository } from 'typeorm';
 import { IBaseRepository } from '../ibase.repository';
 import { PaginatorResponse } from '../../dtos/responses/paginator.response';
 import { Logger } from '@nestjs/common';
@@ -17,7 +17,7 @@ export class BaseRepository implements IBaseRepository {
    * @returns
    */
   public async findOne(id?: any): Promise<any> {
-    if(id) {
+    if (id) {
       this._log.log(
         `============== Call method findOne width parameters:${id} ==============`,
       );
@@ -152,5 +152,16 @@ export class BaseRepository implements IBaseRepository {
 
   private convertObjectToJson(obj: any) {
     return JSON.stringify(obj);
+  }
+
+  /**
+   * upsert
+   * @param data 
+   * @param conflictPathsOrOptions 
+   */
+  public async upsert(data: Array<any>, conflictPathsOrOptions: string[]) {
+    const results = await this._repos.upsert(data, conflictPathsOrOptions).then(t => t.identifiers);
+
+    return results;
   }
 }

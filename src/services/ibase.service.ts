@@ -57,4 +57,11 @@ export interface IBaseService {
    * @param id
    */
   remove(id: any): Promise<ResponseDto>;
+
+  /**
+   * upsert
+   * @param data 
+   * @param conflictPathsOrOptions 
+   */
+  upsert(data: Array<any>, conflictPathsOrOptions: string[]): Promise<any>;
 }

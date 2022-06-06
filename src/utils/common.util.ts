@@ -4,6 +4,7 @@ import { lastValueFrom } from "rxjs";
 import { tmhash } from 'tendermint/lib/hash';
 import { bech32 } from 'bech32';
 import { CONST_CHAR } from "../common/constants/app.constant";
+const axios = require('axios');
 
 @Injectable()
 export class CommonUtil {
@@ -24,6 +25,12 @@ export class CommonUtil {
     const data = await lastValueFrom(this.httpService.get(api + params)).then(
       (rs) => rs.data,
     );
+
+    return data;
+  }
+
+  async getDataService(api, params) {
+    const data = await axios.get(api + params);
 
     return data;
   }
