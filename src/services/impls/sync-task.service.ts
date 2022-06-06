@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
-import { APP_CONSTANTS, CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, NODE_API, SMART_CONTRACT_VERIFICATION } from "../../common/constants/app.constant";
+import { APP_CONSTANTS, CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, MESSAGE_ACTION, NODE_API, SMART_CONTRACT_VERIFICATION } from "../../common/constants/app.constant";
 import { Block, BlockSyncError, MissedBlock, SyncStatus, Transaction, Validator } from "../../entities";
 import { ConfigService } from "../../shared/services/config.service";
 import { CommonUtil } from "../../utils/common.util";
@@ -562,6 +562,7 @@ export class SyncTaskService implements ISyncTaskService {
                                 ).attributes.find(
                                     ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
                                 ).value;
+                                txContractAddress = contract_address;
                                 let creator_address = txData.tx.body.messages[0].sender;
                                 let code_id = txData.tx.body.messages[0].code_id;
                                 let tx_hash = txData.tx_response.txhash;
