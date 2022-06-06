@@ -4,7 +4,7 @@ import { BaseEntityIncrementId } from './base/base.entity';
 @Entity('validators')
 export class Validator extends BaseEntityIncrementId {
   @Unique('operator_address', ['operator_address'])
-  @Column({ name: 'operator_address' })
+  @Column({ name: 'operator_address', update: false })
   operator_address: string;
 
   @Column({ 

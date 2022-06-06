@@ -7,7 +7,7 @@ import { Block } from './block.entity';
 @Entity('transactions')
 export class Transaction extends BaseEntityIncrementId {
   @Unique('tx_hash', ['tx_hash'])
-  @Column({ name: 'tx_hash' })
+  @Column({ name: 'tx_hash', update: false })
   tx_hash: string;
 
   // contain an application-specific response code
@@ -58,10 +58,22 @@ export class Transaction extends BaseEntityIncrementId {
   type: string;
 
   @Column({ 
+    default: '',
+    name: 'contract_address',
+  })
+  contract_address: string;
+
+  @Column({ 
     type: 'text',
     name: 'raw_log',
   })
   raw_log: string;
+
+  @Column({ 
+    type: 'text',
+    name: 'raw_log_data',
+  })
+  raw_log_data: string;
 
   @Column({ name: 'timestamp' })
   timestamp: Date;
