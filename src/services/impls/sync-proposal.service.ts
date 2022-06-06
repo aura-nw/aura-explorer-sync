@@ -73,6 +73,7 @@ export class SyncProposalService implements ISyncProposalService {
           proposal.pro_votes_abstain = 0.0;
           proposal.pro_votes_no = 0.0;
           proposal.pro_votes_no_with_veto = 0.0;
+
           if (proposal.pro_status === CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_VOTING_PERIOD) {
             //get proposal tally
             const paramsTally = `cosmos/gov/v1beta1/proposals/${item.proposal_id}/tally`;
@@ -104,21 +105,21 @@ export class SyncProposalService implements ISyncProposalService {
           if (bondedTokens && Number(bondedTokens.pool.bonded_tokens) > 0) {
             proposal.pro_turnout = ((Number(proposal.pro_votes_yes) + Number(proposal.pro_votes_abstain) + Number(proposal.pro_votes_no) + Number(proposal.pro_votes_no_with_veto)) * 100) / Number(bondedTokens.pool.bonded_tokens);
           }
+
           // insert into table proposals
-          try {
-            await this.proposalRepository.create(proposal);
-          } catch (error) {
-            await this.proposalRepository.update(proposal);
-            this._logger.error(null, `Proposal is already existed!`);
-          }
+          await this.proposalRepository.upsert([proposal], []);
         }
-        //delete proposal failed
-        const listId = data.map((i) => Number(i.proposal_id));
-        await this.proposalRepository.deleteProposalsByListId(listId);
+      }
+      //delete proposal failed
+      const listId = data.map((i) => Number(i.proposal_id));
+      if (listId?.length > 0) {
+        await this.proposalRepository.deleteProposals();
       }
       this.isSync = false;
     } catch (error) {
-      this._logger.error(error, `Sync proposals error`);
+      // this._logger.error(error, `Sync proposals error`);
+      this._logger.error(null, `Sync Proposol was error, ${error.name}: ${error.message}`);
+      this._logger.error(null, `${error.stack}`);
       this.isSync = false;
     }
   }
@@ -130,14 +131,14 @@ export class SyncProposalService implements ISyncProposalService {
    */
   async getProposalsFromNode(rootApi: string): Promise<any> {
     let result = await this._commonUtil.getDataAPI(rootApi, NODE_API.PROPOSALS);
-    let key = result.pagination.next_key;
+    // let key = result.pagination.next_key;
     result = result.proposals;
-    while (key != null) {
-      const params = `cosmos/gov/v1beta1/proposals?pagination.key=${key}`;
-      let dataProposal = await this._commonUtil.getDataAPI(rootApi, params);
-      key = dataProposal.pagination.next_key;
-      result = [...result, ...dataProposal.proposals];
-    }
+    // while (key) {
+    //   const params = `cosmos/gov/v1beta1/proposals?pagination.key=${key}&pagination.reverse=true`;
+    //   let dataProposal = await this._commonUtil.getDataAPI(rootApi, params);
+    //   key = dataProposal.pagination.next_key;
+    //   result = [...result, ...dataProposal.proposals];
+    // }
     return result;
   }
 }

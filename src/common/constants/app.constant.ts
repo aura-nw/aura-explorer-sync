@@ -20,7 +20,7 @@ export enum MESSAGE_ACTION {
 }
 
 export enum NODE_API {
-  PROPOSALS = `cosmos/gov/v1beta1/proposals`,
+  PROPOSALS = `cosmos/gov/v1beta1/proposals?pagination.reverse=true`,
   STAKING_POOL = `cosmos/staking/v1beta1/pool`,
   INFLATION = `cosmos/mint/v1beta1/inflation`,
   COMMUNITY_POOL = `cosmos/distribution/v1beta1/community_pool`,
@@ -40,12 +40,19 @@ export enum CONST_CHAR {
   SECOND = 's',
   UAURA  = 'uaura',
   DELEGATE  = 'delegate',
+  REDELEGATE = 'redelegate',
   UNBOND = 'unbond',
   VALIDATOR = 'validator',
   AMOUNT = 'amount',
   UNDEFINED = 'undefined',
   MESSAGE = 'message',
   ACTION = 'action',
+  WITHDRAW_REWARDS = 'withdraw_rewards',
+  TRANSFER = 'transfer',
+  SOURCE_VALIDATOR = 'source_validator',
+  INSTANTIATE = 'instantiate',
+  _CONTRACT_ADDRESS = '_contract_address',
+  CODE_ID = 'code_id',
 }
 
 export enum CONST_MSG_TYPE {
@@ -55,7 +62,9 @@ export enum CONST_MSG_TYPE {
   MSG_DELEGATE = 'MsgDelegate',
   MSG_UNDELEGATE = 'MsgUndelegate',
   MSG_REDELEGATE = 'MsgBeginRedelegate',
-  MSG_WITHDRAW_DELEGATOR_REWARD = 'MsgWithdrawDelegatorReward'
+  MSG_WITHDRAW_DELEGATOR_REWARD = 'MsgWithdrawDelegatorReward',
+  MSG_INSTANTIATE_CONTRACT = 'MsgInstantiateContract',
+  MSG_EXECUTE_CONTRACT = 'MsgExecuteContract',
 }
 
 export enum CONST_PROPOSAL_TYPE {
@@ -77,4 +86,10 @@ export enum CONST_PROPOSAL_STATUS {
   PROPOSAL_STATUS_PASSED = 'PROPOSAL_STATUS_PASSED',
   PROPOSAL_STATUS_REJECTED = 'PROPOSAL_STATUS_REJECTED',
   PROPOSAL_STATUS_FAILED = 'PROPOSAL_STATUS_FAILED'
+}
+
+export enum SMART_CONTRACT_VERIFICATION {
+  UNVERIFIED = 'UNVERIFIED',
+  EXACT_MATCH = 'EXACT MATCH',
+  SIMILAR_MATCH = 'SIMILAR MATCH',
 }

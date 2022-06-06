@@ -104,4 +104,14 @@ export class BaseService implements IBaseService {
     const result = await this._repos.remove(id);
     return ResponseDto.response(ErrorMap.SUCCESSFUL, result);
   }
+
+  /**
+   * upsert
+   * @param data 
+   * @param conflictPathsOrOptions 
+   * @returns 
+   */
+  public upsert(data: Array<any>, conflictPathsOrOptions: string[]): Promise<any> {
+    return this._repos.upsert(data, conflictPathsOrOptions);
+  }
 }

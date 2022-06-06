@@ -23,6 +23,9 @@ import { ProposalDepositRepository } from './repositories/impls/proposal-deposit
 import { ProposalVoteRepository } from './repositories/impls/proposal-vote.repository';
 import { SyncStatusRepository } from './repositories/impls/sync-status.repository';
 import { TransactionRepository } from './repositories/impls/transaction.repository';
+import { SyncWebsocketService } from './services/impls/sync-websocket.service';
+import { SmartContractRepository } from './repositories/impls/smart-contract.repository';
+import { TokenContractRepository } from './repositories/impls/token-contract.repository';
 
 const controllers = [];
 const entities = [
@@ -38,6 +41,8 @@ const entities = [
   ENTITIES_CONFIG.PROPOSAL_VOTE,
   ENTITIES_CONFIG.SYNC_STATUS,
   ENTITIES_CONFIG.TRANSACTION,
+  ENTITIES_CONFIG.SMART_CONTRACT,
+  ENTITIES_CONFIG.TOKEN_CONTRACT,
 ];
 @Module({
   imports: [
@@ -108,6 +113,14 @@ const entities = [
       provide: REPOSITORY_INTERFACE.ITRANSACTION_REPOSITORY,
       useClass: TransactionRepository,
     },
+    {
+      provide: REPOSITORY_INTERFACE.ISMART_CONTRACT_REPOSITORY,
+      useClass: SmartContractRepository,
+    },
+    {
+      provide: REPOSITORY_INTERFACE.ITOKEN_CONTRACT_REPOSITORY,
+      useClass: TokenContractRepository,
+    },
     //service
     {
       provide: SERVICE_INTERFACE.ISYNC_PROPOSAL_SERVICE,
@@ -116,6 +129,10 @@ const entities = [
     {
       provide: SERVICE_INTERFACE.ISYNC_TASK_SERVICE,
       useClass: SyncTaskService,
+    },
+    {
+      provide: SERVICE_INTERFACE.ISYNC_WEBSOCKET_SERVICE,
+      useClass: SyncWebsocketService,
     },
   ],
 })
