@@ -68,4 +68,11 @@ export interface IBaseRepository {
    * @param id
    */
   remove(id: any): Promise<DeleteResult>;
+
+  /**
+   * upsert
+   * @param data 
+   * @param conflictPathsOrOptions 
+   */
+  upsert(data: Array<any>, conflictPathsOrOptions: string[]);
 }
