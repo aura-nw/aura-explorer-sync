@@ -579,7 +579,8 @@ export class SyncTaskService implements ISyncTaskService {
                                     this._logger.error('Can not connect to smart contract verify service or LCD service', error);
                                 }
 
-                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url, compiler_version;
+                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url, 
+                                compiler_version, instantiate_msg_schema, query_msg_schema, execute_msg_schema;
                                 if (smartContractResponse) {
                                     contract_hash = smartContractResponse.Message.length === 64 ? smartContractResponse.Message : '';
                                 }
@@ -593,6 +594,9 @@ export class SyncTaskService implements ISyncTaskService {
                                         contract_match = exactContract.contract_address;
                                         url = exactContract.url;
                                         compiler_version = exactContract.compiler_version;
+                                        instantiate_msg_schema = exactContract.instantiate_msg_schema;
+                                        query_msg_schema = exactContract.query_msg_schema;
+                                        execute_msg_schema = exactContract.execute_msg_schema;
                                     }
                                 }
 
@@ -639,6 +643,9 @@ export class SyncTaskService implements ISyncTaskService {
                                     contract_hash,
                                     tx_hash,
                                     url,
+                                    instantiate_msg_schema,
+                                    query_msg_schema,
+                                    execute_msg_schema,
                                     contract_match,
                                     contract_verification,
                                     compiler_version,
