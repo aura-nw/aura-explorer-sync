@@ -817,7 +817,7 @@ export class SyncTaskService implements ISyncTaskService {
                         historyProposal.initial_deposit = 0;
                         if (proposalType === CONST_PROPOSAL_TYPE.COMMUNITY_POOL_SPEND_PROPOSAL) {
                             historyProposal.recipient = message.content.recipient;
-                            historyProposal.amount = Number(message.content.amount[0].amount);
+                            historyProposal.amount = message.content.amount.length > 0 ? Number(message.content.amount[0].amount) : 0;
                         } else {
                             if (message.initial_deposit.length > 0) {
                                 historyProposal.initial_deposit = Number(message.initial_deposit[0].amount);
