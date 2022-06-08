@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
-import { APP_CONSTANTS, CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, NODE_API, SMART_CONTRACT_VERIFICATION } from "../../common/constants/app.constant";
+import { APP_CONSTANTS, CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, MESSAGE_ACTION, NODE_API, SMART_CONTRACT_VERIFICATION } from "../../common/constants/app.constant";
 import { Block, BlockSyncError, MissedBlock, SyncStatus, Transaction, Validator } from "../../entities";
 import { ConfigService } from "../../shared/services/config.service";
 import { CommonUtil } from "../../utils/common.util";
@@ -561,6 +561,7 @@ export class SyncTaskService implements ISyncTaskService {
                                 ).attributes.find(
                                     ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
                                 ).value;
+                                txContractAddress = contract_address;
                                 let creator_address = txData.tx.body.messages[0].sender;
                                 let code_id = txData.tx.body.messages[0].code_id;
                                 let tx_hash = txData.tx_response.txhash;
@@ -577,7 +578,8 @@ export class SyncTaskService implements ISyncTaskService {
                                     this._logger.error('Can not connect to smart contract verify service or LCD service', error);
                                 }
 
-                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url, compiler_version;
+                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url, 
+                                compiler_version, instantiate_msg_schema, query_msg_schema, execute_msg_schema;
                                 if (smartContractResponse) {
                                     contract_hash = smartContractResponse.Message.length === 64 ? smartContractResponse.Message : '';
                                 }
@@ -591,6 +593,9 @@ export class SyncTaskService implements ISyncTaskService {
                                         contract_match = exactContract.contract_address;
                                         url = exactContract.url;
                                         compiler_version = exactContract.compiler_version;
+                                        instantiate_msg_schema = exactContract.instantiate_msg_schema;
+                                        query_msg_schema = exactContract.query_msg_schema;
+                                        execute_msg_schema = exactContract.execute_msg_schema;
                                     }
                                 }
 
@@ -637,6 +642,9 @@ export class SyncTaskService implements ISyncTaskService {
                                     contract_hash,
                                     tx_hash,
                                     url,
+                                    instantiate_msg_schema,
+                                    query_msg_schema,
+                                    execute_msg_schema,
                                     contract_match,
                                     contract_verification,
                                     compiler_version,
