@@ -444,7 +444,7 @@ export class SyncTaskService implements ISyncTaskService {
         const result: BlockSyncError = await this.blockSyncErrorRepository.findOne();
         if (result) {
             this._logger.log(null, `Class ${SyncTaskService.name}, call blockSyncError method with prameters: {syncBlock: ${result.height}}`);
-            const idxSync = this.schedulesSync.indexOf(result.height);            
+            const idxSync = this.schedulesSync.indexOf(result.height);
 
             // Check height has sync or not. If height hasn't sync when we recall handleSyncData method
             if (idxSync < 0) {
@@ -580,8 +580,8 @@ export class SyncTaskService implements ISyncTaskService {
                                     this._logger.error('Can not connect to smart contract verify service or LCD service', error);
                                 }
 
-                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url, 
-                                compiler_version, instantiate_msg_schema, query_msg_schema, execute_msg_schema;
+                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url,
+                                    compiler_version, instantiate_msg_schema, query_msg_schema, execute_msg_schema;
                                 if (smartContractResponse) {
                                     contract_hash = smartContractResponse.Message.length === 64 ? smartContractResponse.Message : '';
                                 }
@@ -818,7 +818,7 @@ export class SyncTaskService implements ISyncTaskService {
                         historyProposal.initial_deposit = 0;
                         if (proposalType === CONST_PROPOSAL_TYPE.COMMUNITY_POOL_SPEND_PROPOSAL) {
                             historyProposal.recipient = message.content.recipient;
-                            historyProposal.amount = (message.content.amount.length > 0)? Number(message.content.amount[0].amount) : 0;
+                            historyProposal.amount = (message.content.amount.length > 0) ? Number(message.content.amount[0].amount) : 0;
                         } else {
                             if (message.initial_deposit.length > 0) {
                                 historyProposal.initial_deposit = Number(message.initial_deposit[0].amount);
