@@ -6,7 +6,6 @@ import { ISyncWebsocketService } from "../isync-websocket.service";
 import { REPOSITORY_INTERFACE } from "src/module.config";
 import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
 import { CommonUtil } from "src/utils/common.util";
-import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import { StargateClient } from "@cosmjs/stargate";
 import { text } from "stream/consumers";
 

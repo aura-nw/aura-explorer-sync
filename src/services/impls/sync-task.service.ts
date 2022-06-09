@@ -29,7 +29,6 @@ import { DelegatorReward } from "../../entities/delegator-reward.entity";
 import { IDelegatorRewardRepository } from "../../repositories/idelegator-reward.repository";
 import e from "express";
 import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
-import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 import { ITokenContractRepository } from "src/repositories/itoken-contract.repository";
 import { loadavg } from "os";
 
@@ -443,7 +442,6 @@ export class SyncTaskService implements ISyncTaskService {
     async blockSyncError() {
         const result: BlockSyncError = await this.blockSyncErrorRepository.findOne();
         if (result) {
-            this._logger.log(null, `Class ${SyncTaskService.name}, call blockSyncError method with prameters: {syncBlock: ${result.height}}`);
             const idxSync = this.schedulesSync.indexOf(result.height);
 
             // Check height has sync or not. If height hasn't sync when we recall handleSyncData method
@@ -569,19 +567,15 @@ export class SyncTaskService implements ISyncTaskService {
                                 let tx_hash = txData.tx_response.txhash;
 
                                 let paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
-                                let paramConstructor = `/cosmwasm/wasm/v1/contract/${contract_address}/history`;
-                                let smartContractResponse, lcdResponse;
+                                let smartContractResponse;
                                 try {
-                                    [smartContractResponse, lcdResponse] = await Promise.all([
-                                        this._commonUtil.getDataAPI(this.smartContractService, paramGetHash),
-                                        this._commonUtil.getDataAPI(this.api, paramConstructor),
-                                    ]);
+                                    smartContractResponse = await this._commonUtil.getDataAPI(this.smartContractService, paramGetHash);
                                 } catch (error) {
                                     this._logger.error('Can not connect to smart contract verify service or LCD service', error);
                                 }
 
-                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url,
-                                    compiler_version, instantiate_msg_schema, query_msg_schema, execute_msg_schema;
+                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url, 
+                                compiler_version, instantiate_msg_schema, query_msg_schema, execute_msg_schema;
                                 if (smartContractResponse) {
                                     contract_hash = smartContractResponse.Message.length === 64 ? smartContractResponse.Message : '';
                                 }
@@ -598,40 +592,6 @@ export class SyncTaskService implements ISyncTaskService {
                                         instantiate_msg_schema = exactContract.instantiate_msg_schema;
                                         query_msg_schema = exactContract.query_msg_schema;
                                         execute_msg_schema = exactContract.execute_msg_schema;
-                                    }
-                                }
-
-                                let tokenContract, token_name, token_symbol, token_decimal, token_image, token_description, max_total_supply;
-                                if (lcdResponse) {
-                                    let msg = lcdResponse.entries[0].msg;
-                                    try {
-                                        const client = await SigningCosmWasmClient.connect(this.rpc);
-                                        var queryMsg = {
-                                            "token_info": {}
-                                        };
-                                        let resultQuery = await client.queryContractSmart(contract_address, queryMsg);
-
-                                        token_name = msg.name;
-                                        token_decimal = msg.decimals;
-                                        token_symbol = msg.symbol;
-                                        max_total_supply = resultQuery.total_supply;
-                                        try {
-                                            token_image = msg.marketing.logo.url ?? '';
-                                            token_description = msg.marketing.description ?? '';
-                                        } catch (error) {
-                                            this._logger.error('Can not get image and description of token', error);
-                                        }
-                                        tokenContract = {
-                                            name: token_name,
-                                            symbol: token_symbol,
-                                            image: token_image,
-                                            description: token_description,
-                                            contract_address,
-                                            decimal: token_decimal,
-                                            max_total_supply,
-                                        }
-                                    } catch (error) {
-                                        this._logger.error('This is not a CW20 contract', error);
                                     }
                                 }
 
@@ -652,12 +612,7 @@ export class SyncTaskService implements ISyncTaskService {
                                     compiler_version,
                                 }
 
-                                tokenContract ?
-                                    await Promise.all([
-                                        this.smartContractRepository.create(smartContract),
-                                        this.tokenContractRepository.create(tokenContract)
-                                    ]) :
-                                    await this.smartContractRepository.create(smartContract);
+                                await this.smartContractRepository.create(smartContract);
                             } catch (error) {
                                 this._logger.error(null, `Got error instantiate contract transaction`);
                                 this._logger.error(null, `${error.stack}`);
@@ -671,7 +626,7 @@ export class SyncTaskService implements ISyncTaskService {
                     }
                     const newTx = new Transaction();
                     const fee = txData.tx_response.tx.auth_info.fee.amount[0];
-                    const txFee = (fee) ? (fee[CONST_CHAR.AMOUNT] / APP_CONSTANTS.PRECISION_DIV).toFixed(6) : Number("0").toFixed(6);
+                    const txFee = (fee[CONST_CHAR.AMOUNT] / APP_CONSTANTS.PRECISION_DIV).toFixed(6);
                     // newTx.blockId = savedBlock.id;
                     newTx.code = txData.tx_response.code;
                     newTx.codespace = txData.tx_response.codespace;
@@ -765,7 +720,7 @@ export class SyncTaskService implements ISyncTaskService {
             }
 
         } catch (error) {
-            this._logger.error(null, `Sync Blocked & Transaction were error height: ${fetchingBlockHeight}, ${error.name}: ${error.message}`);
+            this._logger.error(null, `Sync Blocked & Transaction were error, ${error.name}: ${error.message}`);
             this._logger.error(null, `${error.stack}`);
 
             const idxSync = this.schedulesSync.indexOf(fetchingBlockHeight);
@@ -818,7 +773,7 @@ export class SyncTaskService implements ISyncTaskService {
                         historyProposal.initial_deposit = 0;
                         if (proposalType === CONST_PROPOSAL_TYPE.COMMUNITY_POOL_SPEND_PROPOSAL) {
                             historyProposal.recipient = message.content.recipient;
-                            historyProposal.amount = (message.content.amount.length > 0) ? Number(message.content.amount[0].amount) : 0;
+                            historyProposal.amount = Number(message.content.amount[0].amount);
                         } else {
                             if (message.initial_deposit.length > 0) {
                                 historyProposal.initial_deposit = Number(message.initial_deposit[0].amount);
