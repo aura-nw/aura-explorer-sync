@@ -31,6 +31,7 @@ import e from "express";
 import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
 import { ITokenContractRepository } from "src/repositories/itoken-contract.repository";
 import { loadavg } from "os";
+import { SmartContract } from "src/entities/smart-contract.entity";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -615,11 +616,36 @@ export class SyncTaskService implements ISyncTaskService {
 
                                 await this.smartContractRepository.create(smartContract);
                             } catch (error) {
-                                this._logger.error(null, `Got error instantiate contract transaction`);
+                                this._logger.error(null, `Got error in instantiate contract transaction`);
                                 this._logger.error(null, `${error.stack}`);
                             }
                         } else if (txMsgType == CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
                             txContractAddress = txData.tx.body.messages[0].contract;
+                            try {
+                                let contracts = [];
+                                let action = txData.tx.body.messages[0].msg.create_minter;
+                                let tx_hash = txData.tx_response.txhash;
+                                let height = txData.tx_response.height;
+                                let contract_addresses = txData.tx_response.logs[0].events.
+                                    find((x) => x.type == CONST_CHAR.INSTANTIATE).attributes.filter((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS);
+                                let code_ids = txData.tx_response.logs[0].events.
+                                    find((x) => x.type == CONST_CHAR.INSTANTIATE).attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
+                                contract_addresses.map(function (x, i) {
+                                    const smartContract = new SmartContract();
+                                    smartContract.code_id = code_ids[i].value;
+                                    smartContract.contract_name = smartContract.code_id == 1 ? CONST_CHAR.CODE_1_NAME : CONST_CHAR.CODE_2_NAME;
+                                    smartContract.contract_address = contract_addresses[i].value;
+                                    smartContract.creator_address = txData.tx_response.logs[0].events.
+                                        find((x) => x.type == CONST_CHAR.EXECUTE).attributes.find((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS).value;
+                                    smartContract.tx_hash = tx_hash;
+                                    smartContract.height = height;
+                                    contracts.push(smartContract);
+                                })
+                                await this.smartContractRepository.create(contracts);
+                            } catch (error) {
+                                this._logger.error(null, `Got error in create minter transaction`);
+                                this._logger.error(null, `${error.stack}`);
+                            }
                         }
                     } else {
                         const txBody = txData.tx_response.tx.body.messages[0];
