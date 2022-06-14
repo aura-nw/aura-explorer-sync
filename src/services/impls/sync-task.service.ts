@@ -439,7 +439,7 @@ export class SyncTaskService implements ISyncTaskService {
         }
     }
 
-    @Interval(2000)
+    @Interval(4000)
     async blockSyncError() {
         const result: BlockSyncError = await this.blockSyncErrorRepository.findOne();
         if (result) {
