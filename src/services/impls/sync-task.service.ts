@@ -32,6 +32,7 @@ import { ISmartContractRepository } from "src/repositories/ismart-contract.repos
 import { ITokenContractRepository } from "src/repositories/itoken-contract.repository";
 import { loadavg } from "os";
 import { SmartContract } from "src/entities/smart-contract.entity";
+import { In } from "typeorm";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -639,6 +640,7 @@ export class SyncTaskService implements ISyncTaskService {
                                         find((x) => x.type == CONST_CHAR.EXECUTE).attributes.find((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS).value;
                                     smartContract.tx_hash = tx_hash;
                                     smartContract.height = height;
+                                    smartContract.contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED;
                                     contracts.push(smartContract);
                                 })
                                 await this.smartContractRepository.create(contracts);
