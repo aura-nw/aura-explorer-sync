@@ -1,1 +1,3 @@
-export interface ISyncTaskService {}
+export interface ISyncTaskService {
+    handleSyncData(syncBlock: number, recallSync: boolean): Promise<any>;
+}

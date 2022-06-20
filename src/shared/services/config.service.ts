@@ -1,8 +1,11 @@
+import { Injectable } from '@nestjs/common';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { DATABASE_TYPE } from '../../common/constants/app.constant';
+import { PROCESSOR_CONSTANTS } from '../constants/common.const';
 import { PascalCaseStrategy } from '../pascalCase.strategy';
 
+@Injectable()
 export class ConfigService {
   constructor() {
     dotenv.config({
@@ -40,7 +43,27 @@ export class ConfigService {
   }
 
   get ENV_CONFIG() {
-    return {};
+    return {
+      REDIS_CONFIG: {
+        HOST: `${this.get('REDIS_HOST')}`,
+        PORT: `${this.get('REDIS_PORT')}`,
+        PREFIX: `${this.get('REDIS_PREFIX')}`
+      },
+      THREADS: Number(this.get('THREADS')),
+      JOB_OPTIONS: {
+        ATTEMPTS: Number(this.get('REDIS_HOST')) || 3,
+        BACK_OFF: Number(this.get('BACK_OFF')) || 1000
+      }
+    };
+  }
+
+  get registerQueue() {
+    const threads = Number(this.get('THREADS'));
+    const queues = [];
+    for (let idx = 1; idx <= threads; idx++) {
+      queues.push({ name: `${PROCESSOR_CONSTANTS.SYNC_BLOCK}_${idx}` });
+    }
+    return queues;
   }
 
   get typeOrmConfig(): TypeOrmModuleOptions {

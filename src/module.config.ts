@@ -44,6 +44,8 @@ export const SERVICE_INTERFACE = {
   ISYNC_PROPOSAL_SERVICE: 'ISyncProposalService',
   ISYNC_TASK_SERVICE: 'ISyncTaskService',
   ISYNC_WEBSOCKET_SERVICE: 'ISyncWebsocketService',
+  ISYNC_STATUS_SERVICE: 'ISyncStatusService',
+  IBLOCK_SYNC_ERROR_SERVICE: 'IBlockSyncErrorService',
 };
 
 export const REPOSITORY_INTERFACE = {

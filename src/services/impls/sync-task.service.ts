@@ -28,11 +28,13 @@ import { Delegation } from "../../entities/delegation.entity";
 import { DelegatorReward } from "../../entities/delegator-reward.entity";
 import { IDelegatorRewardRepository } from "../../repositories/idelegator-reward.repository";
 import e from "express";
-import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
-import { ITokenContractRepository } from "src/repositories/itoken-contract.repository";
+import { ISmartContractRepository } from "../../repositories/ismart-contract.repository";
+import { ITokenContractRepository } from "../../repositories/itoken-contract.repository";
 import { loadavg } from "os";
-import { SmartContract } from "src/entities/smart-contract.entity";
+import { SmartContract } from "../../entities/smart-contract.entity";
 import { In } from "typeorm";
+import { SyncBlockQueue } from "../../shared/queues/sync-block.queue";
+import { PROCESS_CONSTANTS } from "../../shared/constants/common.const";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -44,7 +46,6 @@ export class SyncTaskService implements ISyncTaskService {
     private isSyncValidator = false;
     private isSyncMissBlock = false;
     private currentBlock: number;
-    private threads = 0;
     private schedulesSync: Array<number> = [];
     private smartContractService;
 
@@ -94,94 +95,6 @@ export class SyncTaskService implements ISyncTaskService {
 
         this.smartContractService = this.configService.get('SMART_CONTRACT_SERVICE');
 
-        // Get number thread from config
-        this.threads = Number(this.configService.get('THREADS') || 15);
-
-        // Call worker to process
-        this.workerProcess();
-    }
-
-    /**
-     * scheduleTimeoutJob
-     * @param height 
-     */
-    scheduleTimeoutJob(height: number) {
-        this._logger.log(null, `Class ${SyncTaskService.name}, call scheduleTimeoutJob method with prameters: {currentBlk: ${height}}`);
-
-        this.schedule.scheduleTimeoutJob(`schedule_sync_block_${uuidv4()}`, 100, async () => {
-            //Update code sync data
-            await this.handleSyncData(height);
-
-            // Close thread
-            return true;
-        });
-    }
-
-    /**
-    * threadProcess
-    * @param currentBlk Current block
-    * @param blockLatest The final block
-    */
-    threadProcess(currentBlk: number, latestBlk: number) {
-        let loop = 0;
-        let height = 0;
-        try {
-            let blockNotSync = latestBlk - currentBlk;
-            if (blockNotSync > 0) {
-                if (blockNotSync > this.threads) {
-                    loop = this.threads;
-                } else {
-                    loop = blockNotSync;
-                }
-
-                // Create 10 thread to sync data      
-                for (let i = 1; i <= loop; i++) {
-                    height = currentBlk + i;
-                    this.scheduleTimeoutJob(height);
-                }
-            }
-        } catch (error) {
-            this._logger.log(null, `Call threadProcess method error: $${error.message}`);
-        }
-
-        // If current block not equal latest block when the symtem will call workerProcess method    
-        this.schedule.scheduleIntervalJob(`schedule_recall_${(new Date()).getTime()}`, 1000, async () => {
-            // Update code sync data
-            this._logger.log(null, `Class ${SyncTaskService.name}, recall workerProcess method`);
-            this.workerProcess(height);
-
-            // Close thread
-            return true;
-        });
-    }
-
-    /**
-     * workerProcess
-     * @param height
-     */
-    async workerProcess(height: number = undefined) {
-
-        this._logger.log(null, `Class ${SyncTaskService.name}, call workerProcess method`);
-
-        let currentBlk = 0, latestBlk = 0;
-        // Get blocks latest
-        try {
-            const blockLatest = await this.getBlockLatest();
-            latestBlk = Number(blockLatest?.block?.header?.height || 0);
-
-            if (height > 0) {
-                currentBlk = height;
-
-            } else {
-                //Get current height
-                const status = await this.statusRepository.findOne();
-                if (status) {
-                    currentBlk = status.current_block;
-                }
-            }
-        } catch (err) { }
-
-        this.threadProcess(currentBlk, latestBlk)
     }
 
     @Interval(500)
@@ -440,21 +353,11 @@ export class SyncTaskService implements ISyncTaskService {
         }
     }
 
-    @Interval(4000)
-    async blockSyncError() {
-        const result: BlockSyncError = await this.blockSyncErrorRepository.findOne();
-        if (result) {
-            this._logger.log(null, `Class ${SyncTaskService.name}, call blockSyncError method with prameters: {syncBlock: ${result.height}}`);
-            const idxSync = this.schedulesSync.indexOf(result.height);
-
-            // Check height has sync or not. If height hasn't sync when we recall handleSyncData method
-            if (idxSync < 0) {
-                await this.handleSyncData(result.height, true);
-                this.schedulesSync.splice(idxSync, 1);
-            }
-        }
-    }
-
+    /**
+     * handleSyncData
+     * @param syncBlock 
+     * @param recallSync 
+     */
     async handleSyncData(syncBlock: number, recallSync = false): Promise<any> {
         this._logger.log(null, `Class ${SyncTaskService.name}, call handleSyncData method with prameters: {syncBlock: ${syncBlock}}`);
         // this.logger.log(null, `Already syncing Block: ${syncBlock}`);
@@ -730,15 +633,7 @@ export class SyncTaskService implements ISyncTaskService {
             // this.influxDbClient.closeWriteApi();
 
             // Update current block
-            let currentBlk = 0;
-            const status = await this.statusRepository.findOne();
-            if (status) {
-                currentBlk = status.current_block;
-            }
-
-            if (syncBlock > currentBlk) {
-                await this.updateStatus(fetchingBlockHeight);
-            }
+            await this.updateStatus(fetchingBlockHeight);
 
             // Delete data on Block sync error table
             await this.removeBlockError(syncBlock);
@@ -978,8 +873,12 @@ export class SyncTaskService implements ISyncTaskService {
 
     async updateStatus(newHeight) {
         const status = await this.statusRepository.findOne();
-        status.current_block = newHeight;
-        await this.statusRepository.create(status);
+        if (status) {
+            if (Number(newHeight) > Number(status.current_block)) {
+                status.current_block = newHeight;
+                await this.statusRepository.update(status);
+            }
+        }
     }
 
     async getCurrentStatus() {
@@ -992,17 +891,5 @@ export class SyncTaskService implements ISyncTaskService {
         } else {
             this.currentBlock = status[0].current_block;
         }
-    }
-
-    /**
-   * getBlockLatest
-   * @returns 
-   */
-    async getBlockLatest(): Promise<any> {
-        this._logger.log(null, `Class ${SyncTaskService.name}, call getBlockLatest method`);
-
-        const paramsBlockLatest = `blocks/latest`;
-        const results = await this._commonUtil.getDataAPI(this.api, paramsBlockLatest);
-        return results;
     }
 }

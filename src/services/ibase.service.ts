@@ -1,30 +1,30 @@
 import { ResponseDto } from "../dtos/responses/response.dto";
 
-export interface IBaseService {
+export interface IBaseService<T> {
   /**
    * findOne
    * @param id
    */
-  findOne(id: any): Promise<ResponseDto>;
+  findOne(id: any): Promise<T>;
 
   /**
    * findByCondition
    * @param filterCondition
    * @param orderBy
    */
-  findByCondition(filterCondition: any, orderBy: any): Promise<ResponseDto>;
+  findByCondition(filterCondition: any, orderBy: any): Promise<T[]>;
 
   /**
    * findAll
    * @param orderBy
    */
-  findAll(orderBy?: any): Promise<ResponseDto>;
+  findAll(orderBy?: any): Promise<T[]>;
 
   /**
    * findWithRelations
    * @param relations
    */
-  findWithRelations(relations: any): Promise<ResponseDto>;
+  findWithRelations(relations: any): Promise<T[]>;
 
   /**
    * findAndCount
@@ -38,30 +38,30 @@ export interface IBaseService {
     pageSize: number,
     condition: any,
     orderBy: any,
-  ): Promise<ResponseDto>;
+  ): Promise<any>;
 
   /**
    * create
    * @param data
    */
-  create<T>(data: T | any): Promise<ResponseDto>;
+  create(data: T | any): Promise<T>;
 
   /**
    * update
    * @param data
    */
-  update<T>(data: T | any): Promise<ResponseDto>;
+  update(data: T | any): Promise<T>;
 
   /**
    * remove
    * @param id
    */
-  remove(id: any): Promise<ResponseDto>;
+  remove(id: any): Promise<T>;
 
   /**
    * upsert
    * @param data 
    * @param conflictPathsOrOptions 
    */
-  upsert(data: Array<any>, conflictPathsOrOptions: string[]): Promise<any>;
+  upsert(data: Array<any>, conflictPathsOrOptions: string[]): Promise<T[]>;
 }

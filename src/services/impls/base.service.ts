@@ -2,7 +2,7 @@ import { IBaseService } from '../ibase.service';
 import { ErrorMap } from '../../common/error.map';
 import { ResponseDto } from '../../dtos/responses/response.dto';
 
-export class BaseService implements IBaseService {
+export class BaseService<T> implements IBaseService<T> {
   private _repos: any;
   public constructor(repos: any) {
     this._repos = repos;
@@ -13,9 +13,8 @@ export class BaseService implements IBaseService {
    * @param condition
    * @returns
    */
-  public async findOne(id: any): Promise<ResponseDto> {
-    const result = await this._repos.findOne(id);
-    return ResponseDto.response(ErrorMap.SUCCESSFUL, result);
+  public async findOne(id: any): Promise<T> {
+    return await this._repos.findOne(id);
   }
 
   /**
@@ -24,12 +23,11 @@ export class BaseService implements IBaseService {
    * @param orderBy
    * @returns
    */
-  public async findByCondition(
+  public async findByCondition (
     condition: any,
     orderBy: any = null,
-  ): Promise<ResponseDto> {
-    const result = await this._repos.findByCondition(condition, orderBy);
-    return ResponseDto.response(ErrorMap.SUCCESSFUL, result);
+  ): Promise<T[]>{
+    return await this._repos.findByCondition(condition, orderBy);
   }
 
   /**
@@ -37,9 +35,8 @@ export class BaseService implements IBaseService {
    * @param relations
    * @returns
    */
-  public async findWithRelations(relations: any): Promise<ResponseDto> {
-    const result = await this._repos.findWithRelations(relations);
-    return ResponseDto.response(ErrorMap.SUCCESSFUL, result);
+  public async findWithRelations(relations: any): Promise<T[]> {
+    return await this._repos.findWithRelations(relations);
   }
 
   /**
@@ -47,9 +44,8 @@ export class BaseService implements IBaseService {
    * @param orderBy
    * @returns
    */
-  public async findAll(orderBy?: any): Promise<ResponseDto> {
-    const result = await this._repos.findAll(orderBy);
-    return ResponseDto.response(ErrorMap.SUCCESSFUL, result);
+  public async findAll(orderBy?: any): Promise<T[]> {
+    return await this._repos.findAll(orderBy);
   }
 
   /**
@@ -72,7 +68,7 @@ export class BaseService implements IBaseService {
       condition,
       orderBy,
     );
-    return ResponseDto.response(ErrorMap.SUCCESSFUL, result);
+    return result;
   }
 
   /**
@@ -80,9 +76,8 @@ export class BaseService implements IBaseService {
    * @param data
    * @returns
    */
-  public async create<T>(data: T | any): Promise<ResponseDto> {
-    const result = await this._repos.create(data);
-    return ResponseDto.response(ErrorMap.SUCCESSFUL, result);
+  public async create(data: T | any): Promise<T> {
+    return await this._repos.create(data);
   }
 
   /**
@@ -90,9 +85,8 @@ export class BaseService implements IBaseService {
    * @param data
    * @returns
    */
-  public async update<T>(data: T | any): Promise<ResponseDto> {
-    const result = await this._repos.update(data);
-    return ResponseDto.response(ErrorMap.SUCCESSFUL, result);
+  public async update(data: T | any): Promise<T> {
+    return await this._repos.update(data);
   }
 
   /**
@@ -100,9 +94,8 @@ export class BaseService implements IBaseService {
    * @param id
    * @returns
    */
-  public async remove(id: any): Promise<ResponseDto> {
-    const result = await this._repos.remove(id);
-    return ResponseDto.response(ErrorMap.SUCCESSFUL, result);
+  public async remove(id: any): Promise<T> {
+    return await this._repos.remove(id);
   }
 
   /**
@@ -111,7 +104,7 @@ export class BaseService implements IBaseService {
    * @param conflictPathsOrOptions 
    * @returns 
    */
-  public upsert(data: Array<any>, conflictPathsOrOptions: string[]): Promise<any> {
+  public upsert(data: Array<any>, conflictPathsOrOptions: string[]): Promise<T[]> {
     return this._repos.upsert(data, conflictPathsOrOptions);
   }
 }

@@ -6,7 +6,7 @@ import {
   REPOSITORY_INTERFACE,
   SERVICE_INTERFACE,
 } from './module.config';
-import { ConfigService } from './shared/services/config.service';
+import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { ScheduleModule } from 'nest-schedule';
 import { SyncProposalService } from './services/impls/sync-proposal.service';
@@ -26,12 +26,18 @@ import { TransactionRepository } from './repositories/impls/transaction.reposito
 import { SyncWebsocketService } from './services/impls/sync-websocket.service';
 import { SmartContractRepository } from './repositories/impls/smart-contract.repository';
 import { TokenContractRepository } from './repositories/impls/token-contract.repository';
+import { BullModule } from "@nestjs/bull";
+import { PROCESSOR_CONSTANTS } from './shared/constants/common.const';
+import { SyncBlockConsumer } from './shared/consumers/sync-block.consumer';
+import { SyncBlockQueue } from './shared/queues/sync-block.queue';
+import { SyncStatusService } from './services/impls/sync-status.service';
+import { BlockSyncErrorService } from './services/impls/block-sync-error.service';
 
 const controllers = [];
 const entities = [
-  ENTITIES_CONFIG.BLOCK_SYNC_ERROR, 
-  ENTITIES_CONFIG.MISSED_BLOCK, 
-  ENTITIES_CONFIG.PROPOSAL, 
+  ENTITIES_CONFIG.BLOCK_SYNC_ERROR,
+  ENTITIES_CONFIG.MISSED_BLOCK,
+  ENTITIES_CONFIG.PROPOSAL,
   ENTITIES_CONFIG.VALIDATOR,
   ENTITIES_CONFIG.BLOCK,
   ENTITIES_CONFIG.DELEGATION,
@@ -44,6 +50,7 @@ const entities = [
   ENTITIES_CONFIG.SMART_CONTRACT,
   ENTITIES_CONFIG.TOKEN_CONTRACT,
 ];
+
 @Module({
   imports: [
     ScheduleModule.register(),
@@ -53,6 +60,17 @@ const entities = [
         maxRedirects: 5,
       }),
     }),
+    BullModule.forRootAsync({
+      useFactory: async (_queueConfig = ENV_CONFIG.REDIS_CONFIG) => ({
+        redis: {
+          host: _queueConfig.HOST,
+          port: _queueConfig.PORT,
+          prefix: _queueConfig.PREFIX + '_BULL'
+        },
+      }),
+      inject: [ConfigService],
+    }),
+    BullModule.registerQueue({ name: PROCESSOR_CONSTANTS.SYNC_BLOCK }),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
     TypeOrmModule.forFeature([...entities]),
@@ -134,6 +152,19 @@ const entities = [
       provide: SERVICE_INTERFACE.ISYNC_WEBSOCKET_SERVICE,
       useClass: SyncWebsocketService,
     },
+    {
+      provide: SERVICE_INTERFACE.ISYNC_STATUS_SERVICE,
+      useClass: SyncStatusService,
+    },
+    {
+      provide: SERVICE_INTERFACE.IBLOCK_SYNC_ERROR_SERVICE,
+      useClass: BlockSyncErrorService,
+    },
+   
+    // ConfigService,
+     // Queue
+    SyncBlockQueue,
+    SyncBlockConsumer,
   ],
 })
-export class AppModule {}
+export class AppModule { }
