@@ -10,10 +10,8 @@ import { ConfigService, ENV_CONFIG } from '../services/config.service';
 export class SyncBlockConsumer {
 
     private readonly _logger = new Logger(SyncBlockConsumer.name);
-    private s;
 
     constructor(
-        private configService: ConfigService,
         @Inject(SERVICE_INTERFACE.ISYNC_TASK_SERVICE)
         private syncTaskService: ISyncTaskService,
     ) {
