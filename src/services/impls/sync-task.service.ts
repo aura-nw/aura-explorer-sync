@@ -31,6 +31,8 @@ import e from "express";
 import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
 import { ITokenContractRepository } from "src/repositories/itoken-contract.repository";
 import { loadavg } from "os";
+import { SmartContract } from "src/entities/smart-contract.entity";
+import { In } from "typeorm";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -554,70 +556,12 @@ export class SyncTaskService implements ISyncTaskService {
                             };
                             txRawLogData = JSON.stringify(rawData);
                         } else if (txMsgType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
-                            try {
-                                let contract_name = txData.tx.body.messages[0].label;
-                                let height = txData.tx_response.height;
-                                let contract_address = txData.tx_response.logs[0].events.find(
-                                    ({ type }) => type === CONST_CHAR.INSTANTIATE,
-                                ).attributes.find(
-                                    ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
-                                ).value;
-                                txContractAddress = contract_address;
-                                let creator_address = txData.tx.body.messages[0].sender;
-                                let code_id = txData.tx.body.messages[0].code_id;
-                                let tx_hash = txData.tx_response.txhash;
-
-                                let paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
-                                let smartContractResponse;
-                                try {
-                                    smartContractResponse = await this._commonUtil.getDataAPI(this.smartContractService, paramGetHash);
-                                } catch (error) {
-                                    this._logger.error('Can not connect to smart contract verify service or LCD service', error);
-                                }
-
-                                let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url,
-                                    compiler_version, instantiate_msg_schema, query_msg_schema, execute_msg_schema;
-                                if (smartContractResponse) {
-                                    contract_hash = smartContractResponse.Message.length === 64 ? smartContractResponse.Message : '';
-                                }
-                                if (contract_hash !== '') {
-                                    let existContractHash = await this.smartContractRepository.findContractByHash(contract_hash);
-                                    if (existContractHash.filter(e => e.contract_verification == SMART_CONTRACT_VERIFICATION.EXACT_MATCH).length > 0) {
-                                        contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-                                        let exactContract = existContractHash.find(
-                                            (x) => x.contract_verification == SMART_CONTRACT_VERIFICATION.EXACT_MATCH
-                                        )
-                                        contract_match = exactContract.contract_address;
-                                        url = exactContract.url;
-                                        compiler_version = exactContract.compiler_version;
-                                        instantiate_msg_schema = exactContract.instantiate_msg_schema;
-                                        query_msg_schema = exactContract.query_msg_schema;
-                                        execute_msg_schema = exactContract.execute_msg_schema;
-                                    }
-                                }
-
-                                let smartContract = {
-                                    height,
-                                    code_id,
-                                    contract_name,
-                                    contract_address,
-                                    creator_address,
-                                    contract_hash,
-                                    tx_hash,
-                                    url,
-                                    instantiate_msg_schema,
-                                    query_msg_schema,
-                                    execute_msg_schema,
-                                    contract_match,
-                                    contract_verification,
-                                    compiler_version,
-                                }
-
-                                await this.smartContractRepository.create(smartContract);
-                            } catch (error) {
-                                this._logger.error(null, `Got error instantiate contract transaction`);
-                                this._logger.error(null, `${error.stack}`);
-                            }
+                            let contract_address = txData.tx_response.logs[0].events.find(
+                                ({ type }) => type === CONST_CHAR.INSTANTIATE,
+                            ).attributes.find(
+                                ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
+                            ).value;
+                            txContractAddress = contract_address;
                         } else if (txMsgType == CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
                             txContractAddress = txData.tx.body.messages[0].contract;
                         }
@@ -738,6 +682,7 @@ export class SyncTaskService implements ISyncTaskService {
         let historyProposals = [];
         let delegations = [];
         let delegatorRewards = [];
+        let smartContracts = [];
         for (let k = 0; k < listTransactions.length; k++) {
             const txData = listTransactions[k];
             if (txData.tx.body.messages && txData.tx.body.messages.length > 0
@@ -912,6 +857,96 @@ export class SyncTaskService implements ISyncTaskService {
                         reward.tx_hash = txData.tx_response.txhash;
                         reward.created_at = new Date(txData.tx_response.timestamp);
                         delegatorRewards.push(reward);
+                    } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
+                        try {
+                            let action = txData.tx.body.messages[0].msg.create_minter;
+                            let tx_hash = txData.tx_response.txhash;
+                            let height = txData.tx_response.height;
+                            let contract_addresses = txData.tx_response.logs[0].events.
+                                find((x) => x.type == CONST_CHAR.INSTANTIATE).attributes.filter((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS);
+                            let code_ids = txData.tx_response.logs[0].events.
+                                find((x) => x.type == CONST_CHAR.INSTANTIATE).attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
+                            contract_addresses.map(function (x, i) {
+                                const smartContract = new SmartContract();
+                                smartContract.code_id = code_ids[i].value;
+                                smartContract.contract_name = smartContract.code_id == 1 ? CONST_CHAR.CODE_1_NAME : CONST_CHAR.CODE_2_NAME;
+                                smartContract.contract_address = contract_addresses[i].value;
+                                smartContract.creator_address = txData.tx_response.logs[0].events.
+                                    find((x) => x.type == CONST_CHAR.EXECUTE).attributes.find((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS).value;
+                                smartContract.tx_hash = tx_hash;
+                                smartContract.height = height;
+                                smartContract.contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED;
+                                smartContracts.push(smartContract);
+                            })
+                            // await this.smartContractRepository.create(contracts);
+                        } catch (error) {
+                            this._logger.error(null, `Got error in create minter transaction`);
+                            this._logger.error(null, `${error.stack}`);
+                        }
+                    } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
+                        try {
+                            let contract_name = txData.tx.body.messages[0].label;
+                            let height = txData.tx_response.height;
+                            let contract_address = txData.tx_response.logs[0].events.find(
+                                ({ type }) => type === CONST_CHAR.INSTANTIATE,
+                            ).attributes.find(
+                                ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
+                            ).value;
+                            let creator_address = txData.tx.body.messages[0].sender;
+                            let code_id = txData.tx.body.messages[0].code_id;
+                            let tx_hash = txData.tx_response.txhash;
+
+                            let paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
+                            let smartContractResponse;
+                            try {
+                                smartContractResponse = await this._commonUtil.getDataAPI(this.smartContractService, paramGetHash);
+                            } catch (error) {
+                                this._logger.error('Can not connect to smart contract verify service or LCD service', error);
+                            }
+
+                            let contract_hash = '', contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED, contract_match, url,
+                                compiler_version, instantiate_msg_schema, query_msg_schema, execute_msg_schema;
+                            if (smartContractResponse) {
+                                contract_hash = smartContractResponse.Message.length === 64 ? smartContractResponse.Message : '';
+                            }
+                            if (contract_hash !== '') {
+                                let existContractHash = await this.smartContractRepository.findContractByHash(contract_hash);
+                                if (existContractHash.filter(e => e.contract_verification == SMART_CONTRACT_VERIFICATION.EXACT_MATCH).length > 0) {
+                                    contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
+                                    let exactContract = existContractHash.find(
+                                        (x) => x.contract_verification == SMART_CONTRACT_VERIFICATION.EXACT_MATCH
+                                    )
+                                    contract_match = exactContract.contract_address;
+                                    url = exactContract.url;
+                                    compiler_version = exactContract.compiler_version;
+                                    instantiate_msg_schema = exactContract.instantiate_msg_schema;
+                                    query_msg_schema = exactContract.query_msg_schema;
+                                    execute_msg_schema = exactContract.execute_msg_schema;
+                                }
+                            }
+
+                            let smartContract = {
+                                height,
+                                code_id,
+                                contract_name,
+                                contract_address,
+                                creator_address,
+                                contract_hash,
+                                tx_hash,
+                                url,
+                                instantiate_msg_schema,
+                                query_msg_schema,
+                                execute_msg_schema,
+                                contract_match,
+                                contract_verification,
+                                compiler_version,
+                            }
+                            smartContracts.push(smartContract);
+                            // await this.smartContractRepository.create(smartContract);
+                        } catch (error) {
+                            this._logger.error(null, `Got error in instantiate contract transaction`);
+                            this._logger.error(null, `${error.stack}`);
+                        }
                     }
                 }
             }
@@ -934,6 +969,9 @@ export class SyncTaskService implements ISyncTaskService {
         }
         if (delegatorRewards.length > 0) {
             await this.delegatorRewardRepository.upsert(delegatorRewards, []);
+        }
+        if (smartContracts.length > 0) {
+            await this.smartContractRepository.upsert(smartContracts, []);
         }
     }
 
