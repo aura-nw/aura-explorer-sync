@@ -53,6 +53,9 @@ export enum CONST_CHAR {
   INSTANTIATE = 'instantiate',
   _CONTRACT_ADDRESS = '_contract_address',
   CODE_ID = 'code_id',
+  EXECUTE = 'execute',
+  CODE_1_NAME = 'Check CW721',
+  CODE_2_NAME = 'Create minter'
 }
 
 export enum CONST_MSG_TYPE {
