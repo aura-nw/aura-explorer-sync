@@ -1,12 +1,25 @@
 import { PaginatorResponse } from '../dtos/responses/paginator.response';
-import { DeleteResult } from 'typeorm';
+import { DeleteResult, FindConditions, FindOneOptions } from 'typeorm';
 
-export interface IBaseRepository {
+export interface IBaseRepository<T> {
   /**
    * findOne
    * @param id
    */
-  findOne(id?: any): Promise<any>;
+  findOne(id?: any): Promise<T>;
+
+  /**
+   * findOne
+   * @param options 
+   */
+  findOne(options?: FindOneOptions<any>): Promise<T>;
+
+  /**
+   * findOne
+   * @param conditions 
+   * @param options 
+   */
+  findOne(conditions?: FindConditions<T>, options?: FindOneOptions<any>): Promise<T>
 
   /**
    * findByCondition
@@ -17,19 +30,19 @@ export interface IBaseRepository {
     filterCondition: any,
     orderBy?: any,
     select?: string[],
-  ): Promise<any[]>;
+  ): Promise<T[]>;
 
   /**
    * findAll
    * @param orderBy
    */
-  findAll(orderBy?: any): Promise<any[]>;
+  findAll(orderBy?: any): Promise<T[]>;
 
   /**
    * findWithRelations
    * @param relations
    */
-  findWithRelations(relations: any): Promise<any[]>;
+  findWithRelations(relations: any): Promise<T[]>;
 
   /**
    * findAndCount
@@ -49,7 +62,7 @@ export interface IBaseRepository {
    * create
    * @param data
    */
-  create(data: any): Promise<any>;
+  create(data: any): Promise<T>;
 
   /**
    * insert
@@ -61,7 +74,7 @@ export interface IBaseRepository {
    * update
    * @param data
    */
-  update(data: any): Promise<any>;
+  update(data: any): Promise<T>;
 
   /**
    * remove
@@ -74,5 +87,5 @@ export interface IBaseRepository {
    * @param data 
    * @param conflictPathsOrOptions 
    */
-  upsert(data: Array<any>, conflictPathsOrOptions: string[]);
+  upsert(data: Array<T>, conflictPathsOrOptions: string[]);
 }

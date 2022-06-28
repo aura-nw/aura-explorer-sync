@@ -74,4 +74,14 @@ export class CommonUtil {
       return '';
     }
   }
+
+  /**
+   * getBlockLatest
+   * @returns Promise<any>
+   */
+  async getBlockLatest(rootUrl: string): Promise<any> {
+    const paramsBlockLatest = `blocks/latest`;
+    const results = await this.getDataAPI(rootUrl, paramsBlockLatest);
+    return results;
+  }
 }

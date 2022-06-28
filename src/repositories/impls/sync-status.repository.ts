@@ -1,18 +1,17 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ENTITIES_CONFIG } from "../../module.config";
-import { ObjectLiteral, Repository } from "typeorm";
-import { IDelegatorRewardRepository } from "../idelegator-reward.repository";
+import { Repository } from "typeorm";
 import { ISyncStatusRepository } from "../isync-status.repository";
 import { BaseRepository } from "./base.repository";
-import { BlockSyncError } from "../../entities/block-sync-error.entity";
+import { SyncStatus } from "../../entities/sync-status.entity";
 
 @Injectable()
-export class SyncStatusRepository extends BaseRepository implements ISyncStatusRepository {
+export class SyncStatusRepository extends BaseRepository<SyncStatus> implements ISyncStatusRepository {
     private readonly _logger = new Logger(SyncStatusRepository.name);
     constructor(
         @InjectRepository(ENTITIES_CONFIG.SYNC_STATUS)
-        private readonly repos: Repository<BlockSyncError>,
+        private readonly repos: Repository<SyncStatus>,
     ) {
         super(repos);
         this._logger.log(

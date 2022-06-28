@@ -1,6 +1,7 @@
+import { SmartContract } from "../entities/smart-contract.entity";
 import { IBaseRepository } from "./ibase.repository";
 
-export interface ISmartContractRepository extends IBaseRepository {
+export interface ISmartContractRepository extends IBaseRepository<SmartContract> {
   /**
  * Get the latest block height in DB
  */

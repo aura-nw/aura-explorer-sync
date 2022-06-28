@@ -27,11 +27,14 @@ import { SyncWebsocketService } from './services/impls/sync-websocket.service';
 import { SmartContractRepository } from './repositories/impls/smart-contract.repository';
 import { TokenContractRepository } from './repositories/impls/token-contract.repository';
 import { BullModule } from "@nestjs/bull";
-import { PROCESSOR_CONSTANTS } from './shared/constants/common.const';
+import { PROCESSOR_CONSTANTS } from './common/constants/common.const';
 import { SyncBlockConsumer } from './shared/consumers/sync-block.consumer';
-import { SyncBlockQueue } from './shared/queues/sync-block.queue';
 import { SyncStatusService } from './services/impls/sync-status.service';
 import { BlockSyncErrorService } from './services/impls/block-sync-error.service';
+import { SyncMissedBlockConsumer } from './shared/consumers/sync-missed-block.consumer';
+import { BlockSyncErrorConsumer } from './shared/consumers/block-sync-error.consumer';
+import { SyncValidatorConsumer } from './shared/consumers/sync-validator.consumer';
+import { SyncProposalConsumer } from './shared/consumers/sync-proposal.consumer';
 
 const controllers = [];
 const entities = [
@@ -70,7 +73,13 @@ const entities = [
       }),
       inject: [ConfigService],
     }),
-    BullModule.registerQueue({ name: PROCESSOR_CONSTANTS.SYNC_BLOCK }),
+    BullModule.registerQueue(
+      { name: PROCESSOR_CONSTANTS.SYNC_BLOCK },
+      { name: PROCESSOR_CONSTANTS.SYNC_MISSED_BLOCK },
+      { name: PROCESSOR_CONSTANTS.BLOCK_SYNC_ERROR },
+      { name: PROCESSOR_CONSTANTS.SYNC_VALIDATOR},
+      { name: PROCESSOR_CONSTANTS.SYNC_PROPOSAL}
+    ),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
     TypeOrmModule.forFeature([...entities]),
@@ -160,11 +169,13 @@ const entities = [
       provide: SERVICE_INTERFACE.IBLOCK_SYNC_ERROR_SERVICE,
       useClass: BlockSyncErrorService,
     },
-   
-    // ConfigService,
-     // Queue
-    SyncBlockQueue,
+
+    // Queue
     SyncBlockConsumer,
+    SyncMissedBlockConsumer,
+    BlockSyncErrorConsumer,
+    SyncValidatorConsumer,
+    SyncProposalConsumer
   ],
 })
 export class AppModule { }

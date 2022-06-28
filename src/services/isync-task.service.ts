@@ -1,3 +1,7 @@
 export interface ISyncTaskService {
-    handleSyncData(syncBlock: number, recallSync: boolean): Promise<any>;
+    handleSyncData(height: number, recall: boolean): Promise<any>;
+
+    syncMissedBlock(height: number): Promise<any>;
+
+    syncValidator(validators: Array<any>): Promise<any>;
 }

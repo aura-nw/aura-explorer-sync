@@ -1,6 +1,7 @@
 import { IBaseService } from '../ibase.service';
 import { ErrorMap } from '../../common/error.map';
 import { ResponseDto } from '../../dtos/responses/response.dto';
+import { FindConditions, FindOneOptions } from 'typeorm';
 
 export class BaseService<T> implements IBaseService<T> {
   private _repos: any;
@@ -13,8 +14,19 @@ export class BaseService<T> implements IBaseService<T> {
    * @param condition
    * @returns
    */
-  public async findOne(id: any): Promise<T> {
-    return await this._repos.findOne(id);
+  public async findOne(id?: any, conditions?: FindConditions<any>, options?: FindOneOptions<any>): Promise<T> {
+    if (id) {
+      return this._repos.findOne(id);
+
+    } else if (conditions && options) {
+      return this._repos.findOne(conditions, options);
+
+    } else if (conditions) {
+      return this._repos.findOne(conditions);
+
+    } else {
+      return this._repos.findOne();
+    }
   }
 
   /**
@@ -23,10 +35,10 @@ export class BaseService<T> implements IBaseService<T> {
    * @param orderBy
    * @returns
    */
-  public async findByCondition (
+  public async findByCondition(
     condition: any,
     orderBy: any = null,
-  ): Promise<T[]>{
+  ): Promise<T[]> {
     return await this._repos.findByCondition(condition, orderBy);
   }
 

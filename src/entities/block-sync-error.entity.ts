@@ -8,4 +8,13 @@ export class BlockSyncError extends BaseEntityIncrementId {
 
     @Column({ name: 'block_hash' })
     block_hash: string;
+
+    @Column()
+    status: string;
+
+    @Column({ type: 'text' , nullable: true})
+    message: string;
+
+    @Column({ name: 'retry_times' })
+    retry_times: number;
 }

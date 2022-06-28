@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
 import { APP_CONSTANTS, CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, MESSAGE_ACTION, NODE_API, SMART_CONTRACT_VERIFICATION } from "../../common/constants/app.constant";
 import { Block, BlockSyncError, MissedBlock, SyncStatus, Transaction, Validator } from "../../entities";
-import { ConfigService } from "../../shared/services/config.service";
+import { ConfigService, ENV_CONFIG } from "../../shared/services/config.service";
 import { CommonUtil } from "../../utils/common.util";
 import { ISyncTaskService } from "../isync-task.service";
 import { InjectSchedule, Schedule } from 'nest-schedule';
@@ -27,26 +27,20 @@ import { ProposalDeposit } from "../../entities/proposal-deposit.entity";
 import { Delegation } from "../../entities/delegation.entity";
 import { DelegatorReward } from "../../entities/delegator-reward.entity";
 import { IDelegatorRewardRepository } from "../../repositories/idelegator-reward.repository";
-import e from "express";
 import { ISmartContractRepository } from "../../repositories/ismart-contract.repository";
 import { ITokenContractRepository } from "../../repositories/itoken-contract.repository";
-import { loadavg } from "os";
 import { SmartContract } from "../../entities/smart-contract.entity";
-import { In } from "typeorm";
-import { SyncBlockQueue } from "../../shared/queues/sync-block.queue";
-import { PROCESS_CONSTANTS } from "../../shared/constants/common.const";
+import { BLOCK_SYNC_ERROR_STATUS_CONSTANTS, PROCESS_CONSTANTS } from "../../common/constants/common.const";
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
     private readonly _logger = new Logger(SyncTaskService.name);
-    private rpc;
-    private api;
+    private rpc = '';
+    private api = '';
     private influxDbClient: InfluxDBClient;
-    private isSyncing = false;
     private isSyncValidator = false;
     private isSyncMissBlock = false;
     private currentBlock: number;
-    private schedulesSync: Array<number> = [];
     private smartContractService;
 
     constructor(
@@ -83,8 +77,9 @@ export class SyncTaskService implements ISyncTaskService {
         this._logger.log(
             '============== Constructor Sync Task Service ==============',
         );
-        this.rpc = this.configService.get('RPC');
-        this.api = this.configService.get('API');
+
+        this.rpc = ENV_CONFIG.NODE.RPC;
+        this.api = ENV_CONFIG.NODE.API;
 
         this.influxDbClient = new InfluxDBClient(
             this.configService.get('INFLUXDB_BUCKET'),
@@ -97,20 +92,15 @@ export class SyncTaskService implements ISyncTaskService {
 
     }
 
-    @Interval(500)
-    async syncValidator() {
-        // check status
-        if (this.isSyncValidator) {
-            this._logger.log(null, 'already syncing validator... wait');
-            return;
-        } else {
-            this._logger.log(null, 'fetching data validator...');
-        }
-
+    /**
+     * syncValidator
+     * @param validators 
+     * @returns 
+     */
+    async syncValidator(validators: Array<any>) {
+        
         this.influxDbClient.initWriteApi();
 
-        // get validators
-        const paramsValidator = NODE_API.VALIDATOR;
         // get staking pool
         const paramspool = NODE_API.STAKING_POOL;
         // get slashing param
@@ -118,18 +108,20 @@ export class SyncTaskService implements ISyncTaskService {
         // get slashing signing info
         const paramsSigning = NODE_API.SIGNING_INFOS;
 
-        const [validatorData, poolData, slashingData, signingData]
+        const [
+            poolData,
+            slashingData,
+            signingData]
             = await Promise.all([
-                this._commonUtil.getDataAPI(this.api, paramsValidator),
                 this._commonUtil.getDataAPI(this.api, paramspool),
                 this._commonUtil.getDataAPI(this.api, paramsSlashing),
                 this._commonUtil.getDataAPI(this.api, paramsSigning)
-            ])
+            ]);
 
-        if (validatorData) {
+        if (validators) {
             this.isSyncValidator = true;
-            for (let key in validatorData.validators) {
-                const data = validatorData.validators[key];
+            for (let key in validators) {
+                const data = validators[key];
                 // get account address
                 const operator_address = data.operator_address;
                 const decodeAcc = bech32.decode(operator_address, 1023);
@@ -283,71 +275,56 @@ export class SyncTaskService implements ISyncTaskService {
         }
     }
 
-    @Interval(500)
-    async syncMissedBlock() {
-        // check status
-        if (this.isSyncMissBlock) {
-            this._logger.log(null, 'already syncing validator... wait');
-            return;
-        } else {
-            this._logger.log(null, 'fetching data validator...');
-        }
-
+    /**
+     * syncMissedBlock
+     * @param height 
+     */
+    async syncMissedBlock(height: number) {
         try {
-            // get blocks latest
-            const paramsBlockLatest = NODE_API.LATEST_BLOCK;
-            const blockLatestData = await this._commonUtil.getDataAPI(this.api, paramsBlockLatest);
+            // get block by height
+            const paramsBlock = `blocks/${height}`;
 
-            if (blockLatestData) {
-                this.isSyncMissBlock = true;
+            // get validatorsets
+            const paramsValidatorsets = `cosmos/base/tendermint/v1beta1/validatorsets/${height}`;
 
-                const heightLatest = blockLatestData.block.header.height;
-                // get block by height
-                const paramsBlock = `blocks/${heightLatest}`;
-                // get validatorsets
-                const paramsValidatorsets = `cosmos/base/tendermint/v1beta1/validatorsets/${heightLatest}`;
+            const [blockData, validatorsetsData] = await Promise.all([
+                this._commonUtil.getDataAPI(this.api, paramsBlock),
+                this._commonUtil.getDataAPI(this.api, paramsValidatorsets)
+            ]);
 
-                const [blockData, validatorsetsData] = await Promise.all([
-                    this._commonUtil.getDataAPI(this.api, paramsBlock),
-                    this._commonUtil.getDataAPI(this.api, paramsValidatorsets)
-                ])
+            if (validatorsetsData) {
 
-                if (validatorsetsData) {
+                for (let key in validatorsetsData.validators) {
+                    const data = validatorsetsData.validators[key];
+                    const address = this._commonUtil.getAddressFromPubkey(data.pub_key.key);
 
-                    for (let key in validatorsetsData.validators) {
-                        const data = validatorsetsData.validators[key];
-                        const address = this._commonUtil.getAddressFromPubkey(data.pub_key.key);
+                    if (blockData) {
+                        const signingInfo = blockData.block.last_commit.signatures.filter(e => e.validator_address === address);
+                        if (signingInfo.length <= 0) {
 
-                        if (blockData) {
-                            const signingInfo = blockData.block.last_commit.signatures.filter(e => e.validator_address === address);
-                            if (signingInfo.length <= 0) {
+                            // create missed block
+                            const newMissedBlock = new MissedBlock();
+                            newMissedBlock.height = blockData.block.header.height;
+                            newMissedBlock.validator_address = address;
+                            newMissedBlock.timestamp = blockData.block.header.time;
 
-                                // create missed block
-                                const newMissedBlock = new MissedBlock();
-                                newMissedBlock.height = blockData.block.header.height;
-                                newMissedBlock.validator_address = address;
-                                newMissedBlock.timestamp = blockData.block.header.time;
-
-                                // insert into table missed-block
-                                try {
-                                    await this.missedBlockRepository.create(newMissedBlock);
-                                    // TODO: Write missed block to influxdb
-                                    this.influxDbClient.writeMissedBlock(
-                                        newMissedBlock.validator_address,
-                                        newMissedBlock.height,
-                                    );
-                                } catch (error) {
-                                    this._logger.error(null, `Missed is already existed!`);
-                                }
-
+                            // insert into table missed-block
+                            try {
+                                await this.missedBlockRepository.upsert([newMissedBlock], []);
+                                // TODO: Write missed block to influxdb
+                                this.influxDbClient.writeMissedBlock(
+                                    newMissedBlock.validator_address,
+                                    newMissedBlock.height,
+                                );
+                            } catch (error) {
+                                this._logger.error(null, `Missed is already existed!`);
                             }
+
                         }
                     }
                 }
             }
-            this.isSyncMissBlock = false;
         } catch (error) {
-            this.isSyncMissBlock = false;
             this._logger.error(null, `${error.name}: ${error.message}`);
             this._logger.error(null, `${error.stack}`);
         }
@@ -355,24 +332,26 @@ export class SyncTaskService implements ISyncTaskService {
 
     /**
      * handleSyncData
-     * @param syncBlock 
-     * @param recallSync 
+     * @param height 
+     * @param recall 
      */
-    async handleSyncData(syncBlock: number, recallSync = false): Promise<any> {
-        this._logger.log(null, `Class ${SyncTaskService.name}, call handleSyncData method with prameters: {syncBlock: ${syncBlock}}`);
+    async handleSyncData(height: number, recall: boolean = false): Promise<any> {
+        this._logger.log(null, `Class ${SyncTaskService.name}, call handleSyncData method with prameters: {syncBlock: ${height}}`);
         // this.logger.log(null, `Already syncing Block: ${syncBlock}`);
 
         // TODO: init write api
         this.influxDbClient.initWriteApi();
 
-        // get validators
-        const paramsValidator = NODE_API.VALIDATOR;
-        const validatorData = await this._commonUtil.getDataAPI(this.api, paramsValidator);
-        const fetchingBlockHeight = syncBlock;
+        const fetchingBlockHeight = height;
+        let blockSyncError = new BlockSyncError();
 
         try {
+            // get validators
+            const paramsValidator = NODE_API.VALIDATOR;
+            const validatorData = await this._commonUtil.getDataAPI(this.api, paramsValidator);
+
             // fetching block from node
-            const paramsBlock = `block?height=${fetchingBlockHeight}`;
+            const paramsBlock = `block?height=${height}`;
             const blockData = await this._commonUtil.getDataRPC(this.rpc, paramsBlock);
 
             // create block
@@ -390,11 +369,8 @@ export class SyncTaskService implements ISyncTaskService {
             let blockGasWanted = 0;
 
             //Insert block error table
-            if (!recallSync) {
-                await this.insertBlockError(newBlock.block_hash, newBlock.height);
-
-                // Mark schedule is running
-                this.schedulesSync.push(Number(newBlock.height));
+            if (!recall) {
+                blockSyncError = await this.insertBlockError(newBlock.block_hash, newBlock.height, BLOCK_SYNC_ERROR_STATUS_CONSTANTS.PENDING);
             }
 
             // set proposer and operator_address from validators
@@ -636,25 +612,40 @@ export class SyncTaskService implements ISyncTaskService {
             await this.updateStatus(fetchingBlockHeight);
 
             // Delete data on Block sync error table
-            await this.removeBlockError(syncBlock);
-
-            const idxSync = this.schedulesSync.indexOf(fetchingBlockHeight);
-            if (idxSync > (-1)) {
-                this.schedulesSync.splice(idxSync, 1);
-            }
+            await this.removeBlockError(height);
 
         } catch (error) {
             this._logger.error(null, `Sync Blocked & Transaction were error height: ${fetchingBlockHeight}, ${error.name}: ${error.message}`);
             this._logger.error(null, `${error.stack}`);
 
-            const idxSync = this.schedulesSync.indexOf(fetchingBlockHeight);
-            if (idxSync > (-1)) {
-                this.schedulesSync.splice(idxSync, 1);
+            // Update message error
+            if (recall) {
+                blockSyncError = await this.blockSyncErrorRepository.findOne({
+                    where: { height }
+                });
+
+                const retryTime = (blockSyncError.retry_times + 1);
+                if (retryTime > ENV_CONFIG.JOB_OPTIONS.RETRY_TIME) {
+                    blockSyncError.status = BLOCK_SYNC_ERROR_STATUS_CONSTANTS.ERROR;
+                } else {
+                    blockSyncError.retry_times = retryTime;
+                    blockSyncError.status = BLOCK_SYNC_ERROR_STATUS_CONSTANTS.RETRY;
+                }
+
+            } else {
+                blockSyncError.status = BLOCK_SYNC_ERROR_STATUS_CONSTANTS.RETRY;
             }
+            blockSyncError.message = error.message;
+            await this.blockSyncErrorRepository.update(blockSyncError);
+
             throw new Error(error);
         }
     }
 
+    /**
+     * syncDataWithTransactions
+     * @param listTransactions 
+     */
     async syncDataWithTransactions(listTransactions) {
         let proposalVotes = [];
         let proposalDeposits = [];
@@ -864,13 +855,25 @@ export class SyncTaskService implements ISyncTaskService {
         await this.blockSyncErrorRepository.remove({ height: height });
     }
 
-    async insertBlockError(block_hash: string, height: number) {
+    /**
+     * insertBlockError
+     * @param block_hash 
+     * @param height 
+     * @param status 
+     * @returns 
+     */
+    async insertBlockError(block_hash: string, height: number, status: string) {
         const blockSyncError = new BlockSyncError();
         blockSyncError.block_hash = block_hash;
         blockSyncError.height = height;
-        await this.blockSyncErrorRepository.create(blockSyncError);
+        blockSyncError.status = status;
+        return await this.blockSyncErrorRepository.create(blockSyncError);
     }
 
+    /**
+     * updateStatus
+     * @param newHeight 
+     */
     async updateStatus(newHeight) {
         const status = await this.statusRepository.findOne();
         if (status) {
@@ -881,6 +884,9 @@ export class SyncTaskService implements ISyncTaskService {
         }
     }
 
+    /**
+     * getCurrentStatus
+     */
     async getCurrentStatus() {
         const status = await this.statusRepository.findOne();
         if (!status[0]) {

@@ -4,13 +4,14 @@ import { ENTITIES_CONFIG } from "../../module.config";
 import { ObjectLiteral, Repository } from "typeorm";
 import { IProposalRepository } from "../iproposal.repository";
 import { BaseRepository } from "./base.repository";
+import { Proposal } from "../../entities/proposal.entity";
 
 @Injectable()
-export class ProposalRepository extends BaseRepository implements IProposalRepository {
+export class ProposalRepository extends BaseRepository<Proposal> implements IProposalRepository {
     private readonly _logger = new Logger(ProposalRepository.name);
     constructor(
         @InjectRepository(ENTITIES_CONFIG.PROPOSAL)
-        private readonly repos: Repository<ObjectLiteral>,
+        private readonly repos: Repository<Proposal>,
     ) {
         super(repos);
         this._logger.log(

@@ -7,7 +7,7 @@ import { BaseRepository } from "./base.repository";
 import { BlockSyncError } from "../../entities/block-sync-error.entity";
 
 @Injectable()
-export class BlockSyncErrorRepository extends BaseRepository implements IBlockSyncErrorRepository {
+export class BlockSyncErrorRepository extends BaseRepository<BlockSyncError> implements IBlockSyncErrorRepository {
     private readonly _logger = new Logger(BlockSyncErrorRepository.name);
     constructor(
         @InjectRepository(ENTITIES_CONFIG.BLOCK_SYNC_ERROR)

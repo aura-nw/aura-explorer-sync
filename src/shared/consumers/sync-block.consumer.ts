@@ -1,10 +1,11 @@
-import { Processor, Process, OnGlobalQueueFailed, OnGlobalQueueCompleted } from '@nestjs/bull';
+import { Processor, Process, OnGlobalQueueFailed, OnQueueFailed, OnGlobalQueueError, OnQueueError} from '@nestjs/bull';
 import { Inject, Logger } from '@nestjs/common';
 import { Job } from 'bull';
+import { IBlockSyncErrorService } from 'src/services/iblock-sync-error.service';
 import { SERVICE_INTERFACE } from '../../module.config';
 import { ISyncTaskService } from '../../services/isync-task.service';
-import { PROCESSOR_CONSTANTS, PROCESS_CONSTANTS } from '../constants/common.const';
-import { ConfigService, ENV_CONFIG } from '../services/config.service';
+import { BLOCK_SYNC_ERROR_STATUS_CONSTANTS, PROCESSOR_CONSTANTS, PROCESS_CONSTANTS } from '../../common/constants/common.const';
+import { ENV_CONFIG } from '../services/config.service';
 
 @Processor(PROCESSOR_CONSTANTS.SYNC_BLOCK)
 export class SyncBlockConsumer {
@@ -14,25 +15,19 @@ export class SyncBlockConsumer {
     constructor(
         @Inject(SERVICE_INTERFACE.ISYNC_TASK_SERVICE)
         private syncTaskService: ISyncTaskService,
+        @Inject(SERVICE_INTERFACE.IBLOCK_SYNC_ERROR_SERVICE)
+        private blockSyncErrorService: IBlockSyncErrorService,
     ) {
-        this._logger.log("============== Constructor SyncBlockConsumer ==============");
+        this._logger.log(`============== Class ${SyncBlockConsumer.name} Constructor ==============`);
     }
 
-    @Process({ name: PROCESS_CONSTANTS.EXECUTE_SYNC_BLOCK, concurrency: ENV_CONFIG.THREADS})
+    @Process({ name: PROCESS_CONSTANTS.EXECUTE_SYNC_BLOCK, concurrency: ENV_CONFIG.THREADS.THREADS_BLOCK })
     async executeSyncBlock(job: Job<unknown>) {
         const height: number = Number(job.data);
-        console.log(`============== Call ExecuteSyncBlock method with height: ${height}==============`);
+        this._logger.log(`============== Class ${SyncBlockConsumer.name} Call ExecuteSyncBlock method with height: ${height}==============`);
         if (height) {
+            const status = job.getState();
             await this.syncTaskService.handleSyncData(height, false);
-        }
-    }
-
-    @Process({ name: PROCESS_CONSTANTS.EXECUTE_SYNC_BLOCK_ERROR, concurrency: 1 })
-    async executeSyncBlockError(job: Job<unknown>) {
-        const height: number = Number(job.data);
-        console.log(`============== Call executeSyncBlockError method with height: ${height}==============`);
-        if (height) {
-            await this.syncTaskService.handleSyncData(height, true);
         }
     }
 }

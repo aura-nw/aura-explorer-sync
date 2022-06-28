@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { DATABASE_TYPE } from '../../common/constants/app.constant';
-import { PROCESSOR_CONSTANTS } from '../constants/common.const';
+import { PROCESSOR_CONSTANTS } from '../../common/constants/common.const';
 import { PascalCaseStrategy } from '../pascalCase.strategy';
 
 @Injectable()
@@ -49,10 +49,20 @@ export class ConfigService {
         PORT: `${this.get('REDIS_PORT')}`,
         PREFIX: `${this.get('REDIS_PREFIX')}`
       },
-      THREADS: Number(this.get('THREADS')),
+      THREADS: {
+        THREADS_BLOCK: Number(this.get('THREADS_BLOCK')) || 5,
+        THREADS_BLOCK_SYNC_ERROR: Number(this.get('THREADS_BLOCK_SYNC_ERROR')) || 5,
+        THREADS_SYNC_VALIDATOR: Number(this.get('THREADS_SYNC_VALIDATOR')) || 1,
+        THREADS_SYNC_PROPOSAL: Number(this.get('THREADS_SYNC_PROPOSAL')) || 1,
+      },
       JOB_OPTIONS: {
-        ATTEMPTS: Number(this.get('REDIS_HOST')) || 3,
-        BACK_OFF: Number(this.get('BACK_OFF')) || 1000
+        ATTEMPTS: Number(this.get('ATTEMPTS')) || 5,
+        BACK_OFF: Number(this.get('BACK_OFF')) || 1000,
+        RETRY_TIME: Number(this.get('RETRY_TIME')) || 3
+      },
+      NODE: {
+        API: this.get('API'),
+        RPC: this.get('RPC'),
       }
     };
   }

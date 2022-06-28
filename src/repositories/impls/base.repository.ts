@@ -1,9 +1,9 @@
-import { DeleteResult, In, Repository } from 'typeorm';
+import { DeleteResult, FindConditions, FindOneOptions, In, Repository } from 'typeorm';
 import { IBaseRepository } from '../ibase.repository';
 import { PaginatorResponse } from '../../dtos/responses/paginator.response';
 import { Logger } from '@nestjs/common';
 
-export class BaseRepository implements IBaseRepository {
+export class BaseRepository<T> implements IBaseRepository<T> {
   private _repos: Repository<any>;
   private _log = new Logger(BaseRepository.name);
 
@@ -11,23 +11,16 @@ export class BaseRepository implements IBaseRepository {
     this._repos = repos;
   }
 
+
   /**
    * findOne
    * @param condition
    * @returns
    */
-  public async findOne(id?: any): Promise<any> {
-    if (id) {
-      this._log.log(
-        `============== Call method findOne width parameters:${id} ==============`,
-      );
-      return this._repos.findOne(id);
-    } else {
-      this._log.log(
-        `============== Call method findOne without parameters ==============`,
-      );
-      return this._repos.findOne();
-    }
+  public findOne(id: any): Promise<T>;
+  public findOne(conditions: FindConditions<T>): Promise<any>;
+  public findOne(conditions?: FindConditions<T>, options?: FindOneOptions<any>): Promise<T> {
+    return this._repos.findOne(conditions, options);
   }
 
   /**
@@ -36,12 +29,12 @@ export class BaseRepository implements IBaseRepository {
    * @param orderBy
    * @returns
    */
-  public async findByCondition(
+  public findByCondition(
     condition: any,
     orderBy?: any,
     select?: string[],
     take?: number,
-  ): Promise<any[]> {
+  ): Promise<T[]> {
     this._log.log(
       `============== Call method findOne width parameters: condition:${this.convertObjectToJson(
         condition,
@@ -60,7 +53,7 @@ export class BaseRepository implements IBaseRepository {
    * @param relations
    * @returns
    */
-  public async findWithRelations(relations: any): Promise<any[]> {
+  public findWithRelations(relations: any): Promise<T[]> {
     return this._repos.find(relations);
   }
 
@@ -69,7 +62,7 @@ export class BaseRepository implements IBaseRepository {
    * @param orderBy
    * @returns
    */
-  public async findAll(orderBy?: any): Promise<any[]> {
+  public findAll(orderBy?: any): Promise<T[]> {
     if (orderBy) {
       return this._repos.find({ order: orderBy });
     } else {
@@ -119,7 +112,7 @@ export class BaseRepository implements IBaseRepository {
    * @param data
    * @returns
    */
-  public async create(data: any): Promise<any> {
+  public create(data: T): Promise<T> {
     return this._repos.save(data);
   }
 
@@ -128,7 +121,7 @@ export class BaseRepository implements IBaseRepository {
    * @param data
    * @returns
    */
-  public async insert(data: any): Promise<any> {
+  public insert(data: T): Promise<any> {
     return this._repos.insert(data);
   }
 
@@ -137,7 +130,7 @@ export class BaseRepository implements IBaseRepository {
    * @param data
    * @returns
    */
-  public async update(data: any): Promise<any> {
+  public update(data: T): Promise<T> {
     return this._repos.save(data);
   }
 
@@ -146,7 +139,7 @@ export class BaseRepository implements IBaseRepository {
    * @param id
    * @returns
    */
-  public async remove(id: any): Promise<DeleteResult> {
+  public remove(id: any): Promise<DeleteResult> {
     return this._repos.delete(id);
   }
 
@@ -159,8 +152,8 @@ export class BaseRepository implements IBaseRepository {
    * @param data 
    * @param conflictPathsOrOptions 
    */
-  public async upsert(data: Array<any>, conflictPathsOrOptions: string[]) {
-    const results = await this._repos.upsert(data, conflictPathsOrOptions).then(t => t.identifiers);
+  public upsert(data: Array<T>, conflictPathsOrOptions: string[]) {
+    const results = this._repos.upsert(data, conflictPathsOrOptions).then(t => t.identifiers);
 
     return results;
   }

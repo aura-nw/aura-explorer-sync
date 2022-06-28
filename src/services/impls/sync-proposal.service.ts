@@ -29,24 +29,16 @@ export class SyncProposalService implements ISyncProposalService {
     this.api = this.configService.get('API');
   }
 
-  @Interval(500)
-  async handleInterval() {
-    // check status
-    if (this.isSync) {
-      this._logger.log(null, 'already syncing proposals... wait');
-      return;
-    } else {
-      this._logger.log(null, 'fetching data proposals...');
-    }
+  /**
+   * syncProposals
+   * @param proposals 
+   */
+  async syncProposals(proposals: Array<any>) {
     try {
-      //fetching proposals from node
-      let data = await this.getProposalsFromNode(this.api);
-      this.isSync = true;
-
-      if (data && data.length > 0) {
-        data = data.sort((a, b) => Number(b.proposal_id) - Number(a.proposal_id));
-        for (let i = 0; i < data.length; i++) {
-          const item: any = data[i];
+      if (proposals && proposals.length > 0) {
+        proposals = proposals.sort((a, b) => Number(b.proposal_id) - Number(a.proposal_id));
+        for (let i = 0; i < proposals.length; i++) {
+          const item: any = proposals[i];
           //create proposal
           let proposal = new Proposal();
           proposal.pro_id = Number(item.proposal_id);
@@ -111,16 +103,14 @@ export class SyncProposalService implements ISyncProposalService {
         }
       }
       //delete proposal failed
-      const listId = data.map((i) => Number(i.proposal_id));
+      const listId = proposals.map((i) => Number(i.proposal_id));
       if (listId?.length > 0) {
         await this.proposalRepository.deleteProposals();
       }
-      this.isSync = false;
     } catch (error) {
       // this._logger.error(error, `Sync proposals error`);
       this._logger.error(null, `Sync Proposol was error, ${error.name}: ${error.message}`);
       this._logger.error(null, `${error.stack}`);
-      this.isSync = false;
     }
   }
 

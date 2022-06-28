@@ -1,16 +1,17 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { SmartContract } from "../../entities/smart-contract.entity";
 import { ENTITIES_CONFIG } from "src/module.config";
 import { ObjectLiteral, Repository } from "typeorm";
 import { ISmartContractRepository } from "../ismart-contract.repository";
 import { BaseRepository } from "./base.repository";
 
 @Injectable()
-export class SmartContractRepository extends BaseRepository implements ISmartContractRepository {
+export class SmartContractRepository extends BaseRepository<SmartContract> implements ISmartContractRepository {
     private readonly _logger = new Logger(SmartContractRepository.name);
     constructor(
         @InjectRepository(ENTITIES_CONFIG.SMART_CONTRACT)
-        private readonly repos: Repository<ObjectLiteral>,
+        private readonly repos: Repository<SmartContract>,
     ) {
         super(repos);
         this._logger.log(

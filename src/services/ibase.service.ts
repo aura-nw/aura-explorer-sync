@@ -1,3 +1,4 @@
+import { FindConditions, FindOneOptions } from "typeorm";
 import { ResponseDto } from "../dtos/responses/response.dto";
 
 export interface IBaseService<T> {
@@ -6,6 +7,19 @@ export interface IBaseService<T> {
    * @param id
    */
   findOne(id: any): Promise<T>;
+
+  /**
+   * findOne
+   * @param options 
+   */
+  findOne(options?: FindOneOptions<any>): Promise<any>;
+
+  /**
+   * findOne
+   * @param conditions 
+   * @param options 
+   */
+  findOne(conditions?: FindConditions<any>, options?: FindOneOptions<any>): Promise<any>
 
   /**
    * findByCondition
@@ -44,13 +58,13 @@ export interface IBaseService<T> {
    * create
    * @param data
    */
-  create(data: T | any): Promise<T>;
+  create(data: T): Promise<T>;
 
   /**
    * update
    * @param data
    */
-  update(data: T | any): Promise<T>;
+  update(data: T): Promise<T>;
 
   /**
    * remove
