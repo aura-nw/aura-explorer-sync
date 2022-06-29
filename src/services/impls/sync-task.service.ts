@@ -947,6 +947,15 @@ export class SyncTaskService implements ISyncTaskService {
                             this._logger.error(null, `Got error in instantiate contract transaction`);
                             this._logger.error(null, `${error.stack}`);
                         }
+                    } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
+                        let delegation = new Delegation();
+                        delegation.tx_hash = txData.tx_response.txhash;
+                        delegation.delegator_address = message.delegator_address;
+                        delegation.validator_address = message.validator_address;
+                        delegation.amount = Number(message.value.amount) / APP_CONSTANTS.PRECISION_DIV;
+                        delegation.created_at = new Date(txData.tx_response.timestamp);
+                        delegation.type = CONST_DELEGATE_TYPE.CREATE_VALIDATOR;
+                        delegations.push(delegation);
                     }
                 }
             }
