@@ -54,8 +54,6 @@ export enum CONST_CHAR {
   _CONTRACT_ADDRESS = '_contract_address',
   CODE_ID = 'code_id',
   EXECUTE = 'execute',
-  CODE_1_NAME = 'Check CW721',
-  CODE_2_NAME = 'Create minter'
 }
 
 export enum CONST_MSG_TYPE {
@@ -68,6 +66,7 @@ export enum CONST_MSG_TYPE {
   MSG_WITHDRAW_DELEGATOR_REWARD = 'MsgWithdrawDelegatorReward',
   MSG_INSTANTIATE_CONTRACT = 'MsgInstantiateContract',
   MSG_EXECUTE_CONTRACT = 'MsgExecuteContract',
+  MSG_CREATE_VALIDATOR = 'MsgCreateValidator'
 }
 
 export enum CONST_PROPOSAL_TYPE {
@@ -79,7 +78,8 @@ export enum CONST_PROPOSAL_TYPE {
 export enum CONST_DELEGATE_TYPE {
   DELEGATE = 'Delegate',
   UNDELEGATE = 'Undelegate',
-  REDELEGATE = 'Redelegate'
+  REDELEGATE = 'Redelegate',
+  CREATE_VALIDATOR = 'CreateValidator'
 }
 
 export enum CONST_PROPOSAL_STATUS {
