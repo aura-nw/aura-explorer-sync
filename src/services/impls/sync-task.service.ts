@@ -869,7 +869,6 @@ export class SyncTaskService implements ISyncTaskService {
                             contract_addresses.map(function (x, i) {
                                 const smartContract = new SmartContract();
                                 smartContract.code_id = code_ids[i].value;
-                                smartContract.contract_name = smartContract.code_id == 1 ? CONST_CHAR.CODE_1_NAME : CONST_CHAR.CODE_2_NAME;
                                 smartContract.contract_address = contract_addresses[i].value;
                                 smartContract.creator_address = txData.tx_response.logs[0].events.
                                     find((x) => x.type == CONST_CHAR.EXECUTE).attributes.find((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS).value;
@@ -980,6 +979,13 @@ export class SyncTaskService implements ISyncTaskService {
             await this.delegatorRewardRepository.upsert(delegatorRewards, []);
         }
         if (smartContracts.length > 0) {
+            smartContracts.map(async (smartContract) => {
+                if(smartContract.contract_name == '') {
+                    const param = `/cosmwasm/wasm/v1/contract/${smartContract.contract_address}`;
+                    const contractData = await this._commonUtil.getDataAPI(this.api, param);
+                    smartContract.contract_name = contractData.contract_info.label;
+                }
+            });
             await this.smartContractRepository.upsert(smartContracts, []);
         }
     }
