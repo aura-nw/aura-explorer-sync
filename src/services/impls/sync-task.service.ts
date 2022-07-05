@@ -32,7 +32,7 @@ import { ISmartContractRepository } from "src/repositories/ismart-contract.repos
 import { ITokenContractRepository } from "src/repositories/itoken-contract.repository";
 import { loadavg } from "os";
 import { SmartContract } from "src/entities/smart-contract.entity";
-import { In } from "typeorm";
+import {SyncDataHelpers} from '../../helpers/sync-data.helpers';
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -98,7 +98,9 @@ export class SyncTaskService implements ISyncTaskService {
         this.threads = Number(this.configService.get('THREADS') || 15);
 
         // Call worker to process
-        this.workerProcess();
+        // this.workerProcess();
+
+        this.handleSyncData(4280277, true);
     }
 
     /**
@@ -184,7 +186,7 @@ export class SyncTaskService implements ISyncTaskService {
         this.threadProcess(currentBlk, latestBlk)
     }
 
-    @Interval(500)
+    // @Interval(500)
     async syncValidator() {
         // check status
         if (this.isSyncValidator) {
@@ -370,7 +372,7 @@ export class SyncTaskService implements ISyncTaskService {
         }
     }
 
-    @Interval(500)
+    // @Interval(500)
     async syncMissedBlock() {
         // check status
         if (this.isSyncMissBlock) {
@@ -440,7 +442,7 @@ export class SyncTaskService implements ISyncTaskService {
         }
     }
 
-    @Interval(4000)
+    // @Interval(4000)
     async blockSyncError() {
         const result: BlockSyncError = await this.blockSyncErrorRepository.findOne();
         if (result) {
@@ -465,22 +467,15 @@ export class SyncTaskService implements ISyncTaskService {
         // get validators
         const paramsValidator = NODE_API.VALIDATOR;
         const validatorData = await this._commonUtil.getDataAPI(this.api, paramsValidator);
-        const fetchingBlockHeight = syncBlock;
+        const fetchingBlockHeight = 4280277;
 
         try {
             // fetching block from node
             const paramsBlock = `block?height=${fetchingBlockHeight}`;
             const blockData = await this._commonUtil.getDataRPC(this.rpc, paramsBlock);
 
-            // create block
-            const newBlock = new Block();
-            newBlock.block_hash = blockData.block_id.hash;
-            newBlock.chainid = blockData.block.header.chain_id;
-            newBlock.height = blockData.block.header.height;
-            newBlock.num_txs = blockData.block.data.txs.length;
-            newBlock.timestamp = blockData.block.header.time;
-            newBlock.round = blockData.block.last_commit.round;
-            newBlock.json_data = JSON.stringify(blockData);
+            // make block object from block data 
+            const newBlock = SyncDataHelpers.makeBlockData(blockData);
 
             const operatorAddress = blockData.block.header.proposer_address;
             let blockGasUsed = 0;
@@ -520,76 +515,10 @@ export class SyncTaskService implements ISyncTaskService {
 
                     const txData = await this._commonUtil.getDataAPI(this.api, paramsTx);
 
-                    let txType = 'FAILED', txRawLogData, txContractAddress;
-                    if (txData.tx_response.code === 0) {
-                        const txLog = JSON.parse(txData.tx_response.raw_log);
-
-                        const txAttr = txLog[0].events.find(
-                            ({ type }) => type === CONST_CHAR.MESSAGE,
-                        );
-                        const txAction = txAttr.attributes.find(
-                            ({ key }) => key === CONST_CHAR.ACTION,
-                        );
-                        const regex = /_/gi;
-                        txType = txAction.value.replace(regex, ' ');
-
-                        const txMsgType = txType.substring(txType.lastIndexOf('.') + 1);
-                        if (txMsgType == CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD) {
-                            let amount = txData.tx_response.logs[0].events.find(
-                                ({ type }) => type === CONST_CHAR.WITHDRAW_REWARDS,
-                            );
-                            amount.attributes = amount.attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
-                            txRawLogData = JSON.stringify(amount);
-                        } else if (txMsgType == CONST_MSG_TYPE.MSG_DELEGATE || txMsgType == CONST_MSG_TYPE.MSG_REDELEGATE || txMsgType == CONST_MSG_TYPE.MSG_UNDELEGATE) {
-                            let amount = txData.tx_response.tx.body.messages[0].amount;
-                            let reward;
-                            try {
-                                reward = txData.tx_response.logs[0].events.find(
-                                    ({ type }) => type === CONST_CHAR.TRANSFER,
-                                ).attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
-                            } catch (error) {
-                                reward = 0;
-                            }
-                            const rawData = {
-                                amount,
-                                reward
-                            };
-                            txRawLogData = JSON.stringify(rawData);
-                        } else if (txMsgType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
-                            let contract_address = txData.tx_response.logs[0].events.find(
-                                ({ type }) => type === CONST_CHAR.INSTANTIATE,
-                            ).attributes.find(
-                                ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
-                            ).value;
-                            txContractAddress = contract_address;
-                        } else if (txMsgType == CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
-                            txContractAddress = txData.tx.body.messages[0].contract;
-                        }
-                    } else {
-                        const txBody = txData.tx_response.tx.body.messages[0];
-                        txType = txBody['@type'];
-                    }
-                    const newTx = new Transaction();
-                    const fee = txData.tx_response.tx.auth_info.fee.amount[0];
-                    const txFee = (fee) ? (fee[CONST_CHAR.AMOUNT] / APP_CONSTANTS.PRECISION_DIV).toFixed(6) : Number("0").toFixed(6);
-                    // newTx.blockId = savedBlock.id;
-                    newTx.code = txData.tx_response.code;
-                    newTx.codespace = txData.tx_response.codespace;
-                    newTx.data =
-                        txData.tx_response.code === 0 ? txData.tx_response.data : '';
-                    newTx.gas_used = txData.tx_response.gas_used;
-                    newTx.gas_wanted = txData.tx_response.gas_wanted;
-                    newTx.height = fetchingBlockHeight;
-                    newTx.info = txData.tx_response.info;
-                    newTx.raw_log = txData.tx_response.raw_log;
-                    newTx.raw_log_data = txRawLogData ?? null;
-                    newTx.timestamp = blockData.block.header.time;
-                    newTx.tx = JSON.stringify(txData.tx_response);
-                    newTx.tx_hash = txData.tx_response.txhash;
-                    newTx.type = txType;
-                    newTx.fee = txFee;
-                    newTx.messages = txData.tx_response.tx.body.messages;
-                    newTx.contract_address = txContractAddress;
+                    let [txType, txRawLogData, txContractAddress] = SyncDataHelpers.makeTxRawLogData(txData);
+                    // Make up transaction data from block data
+                    const newTx = SyncDataHelpers.makeTrxData(txData ,fetchingBlockHeight, txType,txRawLogData,blockData.block.header.time, txContractAddress)
+                    
                     transactions.push(newTx);
 
                     // Push data to array, it's insert data to Influxd db
