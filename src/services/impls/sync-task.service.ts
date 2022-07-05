@@ -370,7 +370,6 @@ export class SyncTaskService implements ISyncTaskService {
       }
     });
     if (isSave) {
-      newValidator.id = validatorData.id;
       this.validatorRepository.update(validatorData);
     }
   }
