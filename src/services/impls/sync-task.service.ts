@@ -220,26 +220,12 @@ export class SyncTaskService implements ISyncTaskService {
 
                 try {
                     // create validator
-                    const newValidator = new Validator();
-                    newValidator.operator_address = data.operator_address;
-                    newValidator.acc_address = account_address;
-                    newValidator.cons_address = this._commonUtil.getAddressFromPubkey(data.consensus_pubkey.key);
-                    newValidator.cons_pub_key = data.consensus_pubkey.key;
-                    newValidator.title = data.description.moniker;
-                    newValidator.jailed = data.jailed;
-                    newValidator.commission = Number(data.commission.commission_rates.rate).toFixed(2);
-                    newValidator.max_commission = data.commission.commission_rates.max_rate;
-                    newValidator.max_change_rate = data.commission.commission_rates.max_change_rate;
-                    newValidator.min_self_delegation = data.min_self_delegation;
-                    newValidator.delegator_shares = data.delegator_shares;
-                    newValidator.power = Number(data.tokens);
-                    newValidator.website = data.description.website;
-                    newValidator.details = data.description.details;
-                    newValidator.identity = data.description.identity;
-                    newValidator.unbonding_height = data.unbonding_height;
-                    newValidator.unbonding_time = data.unbonding_time;
-                    newValidator.update_time = data.commission.update_time;
-                    newValidator.status = Number(validatorResponse.result?.status) || 0;
+                    const status = Number(validatorResponse.result?.status) || 0;
+                    const validatorAddr = this._commonUtil.getAddressFromPubkey(data.consensus_pubkey.key);
+
+                    // Makinf Validator entity to insert data
+                    const newValidator = SyncDataHelpers.makeValidatorData(data, account_address, status, validatorAddr);
+
                     const percentPower = (data.tokens / poolData.pool.bonded_tokens) * 100;
                     newValidator.percent_power = percentPower.toFixed(2);
                     const pubkey = this._commonUtil.getAddressFromPubkey(data.consensus_pubkey.key);
@@ -564,7 +550,7 @@ export class SyncTaskService implements ISyncTaskService {
                         let proposalVote = SyncDataHelpers.makeVoteData(txData, message);
                         proposalVotes.push(proposalVote);
                     } else if (txType === CONST_MSG_TYPE.MSG_SUBMIT_PROPOSAL) {
-                        let [historyProposal, proposalDeposit] = SyncDataHelpers.makeSubmitProposal(txData, message, i);
+                        let [historyProposal, proposalDeposit] = SyncDataHelpers.makeSubmitProposalData(txData, message, i);
                         historyProposals.push(historyProposal);
                         if (proposalDeposit) proposalDeposits.push(proposalDeposit);
                     } else if (txType === CONST_MSG_TYPE.MSG_DEPOSIT) {

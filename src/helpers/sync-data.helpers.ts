@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { Block, Transaction, Delegation, DelegatorReward, ProposalVote, HistoryProposal, ProposalDeposit, SmartContract } from "../entities";
+import { Block, Transaction, Delegation, DelegatorReward, ProposalVote, HistoryProposal, ProposalDeposit, SmartContract, Validator } from "../entities";
 import { APP_CONSTANTS, CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, MESSAGE_ACTION, NODE_API, SMART_CONTRACT_VERIFICATION } from "../common/constants/app.constant";
 export class SyncDataHelpers {
     // constructor() {
@@ -216,7 +216,7 @@ export class SyncDataHelpers {
         proposalVote.updated_at = new Date(txData.tx_response.timestamp);
         return proposalVote;
     }
-    static makeSubmitProposal(txData: any, message: any, index: number) {
+    static makeSubmitProposalData(txData: any, message: any, index: number) {
         let historyProposal = new HistoryProposal();
         let proposalDeposit = undefined;
         const proposalTypeReturn = message.content['@type'];
@@ -296,6 +296,31 @@ export class SyncDataHelpers {
             smartContracts.push(smartContract);
         })
         return smartContracts;
+    }
+
+    static makeValidatorData(data: any, account_address: string, status: number, validatorAddr: string) {
+        const newValidator = new Validator();
+        newValidator.operator_address = data.operator_address;
+        newValidator.acc_address = account_address;
+        newValidator.cons_address = validatorAddr;
+        newValidator.cons_pub_key = data.consensus_pubkey.key;
+        newValidator.title = data.description.moniker;
+        newValidator.jailed = data.jailed;
+        newValidator.commission = Number(data.commission.commission_rates.rate).toFixed(2);
+        newValidator.max_commission = data.commission.commission_rates.max_rate;
+        newValidator.max_change_rate = data.commission.commission_rates.max_change_rate;
+        newValidator.min_self_delegation = data.min_self_delegation;
+        newValidator.delegator_shares = data.delegator_shares;
+        newValidator.power = Number(data.tokens);
+        newValidator.website = data.description.website;
+        newValidator.details = data.description.details;
+        newValidator.identity = data.description.identity;
+        newValidator.unbonding_height = data.unbonding_height;
+        newValidator.unbonding_time = data.unbonding_time;
+        newValidator.update_time = data.commission.update_time;
+        newValidator.status = status;
+
+        return newValidator;
     }
 }
 
