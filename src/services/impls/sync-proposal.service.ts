@@ -121,6 +121,7 @@ export class SyncProposalService implements ISyncProposalService {
       this._logger.error(null, `Sync Proposol was error, ${error.name}: ${error.message}`);
       this._logger.error(null, `${error.stack}`);
       this.isSync = false;
+      throw error;
     }
   }
 
@@ -131,14 +132,7 @@ export class SyncProposalService implements ISyncProposalService {
    */
   async getProposalsFromNode(rootApi: string): Promise<any> {
     let result = await this._commonUtil.getDataAPI(rootApi, NODE_API.PROPOSALS);
-    // let key = result.pagination.next_key;
     result = result.proposals;
-    // while (key) {
-    //   const params = `cosmos/gov/v1beta1/proposals?pagination.key=${key}&pagination.reverse=true`;
-    //   let dataProposal = await this._commonUtil.getDataAPI(rootApi, params);
-    //   key = dataProposal.pagination.next_key;
-    //   result = [...result, ...dataProposal.proposals];
-    // }
     return result;
   }
 }

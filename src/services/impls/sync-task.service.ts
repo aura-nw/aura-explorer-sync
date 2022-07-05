@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
-import { APP_CONSTANTS, CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, MESSAGE_ACTION, NODE_API, SMART_CONTRACT_VERIFICATION } from "../../common/constants/app.constant";
+import { CONST_CHAR, CONST_MSG_TYPE, CONST_PUBKEY_ADDR,  NODE_API, SMART_CONTRACT_VERIFICATION } from "../../common/constants/app.constant";
 import { Block, BlockSyncError, MissedBlock, SyncStatus, Transaction, Validator } from "../../entities";
 import { ConfigService } from "../../shared/services/config.service";
 import { CommonUtil } from "../../utils/common.util";
@@ -19,19 +19,11 @@ import { ITransactionRepository } from "../../repositories/itransaction.reposito
 import { ISyncStatusRepository } from "../../repositories/isync-status.repository";
 import { IProposalDepositRepository } from "../../repositories/iproposal-deposit.repository";
 import { IProposalVoteRepository } from "../../repositories/iproposal-vote.repository";
-import { ProposalVote } from "../../entities/proposal-vote.entity";
-import { HistoryProposal } from "../../entities/history-proposal.entity";
 import { IHistoryProposalRepository } from "../../repositories/ihistory-proposal.repository";
 import { IDelegationRepository } from "../../repositories/idelegation.repository";
-import { ProposalDeposit } from "../../entities/proposal-deposit.entity";
-import { Delegation } from "../../entities/delegation.entity";
-import { DelegatorReward } from "../../entities/delegator-reward.entity";
 import { IDelegatorRewardRepository } from "../../repositories/idelegator-reward.repository";
-import e from "express";
 import { ISmartContractRepository } from "src/repositories/ismart-contract.repository";
 import { ITokenContractRepository } from "src/repositories/itoken-contract.repository";
-import { loadavg } from "os";
-import { SmartContract } from "src/entities/smart-contract.entity";
 import { SyncDataHelpers } from '../../helpers/sync-data.helpers';
 
 @Injectable()
@@ -465,7 +457,7 @@ export class SyncTaskService implements ISyncTaskService {
         // get validators
         const paramsValidator = NODE_API.VALIDATOR;
         const validatorData = await this._commonUtil.getDataAPI(this.api, paramsValidator);
-        const fetchingBlockHeight = 4280277;
+        const fetchingBlockHeight = syncBlock;
 
         try {
             // fetching block from node
