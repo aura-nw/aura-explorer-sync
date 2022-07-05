@@ -290,72 +290,30 @@ export class SyncTaskService implements ISyncTaskService {
 
     async syncUpdateValidator(newValidator, validatorData) {
         let isSave = false;
-
-        if (validatorData.title !== newValidator.title) {
-            validatorData.title = newValidator.title;
-            isSave = true;
-        }
-
-        if (validatorData.jailed !== newValidator.jailed) {
-            validatorData.jailed = newValidator.jailed;
-            isSave = true;
-        }
-
-        if (validatorData.commission !== newValidator.commission) {
-            validatorData.commission = newValidator.commission;
-            isSave = true;
-        }
-
-        if (validatorData.power !== Number(newValidator.power)) {
-            validatorData.power = Number(newValidator.power);
-            isSave = true;
-        }
-
-        if (validatorData.percent_power !== newValidator.percent_power) {
-            validatorData.percent_power = newValidator.percent_power;
-            isSave = true;
-        }
-
-        if (validatorData.self_bonded !== Number(newValidator.self_bonded)) {
-            validatorData.self_bonded = newValidator.self_bonded;
-            isSave = true;
-        }
-
-        if (validatorData.percent_self_bonded !== newValidator.percent_self_bonded) {
-            validatorData.percent_self_bonded = newValidator.percent_self_bonded;
-            isSave = true;
-        }
-
-        if (validatorData.website !== newValidator.website) {
-            validatorData.website = newValidator.website;
-            isSave = true;
-        }
-
-        if (validatorData.details !== newValidator.details) {
-            validatorData.details = newValidator.details;
-            isSave = true;
-        }
-
-        if (validatorData.identity !== newValidator.identity) {
-            validatorData.identity = newValidator.identity;
-            isSave = true;
-        }
-
-        if (validatorData.unbonding_height !== newValidator.unbonding_height) {
-            validatorData.unbonding_height = newValidator.unbonding_height;
-            isSave = true;
-        }
-
-        if (validatorData.up_time !== newValidator.up_time) {
-            validatorData.up_time = newValidator.up_time;
-            isSave = true;
-        }
-
-        if (validatorData.status !== newValidator.status) {
-            validatorData.status = newValidator.status;
-            isSave = true;
-        }
-
+        const plainKeys = [
+            'title', 'jailed', 'commission', 'power',
+            'percent_power', 'self_bonded', 'percent_self_bonded',
+            'website', 'details', 'identity', 'unbonding_height',
+            'up_time', 'status'
+        ];
+        const numberKeys = [
+            'power', 'self_bonded'
+        ]
+        Object.keys(validatorData).forEach(key => {
+            if (plainKeys.indexOf(key) !== -1) {
+                if (numberKeys.indexOf(key) !== -1) {
+                    if (validatorData[key] !== Number(newValidator[key])) {
+                        validatorData[key] = newValidator[key];
+                        isSave = true;
+                    }
+                } else {
+                    if (validatorData[key] !== newValidator[key]) {
+                        validatorData[key] = newValidator[key];
+                        isSave = true;
+                    }
+                }
+            }
+        })
         if (isSave) {
             newValidator.id = validatorData.id;
             this.validatorRepository.update(validatorData);
