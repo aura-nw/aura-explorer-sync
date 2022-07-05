@@ -61,7 +61,6 @@ export class SyncProposalService implements ISyncProposalService {
 
           if (dataProposer && dataProposer.result) {
             proposal.pro_proposer_address = dataProposer.result.proposer;
-            //get validator
             const validator = await this.validatorRepository.findOne({
               where: { acc_address: dataProposer.result.proposer },
             });
