@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { Block, Transaction, Delegation, DelegatorReward, ProposalVote, HistoryProposal, ProposalDeposit, SmartContract, Validator } from "../entities";
+import { Block, Transaction, Delegation, DelegatorReward, ProposalVote, HistoryProposal, ProposalDeposit, SmartContract, Validator, Proposal } from "../entities";
 import { APP_CONSTANTS, CONST_CHAR, CONST_DELEGATE_TYPE, CONST_MSG_TYPE, CONST_PROPOSAL_TYPE, CONST_PUBKEY_ADDR, MESSAGE_ACTION, NODE_API, SMART_CONTRACT_VERIFICATION } from "../common/constants/app.constant";
+import { Any } from "typeorm";
 export class SyncDataHelpers {
     // constructor() {
 
@@ -321,6 +322,45 @@ export class SyncDataHelpers {
         newValidator.status = status;
 
         return newValidator;
+    }
+
+    static makerProposalData(data: any, proposalTally: any) {
+        let proposal = new Proposal();
+        proposal.pro_id = Number(data.proposal_id);
+        proposal.pro_title = data.content['title'];
+        proposal.pro_description = data.content['description'];
+        proposal.pro_status = data.status;
+        proposal.pro_proposer_address = '';
+        proposal.pro_proposer = '';
+        proposal.pro_voting_start_time = new Date(data.voting_start_time);
+        proposal.pro_voting_end_time = new Date(data.voting_end_time);
+        proposal.pro_votes_yes = 0.0;
+        proposal.pro_votes_abstain = 0.0;
+        proposal.pro_votes_no = 0.0;
+        proposal.pro_votes_no_with_veto = 0.0;
+
+        proposal.pro_submit_time = new Date(data.submit_time);
+        proposal.pro_total_deposits = 0.0;
+
+        //set value for column not null
+        proposal.pro_tx_hash = '';
+        proposal.pro_type = data.content['@type'];
+        proposal.pro_deposit_end_time = new Date(data.deposit_end_time);
+        proposal.pro_activity = null;
+        proposal.is_delete = false;
+        if (proposalTally) {
+            proposal.pro_votes_yes = proposalTally.tally.yes;
+            proposal.pro_votes_abstain = proposalTally.tally.abstain;
+            proposal.pro_votes_no = proposalTally.tally.no;
+            proposal.pro_votes_no_with_veto = proposalTally.tally.no_with_veto;
+        } else {
+            proposal.pro_votes_yes = data.final_tally_result.yes;
+            proposal.pro_votes_abstain = data.final_tally_result.abstain;
+            proposal.pro_votes_no = data.final_tally_result.no;
+            proposal.pro_votes_no_with_veto = data.final_tally_result.no_with_veto;
+        }
+
+        return proposal;
     }
 }
 
