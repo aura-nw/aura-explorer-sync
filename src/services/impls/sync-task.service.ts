@@ -32,7 +32,7 @@ import { ISmartContractRepository } from "src/repositories/ismart-contract.repos
 import { ITokenContractRepository } from "src/repositories/itoken-contract.repository";
 import { loadavg } from "os";
 import { SmartContract } from "src/entities/smart-contract.entity";
-import {SyncDataHelpers} from '../../helpers/sync-data.helpers';
+import { SyncDataHelpers } from '../../helpers/sync-data.helpers';
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -517,8 +517,8 @@ export class SyncTaskService implements ISyncTaskService {
 
                     let [txType, txRawLogData, txContractAddress] = SyncDataHelpers.makeTxRawLogData(txData);
                     // Make up transaction data from block data
-                    const newTx = SyncDataHelpers.makeTrxData(txData ,fetchingBlockHeight, txType,txRawLogData,blockData.block.header.time, txContractAddress)
-                    
+                    const newTx = SyncDataHelpers.makeTrxData(txData, fetchingBlockHeight, txType, txRawLogData, blockData.block.header.time, txContractAddress)
+
                     transactions.push(newTx);
 
                     // Push data to array, it's insert data to Influxd db
@@ -622,97 +622,38 @@ export class SyncTaskService implements ISyncTaskService {
                     const txTypeReturn = message['@type'];
                     const txType = txTypeReturn.substring(txTypeReturn.lastIndexOf('.') + 1);
                     if (txType === CONST_MSG_TYPE.MSG_VOTE) {
-                        let proposalVote = new ProposalVote();
-                        proposalVote.proposal_id = Number(message.proposal_id);
-                        proposalVote.voter = message.voter;
-                        proposalVote.tx_hash = txData.tx_response.txhash;
-                        proposalVote.option = message.option;
-                        proposalVote.created_at = new Date(txData.tx_response.timestamp);
-                        proposalVote.updated_at = new Date(txData.tx_response.timestamp);
+                        let proposalVote = SyncDataHelpers.makeVoteData(txData, message);
                         proposalVotes.push(proposalVote);
                     } else if (txType === CONST_MSG_TYPE.MSG_SUBMIT_PROPOSAL) {
-                        let historyProposal = new HistoryProposal();
-                        const proposalTypeReturn = message.content['@type'];
-                        const proposalType = proposalTypeReturn.substring(proposalTypeReturn.lastIndexOf('.') + 1);
-                        historyProposal.proposal_id = 0;
-                        if (txData.tx_response.logs && txData.tx_response.logs.length > 0
-                            && txData.tx_response.logs[i].events && txData.tx_response.logs[i].events.length > 0) {
-                            const events = txData.tx_response.logs[i].events;
-                            const submitEvent = events.find(i => i.type === 'submit_proposal');
-                            const attributes = submitEvent.attributes;
-                            const findId = attributes.find(i => i.key === 'proposal_id');
-                            historyProposal.proposal_id = Number(findId.value);
-                        }
-                        historyProposal.recipient = '';
-                        historyProposal.amount = 0;
-                        historyProposal.initial_deposit = 0;
-                        if (proposalType === CONST_PROPOSAL_TYPE.COMMUNITY_POOL_SPEND_PROPOSAL) {
-                            historyProposal.recipient = message.content.recipient;
-                            historyProposal.amount = (message.content.amount.length > 0) ? Number(message.content.amount[0].amount) : 0;
-                        } else {
-                            if (message.initial_deposit.length > 0) {
-                                historyProposal.initial_deposit = Number(message.initial_deposit[0].amount);
-                                //save data to proposal deposit
-                                let proposalDeposit = new ProposalDeposit();
-                                proposalDeposit.proposal_id = historyProposal.proposal_id;
-                                proposalDeposit.tx_hash = txData.tx_response.txhash;
-                                proposalDeposit.depositor = message.proposer;
-                                proposalDeposit.amount = Number(message.initial_deposit[0].amount);
-                                proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
-                                proposalDeposits.push(proposalDeposit);
-                            }
-                        }
-                        historyProposal.tx_hash = txData.tx_response.txhash;
-                        historyProposal.title = message.content.title;
-                        historyProposal.description = message.content.description;
-                        historyProposal.proposer = message.proposer;
-                        historyProposal.created_at = new Date(txData.tx_response.timestamp);
+                        let [historyProposal, proposalDeposit] = SyncDataHelpers.makeSubmitProposal(txData, message,i);
                         historyProposals.push(historyProposal);
+                        if (proposalDeposit) proposalDeposits.push(proposalDeposit);
                     } else if (txType === CONST_MSG_TYPE.MSG_DEPOSIT) {
-                        let proposalDeposit = new ProposalDeposit();
-                        proposalDeposit.proposal_id = Number(message.proposal_id);
-                        proposalDeposit.tx_hash = txData.tx_response.txhash;
-                        proposalDeposit.depositor = message.depositor;
-                        proposalDeposit.amount = Number(message.amount[0].amount);
-                        proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
+                        let proposalDeposit = SyncDataHelpers.makeDepositData(txData, message)
                         proposalDeposits.push(proposalDeposit);
                     } else if (txType === CONST_MSG_TYPE.MSG_DELEGATE) {
-                        let [delegation,reward] = SyncDataHelpers.makeDelegateData(txData,message,i)
+                        let [delegation, reward] = SyncDataHelpers.makeDelegateData(txData, message, i)
                         delegations.push(delegation);
                         delegatorRewards.push(reward);
                     } else if (txType === CONST_MSG_TYPE.MSG_UNDELEGATE) {
-                        let [delegation,reward] = SyncDataHelpers.makeUndelegateData(txData,message,i)
+                        let [delegation, reward] = SyncDataHelpers.makeUndelegateData(txData, message, i)
                         delegations.push(delegation);
                         delegatorRewards.push(reward);
                     } else if (txType === CONST_MSG_TYPE.MSG_REDELEGATE) {
-                        let [delegation1,delegation2,reward1,reward2] = SyncDataHelpers.makeRedelegationData(txData,message);
+                        let [delegation1, delegation2, reward1, reward2] = SyncDataHelpers.makeRedelegationData(txData, message,i);
                         delegations.push(delegation1);
                         delegations.push(delegation2);
                         delegatorRewards.push(reward1);
                         delegatorRewards.push(reward2);
                     } else if (txType === CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD) {
-                        let reward = SyncDataHelpers.makeWithDrawDelegationData(txData,message,i);
+                        let reward = SyncDataHelpers.makeWithDrawDelegationData(txData, message, i);
                         delegatorRewards.push(reward);
                     } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
                         try {
-                            let action = txData.tx.body.messages[0].msg.create_minter;
-                            let tx_hash = txData.tx_response.txhash;
-                            let height = txData.tx_response.height;
-                            let contract_addresses = txData.tx_response.logs[0].events.
-                                find((x) => x.type == CONST_CHAR.INSTANTIATE).attributes.filter((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS);
-                            let code_ids = txData.tx_response.logs[0].events.
-                                find((x) => x.type == CONST_CHAR.INSTANTIATE).attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
-                            contract_addresses.map(function (x, i) {
-                                const smartContract = new SmartContract();
-                                smartContract.code_id = code_ids[i].value;
-                                smartContract.contract_address = contract_addresses[i].value;
-                                smartContract.creator_address = txData.tx_response.logs[0].events.
-                                    find((x) => x.type == CONST_CHAR.EXECUTE).attributes.find((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS).value;
-                                smartContract.tx_hash = tx_hash;
-                                smartContract.height = height;
-                                smartContract.contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED;
-                                smartContracts.push(smartContract);
-                            })
+                            let _smartContracts = SyncDataHelpers.makeExecuteContractData(txData, message);
+                            if (_smartContracts.length > 0) {
+                                smartContracts = smartContracts.concat(_smartContracts);
+                            }
                             // await this.smartContractRepository.create(contracts);
                         } catch (error) {
                             this._logger.error(null, `Got error in create minter transaction`);
@@ -783,13 +724,7 @@ export class SyncTaskService implements ISyncTaskService {
                             this._logger.error(null, `${error.stack}`);
                         }
                     } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
-                        let delegation = new Delegation();
-                        delegation.tx_hash = txData.tx_response.txhash;
-                        delegation.delegator_address = message.delegator_address;
-                        delegation.validator_address = message.validator_address;
-                        delegation.amount = Number(message.value.amount) / APP_CONSTANTS.PRECISION_DIV;
-                        delegation.created_at = new Date(txData.tx_response.timestamp);
-                        delegation.type = CONST_DELEGATE_TYPE.CREATE_VALIDATOR;
+                        let delegation = SyncDataHelpers.makeCreateValidatorData(txData, message);
                         delegations.push(delegation);
                     }
                 }
@@ -816,7 +751,7 @@ export class SyncTaskService implements ISyncTaskService {
         }
         if (smartContracts.length > 0) {
             smartContracts.map(async (smartContract) => {
-                if(smartContract.contract_name == '') {
+                if (smartContract.contract_name == '') {
                     const param = `/cosmwasm/wasm/v1/contract/${smartContract.contract_address}`;
                     const contractData = await this._commonUtil.getDataAPI(this.api, param);
                     smartContract.contract_name = contractData.contract_info.label;
