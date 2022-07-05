@@ -29,7 +29,7 @@ export class SyncProposalService implements ISyncProposalService {
     this.api = this.configService.get('API');
   }
 
-  // @Interval(500)
+  @Interval(500)  
   async handleInterval() {
     // check status
     if (this.isSync) {

@@ -98,9 +98,7 @@ export class SyncTaskService implements ISyncTaskService {
         this.threads = Number(this.configService.get('THREADS') || 15);
 
         // Call worker to process
-        // this.workerProcess();
-
-        this.handleSyncData(4280277, true);
+        this.workerProcess();
     }
 
     /**
@@ -186,7 +184,7 @@ export class SyncTaskService implements ISyncTaskService {
         this.threadProcess(currentBlk, latestBlk)
     }
 
-    // @Interval(500)
+    @Interval(500)
     async syncValidator() {
         // check status
         if (this.isSyncValidator) {
@@ -372,7 +370,7 @@ export class SyncTaskService implements ISyncTaskService {
         }
     }
 
-    // @Interval(500)
+    @Interval(500)
     async syncMissedBlock() {
         // check status
         if (this.isSyncMissBlock) {
@@ -442,7 +440,7 @@ export class SyncTaskService implements ISyncTaskService {
         }
     }
 
-    // @Interval(4000)
+    @Interval(3000)
     async blockSyncError() {
         const result: BlockSyncError = await this.blockSyncErrorRepository.findOne();
         if (result) {
@@ -574,16 +572,7 @@ export class SyncTaskService implements ISyncTaskService {
              */
             // this.influxDbClient.closeWriteApi();
 
-            // Update current block
-            let currentBlk = 0;
-            const status = await this.statusRepository.findOne();
-            if (status) {
-                currentBlk = status.current_block;
-            }
-
-            if (syncBlock > currentBlk) {
-                await this.updateStatus(fetchingBlockHeight);
-            }
+            await this.updateStatus(fetchingBlockHeight);
 
             // Delete data on Block sync error table
             await this.removeBlockError(syncBlock);
@@ -625,7 +614,7 @@ export class SyncTaskService implements ISyncTaskService {
                         let proposalVote = SyncDataHelpers.makeVoteData(txData, message);
                         proposalVotes.push(proposalVote);
                     } else if (txType === CONST_MSG_TYPE.MSG_SUBMIT_PROPOSAL) {
-                        let [historyProposal, proposalDeposit] = SyncDataHelpers.makeSubmitProposal(txData, message,i);
+                        let [historyProposal, proposalDeposit] = SyncDataHelpers.makeSubmitProposal(txData, message, i);
                         historyProposals.push(historyProposal);
                         if (proposalDeposit) proposalDeposits.push(proposalDeposit);
                     } else if (txType === CONST_MSG_TYPE.MSG_DEPOSIT) {
@@ -640,7 +629,7 @@ export class SyncTaskService implements ISyncTaskService {
                         delegations.push(delegation);
                         delegatorRewards.push(reward);
                     } else if (txType === CONST_MSG_TYPE.MSG_REDELEGATE) {
-                        let [delegation1, delegation2, reward1, reward2] = SyncDataHelpers.makeRedelegationData(txData, message,i);
+                        let [delegation1, delegation2, reward1, reward2] = SyncDataHelpers.makeRedelegationData(txData, message, i);
                         delegations.push(delegation1);
                         delegations.push(delegation2);
                         delegatorRewards.push(reward1);
@@ -774,8 +763,10 @@ export class SyncTaskService implements ISyncTaskService {
 
     async updateStatus(newHeight) {
         const status = await this.statusRepository.findOne();
-        status.current_block = newHeight;
-        await this.statusRepository.create(status);
+        if (newHeight > status.current_block) {
+            status.current_block = newHeight;
+            await this.statusRepository.create(status);
+        }
     }
 
     async getCurrentStatus() {
@@ -796,7 +787,6 @@ export class SyncTaskService implements ISyncTaskService {
    */
     async getBlockLatest(): Promise<any> {
         this._logger.log(null, `Class ${SyncTaskService.name}, call getBlockLatest method`);
-
         const paramsBlockLatest = `blocks/latest`;
         const results = await this._commonUtil.getDataAPI(this.api, paramsBlockLatest);
         return results;
