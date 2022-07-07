@@ -96,3 +96,21 @@ export enum SMART_CONTRACT_VERIFICATION {
   EXACT_MATCH = 'EXACT MATCH',
   SIMILAR_MATCH = 'SIMILAR MATCH',
 }
+
+export enum CONTRACT_TYPE {
+  CW20 = "CW20",
+  CW721 = "CW721"
+}
+
+export enum CONTRACT_CODE_RESULT {
+  TBD = "TBD",
+  CORRECT = "Correct",
+  INCORRECT = "Incorrect"
+}
+
+export enum CONTRACT_CODE_STATUS {
+  TBD = "TBD",
+  WAITING = "WAITING",
+  COMPLETED = "COMPLETED",
+  REJECTED = "REJECTED"
+}
