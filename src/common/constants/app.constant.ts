@@ -114,3 +114,7 @@ export enum CONTRACT_CODE_STATUS {
   COMPLETED = "COMPLETED",
   REJECTED = "REJECTED"
 }
+
+export enum INDEXER_API {
+  CHECK_STATUS_CODE_ID = "api/v1/codeid/%s/checkStatus"
+}

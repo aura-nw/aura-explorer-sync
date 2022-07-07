@@ -28,9 +28,6 @@ export const ENTITIES_CONFIG = {
   SMART_CONTRACT_CODE: SmartContractCode
 };
 
-export const REQUEST_CONFIG = {
-};
-
 export const RESPONSE_CONFIG = {
   RESPONSE_DTO: ResponseDto,
 };
