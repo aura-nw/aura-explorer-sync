@@ -12,4 +12,4 @@ const providers = [ConfigService, CommonUtil];
   providers: [...providers],
   exports: [...providers],
 })
-export class SharedModule { }
+export class SharedModule {}
