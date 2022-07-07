@@ -53,9 +53,9 @@ export class SyncProposalService implements ISyncProposalService {
         );
         for (let i = 0; i < data.length; i++) {
           const item: any = data[i];
-          let proposalTally = undefined;
+          let proposalTally = null;
           if (
-            item.pro_status ===
+            item.status ===
             CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_VOTING_PERIOD
           ) {
             const paramsTally = `cosmos/gov/v1beta1/proposals/${item.proposal_id}/tally`;
