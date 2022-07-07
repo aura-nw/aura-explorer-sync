@@ -26,6 +26,8 @@ import { TransactionRepository } from './repositories/impls/transaction.reposito
 import { SyncWebsocketService } from './services/impls/sync-websocket.service';
 import { SmartContractRepository } from './repositories/impls/smart-contract.repository';
 import { TokenContractRepository } from './repositories/impls/token-contract.repository';
+import { SmartContractCodeRepository } from './repositories/impls/smart-contract-code.repository';
+import { SyncContractCodeService } from './services/impls/sync-contract-code.service';
 
 const controllers = [];
 const entities = [
@@ -43,6 +45,7 @@ const entities = [
   ENTITIES_CONFIG.TRANSACTION,
   ENTITIES_CONFIG.SMART_CONTRACT,
   ENTITIES_CONFIG.TOKEN_CONTRACT,
+  ENTITIES_CONFIG.SMART_CONTRACT_CODE
 ];
 @Module({
   imports: [
@@ -121,6 +124,10 @@ const entities = [
       provide: REPOSITORY_INTERFACE.ITOKEN_CONTRACT_REPOSITORY,
       useClass: TokenContractRepository,
     },
+    {
+      provide: REPOSITORY_INTERFACE.ISMART_CONTRACT_CODE_REPOSITORY,
+      useClass: SmartContractCodeRepository,
+    },
     //service
     {
       provide: SERVICE_INTERFACE.ISYNC_PROPOSAL_SERVICE,
@@ -133,6 +140,10 @@ const entities = [
     {
       provide: SERVICE_INTERFACE.ISYNC_WEBSOCKET_SERVICE,
       useClass: SyncWebsocketService,
+    },
+    {
+      provide: SERVICE_INTERFACE.ISYNC_CONTRACT_CODE_SERVICE,
+      useClass: SyncContractCodeService,
     },
   ],
 })
