@@ -51,8 +51,10 @@ export class SyncContractCodeService implements ISyncContractCodeService {
                     switch (contractCodeIndexer.data.status) {
                         case CONTRACT_CODE_STATUS.COMPLETED:
                             item.result = CONTRACT_CODE_RESULT.CORRECT;
+                            break;
                         case CONTRACT_CODE_STATUS.REJECTED:
                             item.result = CONTRACT_CODE_RESULT.INCORRECT;
+                            break;
                         default:
                             item.result = CONTRACT_CODE_RESULT.TBD;
                     }
