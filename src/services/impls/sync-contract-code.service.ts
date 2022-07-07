@@ -7,13 +7,13 @@ import { ISmartContractCodeRepository } from "../../repositories/ismart-contract
 import { Interval } from '@nestjs/schedule';
 import { CONTRACT_CODE_RESULT, CONTRACT_CODE_STATUS, INDEXER_API } from "../../common/constants/app.constant";
 import { SmartContractCode } from "../../entities/smart-contract-code.entity";
+import * as util from 'util';
 
 @Injectable()
 export class SyncContractCodeService implements ISyncContractCodeService {
     private readonly _logger = new Logger(SyncContractCodeService.name);
     private indexerUrl;
     private isSyncContractCode = false;
-    private util = require('util');
 
     constructor(
         private configService: ConfigService,
@@ -47,7 +47,7 @@ export class SyncContractCodeService implements ISyncContractCodeService {
                 for (let i = 0; i < contractCodeDB.length; i++) {
                     let item: SmartContractCode = contractCodeDB[i];
                     //get contract code from indexer
-                    const contractCodeIndexer = await this._commonUtil.getDataAPI(`${this.indexerUrl}${this.util.format(INDEXER_API.CHECK_STATUS_CODE_ID, item.code_id)}`, '');
+                    const contractCodeIndexer = await this._commonUtil.getDataAPI(`${this.indexerUrl}${util.format(INDEXER_API.CHECK_STATUS_CODE_ID, item.code_id)}`, '');
                     switch (contractCodeIndexer.data.status) {
                         case CONTRACT_CODE_STATUS.COMPLETED:
                             item.result = CONTRACT_CODE_RESULT.CORRECT;
