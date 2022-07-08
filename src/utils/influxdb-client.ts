@@ -43,8 +43,8 @@ export class InfluxDBClient {
    */
   queryData(measurement, statTime, step) {
     const results: {
-      count: string,
-      timestamp: string
+      count: string;
+      timestamp: string;
     }[] = [];
     const query = `from(bucket: "${this.bucket}") |> range(start: ${statTime}) |> filter(fn: (r) => r._measurement == "${measurement}") |> window(every: ${step}) |> count()`;
     const output = new Promise((resolve) => {

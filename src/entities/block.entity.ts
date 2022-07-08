@@ -6,10 +6,10 @@ import { Transaction } from './transaction.entity';
 @Entity('blocks')
 export class Block extends BaseEntityIncrementId {
   @Unique('block_hash', ['block_hash'])
-  @Column({ name: 'block_hash', update: false})
+  @Column({ name: 'block_hash', update: false })
   block_hash: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'chainid',
   })
@@ -18,37 +18,37 @@ export class Block extends BaseEntityIncrementId {
   @Column({ name: 'height' })
   height: number;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'identity',
   })
   identity: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'moniker',
   })
   moniker: string;
 
-  @Column({ 
+  @Column({
     default: 0,
     name: 'num_signatures',
   })
   num_signatures: number;
 
-  @Column({ 
+  @Column({
     default: 0,
     name: 'num_txs',
   })
   num_txs: number;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'operator_address',
   })
   operator_address: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'proposer',
   })
@@ -57,19 +57,19 @@ export class Block extends BaseEntityIncrementId {
   @Column({ name: 'timestamp' })
   timestamp: Date;
 
-  @Column({ 
+  @Column({
     default: 0,
     name: 'gas_used',
   })
   gas_used: number;
 
-  @Column({ 
+  @Column({
     default: 0,
     name: 'gas_wanted',
   })
   gas_wanted: number;
 
-  @Column({ 
+  @Column({
     default: 0,
     name: 'round',
   })
@@ -81,7 +81,7 @@ export class Block extends BaseEntityIncrementId {
   @Column({
     name: 'json_data',
     type: 'json',
-    nullable: true
+    nullable: true,
   })
   json_data: any;
 }

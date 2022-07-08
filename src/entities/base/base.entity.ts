@@ -20,5 +20,5 @@ export class BaseEntity {
 
 export class BaseEntityIncrementId extends BaseEntity {
   @PrimaryGeneratedColumn('increment')
-  id: number = 0;
+  id = 0;
 }
