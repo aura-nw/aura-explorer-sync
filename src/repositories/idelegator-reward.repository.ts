@@ -1,3 +1,3 @@
-import { IBaseRepository } from "./ibase.repository";
+import { IBaseRepository } from './ibase.repository';
 
-export interface IDelegatorRewardRepository extends IBaseRepository {}
+export type IDelegatorRewardRepository = IBaseRepository;

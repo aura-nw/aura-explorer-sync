@@ -1,1 +1,1 @@
-export interface ISyncContractCodeService { }
+export interface ISyncContractCodeService {}
