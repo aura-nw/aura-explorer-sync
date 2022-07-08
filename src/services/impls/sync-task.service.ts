@@ -1,5 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
+import { bech32 } from 'bech32';
+import { sha256 } from 'js-sha256';
+import { InjectSchedule, Schedule } from 'nest-schedule';
+import { ISmartContractRepository } from 'src/repositories/ismart-contract.repository';
+import { ITokenContractRepository } from 'src/repositories/itoken-contract.repository';
+import { v4 as uuidv4 } from 'uuid';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
@@ -8,29 +14,23 @@ import {
   SMART_CONTRACT_VERIFICATION,
 } from '../../common/constants/app.constant';
 import { BlockSyncError, MissedBlock, SyncStatus } from '../../entities';
-import { ConfigService } from '../../shared/services/config.service';
-import { CommonUtil } from '../../utils/common.util';
-import { ISyncTaskService } from '../isync-task.service';
-import { InjectSchedule, Schedule } from 'nest-schedule';
-import { v4 as uuidv4 } from 'uuid';
-import { bech32 } from 'bech32';
-import { sha256 } from 'js-sha256';
+import { SyncDataHelpers } from '../../helpers/sync-data.helpers';
 import { REPOSITORY_INTERFACE } from '../../module.config';
-import { IValidatorRepository } from '../../repositories/ivalidator.repository';
-import { InfluxDBClient } from '../../utils/influxdb-client';
-import { IMissedBlockRepository } from '../../repositories/imissed-block.repository';
 import { IBlockSyncErrorRepository } from '../../repositories/iblock-sync-error.repository';
 import { IBlockRepository } from '../../repositories/iblock.repository';
-import { ITransactionRepository } from '../../repositories/itransaction.repository';
-import { ISyncStatusRepository } from '../../repositories/isync-status.repository';
-import { IProposalDepositRepository } from '../../repositories/iproposal-deposit.repository';
-import { IProposalVoteRepository } from '../../repositories/iproposal-vote.repository';
-import { IHistoryProposalRepository } from '../../repositories/ihistory-proposal.repository';
 import { IDelegationRepository } from '../../repositories/idelegation.repository';
 import { IDelegatorRewardRepository } from '../../repositories/idelegator-reward.repository';
-import { ISmartContractRepository } from 'src/repositories/ismart-contract.repository';
-import { ITokenContractRepository } from 'src/repositories/itoken-contract.repository';
-import { SyncDataHelpers } from '../../helpers/sync-data.helpers';
+import { IHistoryProposalRepository } from '../../repositories/ihistory-proposal.repository';
+import { IMissedBlockRepository } from '../../repositories/imissed-block.repository';
+import { IProposalDepositRepository } from '../../repositories/iproposal-deposit.repository';
+import { IProposalVoteRepository } from '../../repositories/iproposal-vote.repository';
+import { ISyncStatusRepository } from '../../repositories/isync-status.repository';
+import { ITransactionRepository } from '../../repositories/itransaction.repository';
+import { IValidatorRepository } from '../../repositories/ivalidator.repository';
+import { ENV_CONFIG } from '../../shared/services/config.service';
+import { CommonUtil } from '../../utils/common.util';
+import { InfluxDBClient } from '../../utils/influxdb-client';
+import { ISyncTaskService } from '../isync-task.service';
 
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
@@ -38,7 +38,6 @@ export class SyncTaskService implements ISyncTaskService {
   private rpc;
   private api;
   private influxDbClient: InfluxDBClient;
-  private isSyncing = false;
   private isSyncValidator = false;
   private isSyncMissBlock = false;
   private currentBlock: number;
@@ -47,7 +46,6 @@ export class SyncTaskService implements ISyncTaskService {
   private smartContractService;
 
   constructor(
-    private configService: ConfigService,
     private _commonUtil: CommonUtil,
     @Inject(REPOSITORY_INTERFACE.IVALIDATOR_REPOSITORY)
     private validatorRepository: IValidatorRepository,
@@ -80,22 +78,21 @@ export class SyncTaskService implements ISyncTaskService {
     this._logger.log(
       '============== Constructor Sync Task Service ==============',
     );
-    this.rpc = this.configService.get('RPC');
-    this.api = this.configService.get('API');
+
+    this.rpc = ENV_CONFIG.NODE.RPC;
+    this.api = ENV_CONFIG.NODE.API;
 
     this.influxDbClient = new InfluxDBClient(
-      this.configService.get('INFLUXDB_BUCKET'),
-      this.configService.get('INFLUXDB_ORG'),
-      this.configService.get('INFLUXDB_URL'),
-      this.configService.get('INFLUXDB_TOKEN'),
+      ENV_CONFIG.INFLUX_DB.BUCKET,
+      ENV_CONFIG.INFLUX_DB.ORGANIZTION,
+      ENV_CONFIG.INFLUX_DB.URL,
+      ENV_CONFIG.INFLUX_DB.TOKEN,
     );
 
-    this.smartContractService = this.configService.get(
-      'SMART_CONTRACT_SERVICE',
-    );
+    this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
 
     // Get number thread from config
-    this.threads = Number(this.configService.get('THREADS') || 15);
+    this.threads = ENV_CONFIG.THREADS;
 
     // Call worker to process
     this.workerProcess();
@@ -198,7 +195,12 @@ export class SyncTaskService implements ISyncTaskService {
           currentBlk = status.current_block;
         }
       }
-    } catch (err) {}
+    } catch (err) {
+      this._logger.error(
+        null,
+        `WorkerProcess method has error ${err.name}: ${err.message}`,
+      );
+    }
 
     this.threadProcess(currentBlk, latestBlk);
   }
@@ -872,9 +874,9 @@ export class SyncTaskService implements ISyncTaskService {
     const status = await this.statusRepository.findOne();
     if (!status[0]) {
       const newStatus = new SyncStatus();
-      newStatus.current_block = Number(this.configService.get('START_HEIGHT'));
+      newStatus.current_block = Number(ENV_CONFIG.START_HEIGHT);
       await this.statusRepository.create(newStatus);
-      this.currentBlock = Number(this.configService.get('START_HEIGHT'));
+      this.currentBlock = newStatus.current_block;
     } else {
       this.currentBlock = status[0].current_block;
     }

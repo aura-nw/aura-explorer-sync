@@ -1,5 +1,11 @@
-import { ResponseDto } from './dtos/responses';
-import { Block, BlockSyncError, MissedBlock, Proposal, Transaction, Validator } from './entities';
+import {
+  Block,
+  BlockSyncError,
+  MissedBlock,
+  Proposal,
+  Transaction,
+  Validator,
+} from './entities';
 import { Delegation } from './entities/delegation.entity';
 import { DelegatorReward } from './entities/delegator-reward.entity';
 import { HistoryProposal } from './entities/history-proposal.entity';
@@ -25,20 +31,6 @@ export const ENTITIES_CONFIG = {
   SMART_CONTRACT: SmartContract,
   TOKEN_CONTRACT: TokenContract,
 };
-
-export const REQUEST_CONFIG = {
-};
-
-export const RESPONSE_CONFIG = {
-  RESPONSE_DTO: ResponseDto,
-};
-
-export module MODULE_REQUEST {
-}
-
-export module MODULE_RESPONSE {
-  export abstract class ResponseDto extends RESPONSE_CONFIG.RESPONSE_DTO {}
-}
 
 export const SERVICE_INTERFACE = {
   ISYNC_PROPOSAL_SERVICE: 'ISyncProposalService',

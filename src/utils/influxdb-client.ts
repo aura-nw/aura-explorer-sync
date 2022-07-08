@@ -1,4 +1,9 @@
-import { InfluxDB, Point, QueryApi, WriteApi } from "@influxdata/influxdb-client";
+import {
+  InfluxDB,
+  Point,
+  QueryApi,
+  WriteApi,
+} from '@influxdata/influxdb-client';
 
 export class InfluxDBClient {
   private client: InfluxDB;
@@ -31,10 +36,10 @@ export class InfluxDBClient {
 
   /**
    * queryData
-   * @param measurement 
-   * @param statTime 
-   * @param step 
-   * @returns 
+   * @param measurement
+   * @param statTime
+   * @param step
+   * @returns
    */
   queryData(measurement, statTime, step) {
     const results: {
@@ -42,7 +47,7 @@ export class InfluxDBClient {
       timestamp: string
     }[] = [];
     const query = `from(bucket: "${this.bucket}") |> range(start: ${statTime}) |> filter(fn: (r) => r._measurement == "${measurement}") |> window(every: ${step}) |> count()`;
-    const output = new Promise((resolve, reject) => {
+    const output = new Promise((resolve) => {
       this.queryApi.queryRows(query, {
         next(row, tableMeta) {
           const o = tableMeta.toObject(row);
@@ -67,12 +72,12 @@ export class InfluxDBClient {
 
   /**
    * writeBlock
-   * @param height 
-   * @param block_hash 
-   * @param num_txs 
-   * @param chainid 
-   * @param timestamp 
-   * @param proposer 
+   * @param height
+   * @param block_hash
+   * @param num_txs
+   * @param chainid
+   * @param timestamp
+   * @param proposer
    */
   writeBlock(height, block_hash, num_txs, chainid, timestamp, proposer): void {
     const point = new Point('blocks')
@@ -87,10 +92,10 @@ export class InfluxDBClient {
 
   /**
    * writeTx
-   * @param tx_hash 
-   * @param height 
-   * @param type 
-   * @param timestamp 
+   * @param tx_hash
+   * @param height
+   * @param type
+   * @param timestamp
    */
   writeTx(tx_hash, height, type, timestamp): void {
     const point = new Point('txs')
@@ -102,14 +107,13 @@ export class InfluxDBClient {
     this.writeApi.writePoint(point);
   }
 
-
   /**
    * writeTxs
-   * @param values 
+   * @param values
    */
   writeTxs(values: Array<any>): void {
     const points: Array<Point> = [];
-    values.forEach(item => {
+    values.forEach((item) => {
       const point = new Point('txs')
         // .tag('chainid', chainid)
         .stringField('tx_hash', item.tx_hash)
@@ -126,8 +130,8 @@ export class InfluxDBClient {
 
   /**
    * convertDate
-   * @param timestamp 
-   * @returns 
+   * @param timestamp
+   * @returns
    */
   private convertDate(timestamp: any): Date {
     return new Date(timestamp.toString());
@@ -135,10 +139,10 @@ export class InfluxDBClient {
 
   /**
    * writeValidator
-   * @param operator_address 
-   * @param title 
-   * @param jailed 
-   * @param power 
+   * @param operator_address
+   * @param title
+   * @param jailed
+   * @param power
    */
   writeValidator(operator_address, title, jailed, power): void {
     const point = new Point('validators')
@@ -151,15 +155,23 @@ export class InfluxDBClient {
 
   /**
    * writeDelegation
-   * @param delegator_address 
-   * @param validator_address 
-   * @param shares 
-   * @param amount 
-   * @param tx_hash 
-   * @param created_at 
-   * @param type 
+   * @param delegator_address
+   * @param validator_address
+   * @param shares
+   * @param amount
+   * @param tx_hash
+   * @param created_at
+   * @param type
    */
-  writeDelegation(delegator_address, validator_address, shares, amount, tx_hash, created_at, type): void {
+  writeDelegation(
+    delegator_address,
+    validator_address,
+    shares,
+    amount,
+    tx_hash,
+    created_at,
+    type,
+  ): void {
     const point = new Point('delegation')
       .stringField('delegator_address', delegator_address)
       .stringField('validator_address', validator_address)
@@ -171,14 +183,13 @@ export class InfluxDBClient {
     this.writeApi.writePoint(point);
   }
 
-
   /**
    * writeDelegations
-   * @param values 
+   * @param values
    */
   writeDelegations(values: Array<any>): void {
     const points: Array<Point> = [];
-    values.forEach(item => {
+    values.forEach((item) => {
       const point = new Point('delegation')
         .stringField('delegator_address', item.delegator_address)
         .stringField('validator_address', item.validator_address)
@@ -188,7 +199,7 @@ export class InfluxDBClient {
         .stringField('created_at', item.created_at)
         .stringField('type', item.type);
 
-        points.push(point);
+      points.push(point);
     });
 
     if (values.length > 0) {
@@ -198,8 +209,8 @@ export class InfluxDBClient {
 
   /**
    * writeMissedBlock
-   * @param validator_address 
-   * @param height 
+   * @param validator_address
+   * @param height
    */
   writeMissedBlock(validator_address, height): void {
     const point = new Point('delegation')
