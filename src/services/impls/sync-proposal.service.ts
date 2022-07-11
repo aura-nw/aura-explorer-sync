@@ -5,11 +5,10 @@ import {
   CONST_PROPOSAL_STATUS,
   NODE_API,
 } from '../../common/constants/app.constant';
-import { Proposal } from '../../entities/proposal.entity';
 import { REPOSITORY_INTERFACE } from '../../module.config';
 import { IProposalRepository } from '../../repositories/iproposal.repository';
 import { IValidatorRepository } from '../../repositories/ivalidator.repository';
-import { ConfigService } from '../../shared/services/config.service';
+import { ENV_CONFIG } from '../../shared/services/config.service';
 import { CommonUtil } from '../../utils/common.util';
 import { ISyncProposalService } from '../isync-proposal.service';
 
@@ -20,7 +19,6 @@ export class SyncProposalService implements ISyncProposalService {
   private isSync = false;
 
   constructor(
-    private configService: ConfigService,
     private _commonUtil: CommonUtil,
     @Inject(REPOSITORY_INTERFACE.IVALIDATOR_REPOSITORY)
     private validatorRepository: IValidatorRepository,
@@ -30,7 +28,7 @@ export class SyncProposalService implements ISyncProposalService {
     this._logger.log(
       '============== Constructor Sync Proposal Service ==============',
     );
-    this.api = this.configService.get('API');
+    this.api = ENV_CONFIG.NODE.API;
   }
 
   @Interval(500)
@@ -55,8 +53,7 @@ export class SyncProposalService implements ISyncProposalService {
           const item: any = data[i];
           let proposalTally = null;
           if (
-            item.status ===
-            CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_VOTING_PERIOD
+            item.status === CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_VOTING_PERIOD
           ) {
             const paramsTally = `cosmos/gov/v1beta1/proposals/${item.proposal_id}/tally`;
             proposalTally = await this._commonUtil.getDataAPI(

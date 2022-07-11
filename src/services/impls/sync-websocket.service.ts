@@ -1,16 +1,14 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import * as WebSocket from 'ws';
 import {
   MESSAGE_ACTION,
   SMART_CONTRACT_VERIFICATION,
-} from 'src/common/constants/app.constant';
-import { ConfigService } from 'src/shared/services/config.service';
-import { ISyncWebsocketService } from '../isync-websocket.service';
+} from '../../common/constants/app.constant';
 import { REPOSITORY_INTERFACE } from 'src/module.config';
 import { ISmartContractRepository } from 'src/repositories/ismart-contract.repository';
+import { ConfigService, ENV_CONFIG } from 'src/shared/services/config.service';
 import { CommonUtil } from 'src/utils/common.util';
-import { StargateClient } from '@cosmjs/stargate';
-import { text } from 'stream/consumers';
+import * as WebSocket from 'ws';
+import { ISyncWebsocketService } from '../isync-websocket.service';
 
 @Injectable()
 export class SyncWebsocketService implements ISyncWebsocketService {
@@ -36,16 +34,15 @@ export class SyncWebsocketService implements ISyncWebsocketService {
       '============== Constructor Sync Websocket Service ==============',
     );
     this.lcd = this.configService.get('API');
-    this.websocketSubscriber = this.configService.get('WEBSOCKET_URL');
-    this.smartContractService = this.configService.get(
-      'SMART_CONTRACT_SERVICE',
-    );
+    this.websocketSubscriber = ENV_CONFIG.WEBSOCKET_URL;
+    this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
     // this.startSyncWebsocket();
   }
 
   async startSyncWebsocket() {
     this._logger.log('syncFromNetwork');
     const websocketUrl = this.websocketSubscriber;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     const websocket = new WebSocket(websocketUrl);
     websocket.on('open', function () {

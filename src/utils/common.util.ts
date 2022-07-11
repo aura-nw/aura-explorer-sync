@@ -1,23 +1,21 @@
-import { HttpService } from "@nestjs/axios";
-import { Inject, Injectable, InternalServerErrorException } from "@nestjs/common";
-import { lastValueFrom } from "rxjs";
+import { HttpService } from '@nestjs/axios';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { lastValueFrom } from 'rxjs';
 import { tmhash } from 'tendermint/lib/hash';
 import { bech32 } from 'bech32';
-import { CONST_CHAR } from "../common/constants/app.constant";
-const axios = require('axios');
+import { CONST_CHAR } from '../common/constants/app.constant';
+import axios from 'axios';
 
 @Injectable()
 export class CommonUtil {
-  constructor(
-    private httpService: HttpService,
-  ) { }
+  constructor(private httpService: HttpService) {}
 
   makeFileObjects(img) {
     // You can create File objects from a Buffer of binary data
     const buffer = Buffer.from(img.data, 'base64');
     return [
       new File(['contents-of-file-1'], 'plain-utf8.txt'),
-      new File([buffer], img.name)
+      new File([buffer], img.name),
     ];
   }
 
@@ -36,12 +34,12 @@ export class CommonUtil {
   }
 
   getAddressFromPubkey(pubkey) {
-    var bytes = Buffer.from(pubkey, 'base64');
+    const bytes = Buffer.from(pubkey, 'base64');
     return tmhash(bytes).slice(0, 20).toString('hex').toUpperCase();
   }
 
   hexToBech32(address, prefix) {
-    let addressBuffer = Buffer.from(address, 'hex');
+    const addressBuffer = Buffer.from(address, 'hex');
     return bech32.encode(prefix, bech32.toWords(addressBuffer));
   }
 

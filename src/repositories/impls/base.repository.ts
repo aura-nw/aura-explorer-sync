@@ -156,11 +156,13 @@ export class BaseRepository implements IBaseRepository {
 
   /**
    * upsert
-   * @param data 
-   * @param conflictPathsOrOptions 
+   * @param data
+   * @param conflictPathsOrOptions
    */
   public async upsert(data: Array<any>, conflictPathsOrOptions: string[]) {
-    const results = await this._repos.upsert(data, conflictPathsOrOptions).then(t => t.identifiers);
+    const results = await this._repos
+      .upsert(data, conflictPathsOrOptions)
+      .then((t) => t.identifiers);
 
     return results;
   }
