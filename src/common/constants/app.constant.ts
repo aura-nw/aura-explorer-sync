@@ -1,7 +1,3 @@
-export enum APP_CONSTANTS {
-  PRECISION_DIV = 1000000
-}
-
 export enum ORDER_BY {
   DESC = 'DESC',
   ASC = 'ASC',
@@ -38,8 +34,7 @@ export enum CONST_PUBKEY_ADDR {
 export enum CONST_CHAR {
   PERCENT = '%',
   SECOND = 's',
-  UAURA  = 'uaura',
-  DELEGATE  = 'delegate',
+  DELEGATE = 'delegate',
   REDELEGATE = 'redelegate',
   UNBOND = 'unbond',
   VALIDATOR = 'validator',
@@ -66,20 +61,20 @@ export enum CONST_MSG_TYPE {
   MSG_WITHDRAW_DELEGATOR_REWARD = 'MsgWithdrawDelegatorReward',
   MSG_INSTANTIATE_CONTRACT = 'MsgInstantiateContract',
   MSG_EXECUTE_CONTRACT = 'MsgExecuteContract',
-  MSG_CREATE_VALIDATOR = 'MsgCreateValidator'
+  MSG_CREATE_VALIDATOR = 'MsgCreateValidator',
 }
 
 export enum CONST_PROPOSAL_TYPE {
   SOFTWARE_UPGRADE_PROPOSAL = 'SoftwareUpgradeProposal',
   COMMUNITY_POOL_SPEND_PROPOSAL = 'CommunityPoolSpendProposal',
-  PARAMETER_CHANGE_PROPOSAL = 'ParameterChangeProposal'
+  PARAMETER_CHANGE_PROPOSAL = 'ParameterChangeProposal',
 }
 
 export enum CONST_DELEGATE_TYPE {
   DELEGATE = 'Delegate',
   UNDELEGATE = 'Undelegate',
   REDELEGATE = 'Redelegate',
-  CREATE_VALIDATOR = 'CreateValidator'
+  CREATE_VALIDATOR = 'CreateValidator',
 }
 
 export enum CONST_PROPOSAL_STATUS {
@@ -88,11 +83,33 @@ export enum CONST_PROPOSAL_STATUS {
   PROPOSAL_STATUS_VOTING_PERIOD = 'PROPOSAL_STATUS_VOTING_PERIOD',
   PROPOSAL_STATUS_PASSED = 'PROPOSAL_STATUS_PASSED',
   PROPOSAL_STATUS_REJECTED = 'PROPOSAL_STATUS_REJECTED',
-  PROPOSAL_STATUS_FAILED = 'PROPOSAL_STATUS_FAILED'
+  PROPOSAL_STATUS_FAILED = 'PROPOSAL_STATUS_FAILED',
 }
 
 export enum SMART_CONTRACT_VERIFICATION {
   UNVERIFIED = 'UNVERIFIED',
   EXACT_MATCH = 'EXACT MATCH',
   SIMILAR_MATCH = 'SIMILAR MATCH',
+}
+
+export enum CONTRACT_TYPE {
+  CW20 = 'CW20',
+  CW721 = 'CW721',
+}
+
+export enum CONTRACT_CODE_RESULT {
+  TBD = 'TBD',
+  CORRECT = 'Correct',
+  INCORRECT = 'Incorrect',
+}
+
+export enum CONTRACT_CODE_STATUS {
+  TBD = 'TBD',
+  WAITING = 'WAITING',
+  COMPLETED = 'COMPLETED',
+  REJECTED = 'REJECTED',
+}
+
+export enum INDEXER_API {
+  CHECK_STATUS_CODE_ID = 'api/v1/codeid/%s/checkStatus',
 }

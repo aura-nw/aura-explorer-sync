@@ -1,33 +1,33 @@
-import { ResponseDto } from "../dtos/responses/response.dto";
+import { ResponseDto } from '../dtos/responses/response.dto';
 
 export interface IBaseService {
   /**
-   * findOne
+   * Get firts data
    * @param id
    */
   findOne(id: any): Promise<ResponseDto>;
 
   /**
-   * findByCondition
+   * Get data by condition
    * @param filterCondition
    * @param orderBy
    */
   findByCondition(filterCondition: any, orderBy: any): Promise<ResponseDto>;
 
   /**
-   * findAll
+   * Get data has relations
    * @param orderBy
    */
   findAll(orderBy?: any): Promise<ResponseDto>;
 
   /**
-   * findWithRelations
+   * Get all data
    * @param relations
    */
   findWithRelations(relations: any): Promise<ResponseDto>;
 
   /**
-   * findAndCount
+   * Get data paging
    * @param pageIndex
    * @param pageSize
    * @param condition
@@ -41,27 +41,27 @@ export interface IBaseService {
   ): Promise<ResponseDto>;
 
   /**
-   * create
+   * Create new data
    * @param data
    */
   create<T>(data: T | any): Promise<ResponseDto>;
 
   /**
-   * update
+   * Update data
    * @param data
    */
   update<T>(data: T | any): Promise<ResponseDto>;
 
   /**
-   * remove
+   * Remove data by id
    * @param id
    */
   remove(id: any): Promise<ResponseDto>;
 
   /**
-   * upsert
-   * @param data 
-   * @param conflictPathsOrOptions 
+   * Insert/Update data
+   * @param data
+   * @param conflictPathsOrOptions
    */
   upsert(data: Array<any>, conflictPathsOrOptions: string[]): Promise<any>;
 }

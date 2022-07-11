@@ -1,32 +1,27 @@
-import { Injectable, Logger } from '@nestjs/common';
 import {
-  Block,
-  Transaction,
-  Delegation,
-  DelegatorReward,
-  ProposalVote,
-  HistoryProposal,
-  ProposalDeposit,
-  SmartContract,
-  Validator,
-  Proposal,
-} from '../entities';
-import {
-  APP_CONSTANTS,
   CONST_CHAR,
   CONST_DELEGATE_TYPE,
   CONST_MSG_TYPE,
   CONST_PROPOSAL_TYPE,
-  CONST_PUBKEY_ADDR,
-  MESSAGE_ACTION,
-  NODE_API,
   SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
-import { Any } from 'typeorm';
+import {
+  Block,
+  Delegation,
+  DelegatorReward,
+  HistoryProposal,
+  Proposal,
+  ProposalDeposit,
+  ProposalVote,
+  SmartContract,
+  Transaction,
+  Validator,
+} from '../entities';
+import { ENV_CONFIG } from '../shared/services/config.service';
 export class SyncDataHelpers {
-  // constructor() {
+  private static precision = ENV_CONFIG.CHAIN_INFO.PRECISION_DIV;
+  private static toDecimal = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
 
-  // }
   static makeBlockData(blockData: any) {
     const newBlock = new Block();
     newBlock.block_hash = blockData.block_id.hash;
@@ -38,6 +33,7 @@ export class SyncDataHelpers {
     newBlock.json_data = JSON.stringify(blockData);
     return newBlock;
   }
+
   static makeTrxData(
     txData: any,
     fetchingBlockHeight: number,
@@ -49,8 +45,8 @@ export class SyncDataHelpers {
     const newTx = new Transaction();
     const fee = txData.tx_response.tx.auth_info.fee.amount[0];
     const txFee = fee
-      ? (fee[CONST_CHAR.AMOUNT] / APP_CONSTANTS.PRECISION_DIV).toFixed(6)
-      : Number('0').toFixed(6);
+      ? (fee[CONST_CHAR.AMOUNT] / this.precision).toFixed(this.toDecimal)
+      : Number('0').toFixed(this.toDecimal);
     // newTx.blockId = savedBlock.id;
     newTx.code = txData.tx_response.code;
     newTx.codespace = txData.tx_response.codespace;
@@ -61,7 +57,6 @@ export class SyncDataHelpers {
     newTx.info = txData.tx_response.info;
     newTx.raw_log = txData.tx_response.raw_log;
     newTx.raw_log_data = txRawLogData ?? null;
-    // newTx.timestamp = blockData.block.header.time;
     newTx.timestamp = time;
     newTx.tx = JSON.stringify(txData.tx_response);
     newTx.tx_hash = txData.tx_response.txhash;
@@ -71,6 +66,7 @@ export class SyncDataHelpers {
     newTx.contract_address = txContractAddress;
     return newTx;
   }
+
   static makeTxRawLogData(txData: any) {
     let txType = 'FAILED',
       txRawLogData,
@@ -131,25 +127,23 @@ export class SyncDataHelpers {
     }
     return [txType, txRawLogData, txContractAddress];
   }
+
   static makeRedelegationData(txData: any, message: any, index: number) {
     const delegation1 = new Delegation();
     delegation1.tx_hash = txData.tx_response.txhash;
     delegation1.delegator_address = message.delegator_address;
     delegation1.validator_address = message.validator_src_address;
-    delegation1.amount =
-      (Number(message.amount.amount) * -1) / APP_CONSTANTS.PRECISION_DIV;
+    delegation1.amount = (Number(message.amount.amount) * -1) / this.precision;
     delegation1.created_at = new Date(txData.tx_response.timestamp);
     delegation1.type = CONST_DELEGATE_TYPE.REDELEGATE;
     const delegation2 = new Delegation();
     delegation2.tx_hash = txData.tx_response.txhash;
     delegation2.delegator_address = message.delegator_address;
     delegation2.validator_address = message.validator_dst_address;
-    delegation2.amount =
-      Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
+    delegation2.amount = Number(message.amount.amount) / this.precision;
     delegation2.created_at = new Date(txData.tx_response.timestamp);
     delegation2.type = CONST_DELEGATE_TYPE.REDELEGATE;
-    // delegations.push(delegation1);
-    // delegations.push(delegation2);
+
     //save data to delegator_rewards table
     let amount1 = 0;
     let amount2 = 0;
@@ -163,9 +157,19 @@ export class SyncDataHelpers {
       const claimEvent = events.find((i) => i.type === 'transfer');
       if (claimEvent) {
         const attributes = claimEvent.attributes;
-        amount1 = Number(attributes[2].value.replace(CONST_CHAR.UAURA, ''));
+        amount1 = Number(
+          attributes[2].value.replace(
+            ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
+            '',
+          ),
+        );
         if (attributes.length > 3) {
-          amount2 = Number(attributes[5].value.replace(CONST_CHAR.UAURA, ''));
+          amount2 = Number(
+            attributes[5].value.replace(
+              ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
+              '',
+            ),
+          );
         }
       }
     }
@@ -174,15 +178,14 @@ export class SyncDataHelpers {
     reward1.validator_address = message.validator_src_address;
     reward1.amount = amount1;
     reward1.tx_hash = txData.tx_response.txhash;
-    // delegatorRewards.push(reward1);
     const reward2 = new DelegatorReward();
     reward2.delegator_address = message.delegator_address;
     reward2.validator_address = message.validator_dst_address;
     reward2.amount = amount2;
     reward2.tx_hash = txData.tx_response.txhash;
-    // delegatorRewards.push(reward2);
     return [delegation1, delegation2, reward1, reward2];
   }
+
   static makeWithDrawDelegationData(txData: any, message: any, index: number) {
     const reward = new DelegatorReward();
     reward.delegator_address = message.delegator_address;
@@ -198,19 +201,21 @@ export class SyncDataHelpers {
       const rewardEvent = events.find((i) => i.type === 'withdraw_rewards');
       const attributes = rewardEvent.attributes;
       const amount = attributes[0].value;
-      reward.amount = Number(amount.replace(CONST_CHAR.UAURA, ''));
+      reward.amount = Number(
+        amount.replace(ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM, ''),
+      );
     }
     reward.tx_hash = txData.tx_response.txhash;
     reward.created_at = new Date(txData.tx_response.timestamp);
     return reward;
   }
+
   static makeUndelegateData(txData: any, message: any, index: number) {
     const delegation = new Delegation();
     delegation.tx_hash = txData.tx_response.txhash;
     delegation.delegator_address = message.delegator_address;
     delegation.validator_address = message.validator_address;
-    delegation.amount =
-      (Number(message.amount.amount) * -1) / APP_CONSTANTS.PRECISION_DIV;
+    delegation.amount = (Number(message.amount.amount) * -1) / this.precision;
     delegation.created_at = new Date(txData.tx_response.timestamp);
     delegation.type = CONST_DELEGATE_TYPE.UNDELEGATE;
     //save data to delegator_rewards table
@@ -229,20 +234,23 @@ export class SyncDataHelpers {
       if (claimEvent) {
         const attributes = claimEvent.attributes;
         reward.amount = Number(
-          attributes[2].value.replace(CONST_CHAR.UAURA, ''),
+          attributes[2].value.replace(
+            ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
+            '',
+          ),
         );
       }
     }
     reward.tx_hash = txData.tx_response.txhash;
     return [delegation, reward];
   }
+
   static makeDelegateData(txData: any, message: any, index: number) {
     const delegation = new Delegation();
     delegation.tx_hash = txData.tx_response.txhash;
     delegation.delegator_address = message.delegator_address;
     delegation.validator_address = message.validator_address;
-    delegation.amount =
-      Number(message.amount.amount) / APP_CONSTANTS.PRECISION_DIV;
+    delegation.amount = Number(message.amount.amount) / this.precision;
     delegation.created_at = new Date(txData.tx_response.timestamp);
     delegation.type = CONST_DELEGATE_TYPE.DELEGATE;
     //save data to delegator_rewards table
@@ -261,13 +269,17 @@ export class SyncDataHelpers {
       if (claimEvent) {
         const attributes = claimEvent.attributes;
         reward.amount = Number(
-          attributes[2].value.replace(CONST_CHAR.UAURA, ''),
+          attributes[2].value.replace(
+            ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
+            '',
+          ),
         );
       }
     }
     reward.tx_hash = txData.tx_response.txhash;
     return [delegation, reward];
   }
+
   static makeVoteData(txData, message: any) {
     const proposalVote = new ProposalVote();
     proposalVote.proposal_id = Number(message.proposal_id);
@@ -278,6 +290,7 @@ export class SyncDataHelpers {
     proposalVote.updated_at = new Date(txData.tx_response.timestamp);
     return proposalVote;
   }
+
   static makeSubmitProposalData(txData: any, message: any, index: number) {
     const historyProposal = new HistoryProposal();
     const proposalDeposit = undefined;
@@ -329,6 +342,7 @@ export class SyncDataHelpers {
     historyProposal.created_at = new Date(txData.tx_response.timestamp);
     return [historyProposal, proposalDeposit];
   }
+
   static makeDepositData(txData: any, message: any) {
     const proposalDeposit = new ProposalDeposit();
     proposalDeposit.proposal_id = Number(message.proposal_id);
@@ -338,20 +352,20 @@ export class SyncDataHelpers {
     proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
     return proposalDeposit;
   }
+
   static makeCreateValidatorData(txData: any, message: any) {
     const delegation = new Delegation();
     delegation.tx_hash = txData.tx_response.txhash;
     delegation.delegator_address = message.delegator_address;
     delegation.validator_address = message.validator_address;
-    delegation.amount =
-      Number(message.value.amount) / APP_CONSTANTS.PRECISION_DIV;
+    delegation.amount = Number(message.value.amount) / this.precision;
     delegation.created_at = new Date(txData.tx_response.timestamp);
     delegation.type = CONST_DELEGATE_TYPE.CREATE_VALIDATOR;
     return delegation;
   }
-  static makeExecuteContractData(txData: any, message: any) {
+
+  static makeExecuteContractData(txData: any, _message: any) {
     const smartContracts = [];
-    const action = txData.tx.body.messages[0].msg.create_minter;
     const tx_hash = txData.tx_response.txhash;
     const height = txData.tx_response.height;
     const contract_addresses = txData.tx_response.logs[0].events
