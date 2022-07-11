@@ -35,12 +35,35 @@ export class ConfigService {
     return this.get('NODE_ENV') || 'development';
   }
 
-  get timezone(): string {
-    return this.get('APP_TIMEZONE');
-  }
-
   get ENV_CONFIG() {
-    return {};
+    return {
+      WEBSOCKET_URL: process.env.WEBSOCKET_URL,
+      THREADS: Number(process.env.THREADS),
+      SMART_CONTRACT_SERVICE: process.env.SMART_CONTRACT_SERVICE,
+      START_HEIGHT: process.env.START_HEIGHT,
+      REDIS: {
+        HOST: process.env.REDIS_HOST,
+        PORT: process.env.REDIS_HOST,
+        PREFIX: process.env.REDIS_PREFIX,
+        DB: process.env.REDIS_DB,
+      },
+      NODE: {
+        API: process.env.API,
+        RPC: process.env.RPC,
+      },
+      CHAIN_INFO: {
+        COIN_DENOM: process.env.COIN_DENOM,
+        COIN_MINIMAL_DENOM: process.env.COIN_MINIMAL_DENOM,
+        COIN_DECIMALS: Number(process.env.COIN_DECIMALS),
+        PRECISION_DIV: Math.pow(10, Number(process.env.COIN_DECIMALS)),
+      },
+      INFLUX_DB: {
+        BUCKET: process.env.INFLUXDB_BUCKET,
+        ORGANIZTION: process.env.INFLUXDB_ORG,
+        URL: process.env.INFLUXDB_URL,
+        TOKEN: process.env.INFLUXDB_TOKEN,
+      },
+    };
   }
 
   get typeOrmConfig(): TypeOrmModuleOptions {

@@ -10,3 +10,4 @@ export * from './history-proposal.entity';
 export * from './proposal-deposit.entity';
 export * from './proposal-vote.entity';
 export * from './sync-status.entity';
+export * from './smart-contract.entity';

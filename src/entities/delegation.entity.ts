@@ -11,7 +11,7 @@ export class Delegation extends BaseEntityIncrementId {
   @Column({
     default: '',
     name: 'validator_address',
-    update: false
+    update: false,
   })
   validator_address: string;
 

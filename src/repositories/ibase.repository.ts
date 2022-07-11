@@ -71,8 +71,8 @@ export interface IBaseRepository {
 
   /**
    * upsert
-   * @param data 
-   * @param conflictPathsOrOptions 
+   * @param data
+   * @param conflictPathsOrOptions
    */
   upsert(data: Array<any>, conflictPathsOrOptions: string[]);
 }
