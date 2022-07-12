@@ -748,7 +748,8 @@ export class SyncTaskService implements ISyncTaskService {
                 compiler_version,
                 instantiate_msg_schema,
                 query_msg_schema,
-                execute_msg_schema;
+                execute_msg_schema,
+                s3_location;
               if (smartContractResponse) {
                 contract_hash =
                   smartContractResponse.Message.length === 64
@@ -780,6 +781,7 @@ export class SyncTaskService implements ISyncTaskService {
                   instantiate_msg_schema = exactContract.instantiate_msg_schema;
                   query_msg_schema = exactContract.query_msg_schema;
                   execute_msg_schema = exactContract.execute_msg_schema;
+                  s3_location = exactContract.s3_location;
                 }
               }
 
@@ -798,6 +800,7 @@ export class SyncTaskService implements ISyncTaskService {
                 contract_match,
                 contract_verification,
                 compiler_version,
+                s3_location,
               };
               smartContracts.push(smartContract);
               // await this.smartContractRepository.create(smartContract);
