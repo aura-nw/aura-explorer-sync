@@ -9,7 +9,7 @@ export class BaseService implements IBaseService {
   }
 
   /**
-   * findOne
+   * Get firts data
    * @param condition
    * @returns
    */
@@ -19,7 +19,7 @@ export class BaseService implements IBaseService {
   }
 
   /**
-   * findByCondition
+   * Get data by condition
    * @param condition
    * @param orderBy
    * @returns
@@ -33,7 +33,7 @@ export class BaseService implements IBaseService {
   }
 
   /**
-   * findWithRelations
+   * Get data has relations
    * @param relations
    * @returns
    */
@@ -43,7 +43,7 @@ export class BaseService implements IBaseService {
   }
 
   /**
-   * findAll
+   * Get all data
    * @param orderBy
    * @returns
    */
@@ -53,7 +53,7 @@ export class BaseService implements IBaseService {
   }
 
   /**
-   * findAndCount
+   * Get data paging
    * @param pageIndex
    * @param pageSize
    * @param condition
@@ -76,7 +76,7 @@ export class BaseService implements IBaseService {
   }
 
   /**
-   * create
+   * Create new data
    * @param data
    * @returns
    */
@@ -86,7 +86,7 @@ export class BaseService implements IBaseService {
   }
 
   /**
-   * update
+   * Update data
    * @param data
    * @returns
    */
@@ -96,7 +96,7 @@ export class BaseService implements IBaseService {
   }
 
   /**
-   * remove
+   * Remove data by id
    * @param id
    * @returns
    */
@@ -106,12 +106,15 @@ export class BaseService implements IBaseService {
   }
 
   /**
-   * upsert
-   * @param data 
-   * @param conflictPathsOrOptions 
-   * @returns 
+   * Insert/Update data
+   * @param data
+   * @param conflictPathsOrOptions
+   * @returns
    */
-  public upsert(data: Array<any>, conflictPathsOrOptions: string[]): Promise<any> {
+  public upsert(
+    data: Array<any>,
+    conflictPathsOrOptions: string[],
+  ): Promise<any> {
     return this._repos.upsert(data, conflictPathsOrOptions);
   }
 }

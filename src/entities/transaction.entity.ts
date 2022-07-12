@@ -11,32 +11,32 @@ export class Transaction extends BaseEntityIncrementId {
   tx_hash: string;
 
   // contain an application-specific response code
-  @Column({ 
+  @Column({
     default: 0,
     name: 'code',
   })
   code: number;
 
   // namespace for the code
-  @Column({ 
+  @Column({
     default: '',
     name: 'codespace',
   })
   codespace: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'data',
   })
   data: string;
 
-  @Column({ 
+  @Column({
     default: 0,
     name: 'gas_used',
   })
   gas_used: number;
 
-  @Column({ 
+  @Column({
     default: 0,
     name: 'gas_wanted',
   })
@@ -45,31 +45,31 @@ export class Transaction extends BaseEntityIncrementId {
   @Column({ name: 'height' })
   height: number;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'info',
   })
   info: string;
 
-  @Column({ 
+  @Column({
     type: 'text',
     name: 'type',
   })
   type: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'contract_address',
   })
   contract_address: string;
 
-  @Column({ 
+  @Column({
     type: 'text',
     name: 'raw_log',
   })
   raw_log: string;
 
-  @Column({ 
+  @Column({
     type: 'text',
     name: 'raw_log_data',
   })
@@ -78,25 +78,25 @@ export class Transaction extends BaseEntityIncrementId {
   @Column({ name: 'timestamp' })
   timestamp: Date;
 
-  @Column({ 
+  @Column({
     type: 'json',
     name: 'tx',
   })
   tx: any;
 
-  @Column({ 
+  @Column({
     type: 'text',
     name: 'blockid',
   })
   blockId: number;
 
-  @Column({ 
+  @Column({
     type: 'text',
     name: 'fee',
   })
   fee: string;
 
-  @Column({ 
+  @Column({
     type: 'json',
     name: 'messages',
   })
