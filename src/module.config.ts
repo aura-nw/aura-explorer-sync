@@ -1,10 +1,17 @@
-import { ResponseDto } from './dtos/responses';
-import { Block, BlockSyncError, MissedBlock, Proposal, Transaction, Validator } from './entities';
+import {
+  Block,
+  BlockSyncError,
+  MissedBlock,
+  Proposal,
+  Transaction,
+  Validator,
+} from './entities';
 import { Delegation } from './entities/delegation.entity';
 import { DelegatorReward } from './entities/delegator-reward.entity';
 import { HistoryProposal } from './entities/history-proposal.entity';
 import { ProposalDeposit } from './entities/proposal-deposit.entity';
 import { ProposalVote } from './entities/proposal-vote.entity';
+import { SmartContractCode } from './entities/smart-contract-code.entity';
 import { SmartContract } from './entities/smart-contract.entity';
 import { SyncStatus } from './entities/sync-status.entity';
 import { TokenContract } from './entities/token-contract.entity';
@@ -24,26 +31,14 @@ export const ENTITIES_CONFIG = {
   SYNC_STATUS: SyncStatus,
   SMART_CONTRACT: SmartContract,
   TOKEN_CONTRACT: TokenContract,
+  SMART_CONTRACT_CODE: SmartContractCode,
 };
-
-export const REQUEST_CONFIG = {
-};
-
-export const RESPONSE_CONFIG = {
-  RESPONSE_DTO: ResponseDto,
-};
-
-export module MODULE_REQUEST {
-}
-
-export module MODULE_RESPONSE {
-  export abstract class ResponseDto extends RESPONSE_CONFIG.RESPONSE_DTO {}
-}
 
 export const SERVICE_INTERFACE = {
   ISYNC_PROPOSAL_SERVICE: 'ISyncProposalService',
   ISYNC_TASK_SERVICE: 'ISyncTaskService',
   ISYNC_WEBSOCKET_SERVICE: 'ISyncWebsocketService',
+  ISYNC_CONTRACT_CODE_SERVICE: 'ISyncContractCodeService',
 };
 
 export const REPOSITORY_INTERFACE = {
@@ -61,6 +56,7 @@ export const REPOSITORY_INTERFACE = {
   ISYNC_STATUS_REPOSITORY: 'ISyncStatusRepository',
   ISMART_CONTRACT_REPOSITORY: 'ISmartContractRepository',
   ITOKEN_CONTRACT_REPOSITORY: 'ITokenContractRepository',
+  ISMART_CONTRACT_CODE_REPOSITORY: 'ISmartContractCodeRepository',
 };
 
 export const PROVIDER_INTERFACE = {};
