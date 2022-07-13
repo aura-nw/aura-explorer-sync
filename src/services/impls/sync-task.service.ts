@@ -284,11 +284,13 @@ export class SyncTaskService implements ISyncTaskService {
           if (signingInfo.length > 0) {
             const signedBlocksWindow = slashingData.params.signed_blocks_window;
             const missedBlocksCounter = signingInfo[0].missed_blocks_counter;
+            const upTime =
+              ((Number(signedBlocksWindow) - Number(missedBlocksCounter)) /
+                Number(signedBlocksWindow)) *
+              100;
+
             newValidator.up_time =
-              ((signedBlocksWindow - missedBlocksCounter) /
-                signedBlocksWindow) *
-              100 +
-              CONST_CHAR.PERCENT;
+              String(upTime.toFixed(2)) + CONST_CHAR.PERCENT;
           }
           newValidator.self_bonded = 0;
           newValidator.percent_self_bonded = '0.00';

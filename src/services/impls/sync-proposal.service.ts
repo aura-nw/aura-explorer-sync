@@ -88,12 +88,13 @@ export class SyncProposalService implements ISyncProposalService {
           }
 
           //sync turnout
-          //get bonded token
-          const bondedTokens = await this._commonUtil.getDataAPI(
-            this.api,
-            NODE_API.STAKING_POOL,
-          );
-          if (bondedTokens && Number(bondedTokens.pool.bonded_tokens) > 0) {
+          if (item.status !== CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_PASSED
+              && item.status !== CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_REJECTED) {
+            //get bonded token
+            const bondedTokens = await this._commonUtil.getDataAPI(
+              this.api,
+              NODE_API.STAKING_POOL,
+            );
             proposal.pro_turnout =
               ((Number(proposal.pro_votes_yes) +
                 Number(proposal.pro_votes_abstain) +
