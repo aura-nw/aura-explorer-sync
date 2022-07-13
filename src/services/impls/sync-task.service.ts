@@ -40,6 +40,7 @@ export class SyncTaskService implements ISyncTaskService {
   private influxDbClient: InfluxDBClient;
   private isSyncValidator = false;
   private isSyncMissBlock = false;
+  private isSyncBlockError = false;
   private currentBlock: number;
   private threads = 0;
   private schedulesSync: Array<number> = [];
@@ -452,22 +453,32 @@ export class SyncTaskService implements ISyncTaskService {
     }
   }
 
-  @Interval(3000)
+  @Interval(1000)
   async blockSyncError() {
-    const result: BlockSyncError =
-      await this.blockSyncErrorRepository.findOne();
-    if (result) {
-      this._logger.log(
-        null,
-        `Class ${SyncTaskService.name}, call blockSyncError method with prameters: {syncBlock: ${result.height}}`,
-      );
-      const idxSync = this.schedulesSync.indexOf(result.height);
+    try {
+      if (this.isSyncBlockError) {
+        this.isSyncBlockError = true;
+        const result: BlockSyncError =
+          await this.blockSyncErrorRepository.findOne();
+        if (result) {
+          this._logger.log(
+            null,
+            `Class ${SyncTaskService.name}, call blockSyncError method with prameters: {syncBlock: ${result.height}}`,
+          );
+          const idxSync = this.schedulesSync.indexOf(result.height);
 
-      // Check height has sync or not. If height hasn't sync when we recall handleSyncData method
-      if (idxSync < 0) {
-        await this.handleSyncData(result.height, true);
-        this.schedulesSync.splice(idxSync, 1);
+          // Check height has sync or not. If height hasn't sync when we recall handleSyncData method
+          if (idxSync < 0) {
+            await this.handleSyncData(result.height, true);
+            this.schedulesSync.splice(idxSync, 1);
+          }
+        }
+        this.isSyncBlockError = false;
+      } else {
+        this._logger.log(`BlockSyncError is proccesing...!`);
       }
+    } catch (error) {
+      this.isSyncBlockError = false;
     }
   }
 
