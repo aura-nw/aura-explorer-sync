@@ -456,7 +456,7 @@ export class SyncTaskService implements ISyncTaskService {
   @Interval(1000)
   async blockSyncError() {
     try {
-      if (this.isSyncBlockError) {
+      if (!this.isSyncBlockError) {
         this.isSyncBlockError = true;
         const result: BlockSyncError =
           await this.blockSyncErrorRepository.findOne();
