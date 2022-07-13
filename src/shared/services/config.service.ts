@@ -82,7 +82,7 @@ export class ConfigService {
       migrationsRun: true,
       connectTimeout: 1000,
       synchronize: false,
-      logging: this.nodeEnv === 'development',
+      // logging: this.nodeEnv === 'development',
       namingStrategy: new PascalCaseStrategy(),
       multipleStatements: true,
     };
