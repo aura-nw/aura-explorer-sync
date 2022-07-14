@@ -111,5 +111,5 @@ export enum CONTRACT_CODE_STATUS {
 }
 
 export enum INDEXER_API {
-  CHECK_STATUS_CODE_ID = 'api/v1/codeid/%s/checkStatus',
+  CHECK_STATUS_CODE_ID = 'api/v1/codeid/%s/%s/checkStatus',
 }
