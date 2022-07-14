@@ -489,18 +489,18 @@ export class SyncTaskService implements ISyncTaskService {
     );
     // this.logger.log(null, `Already syncing Block: ${syncBlock}`);
 
-    // TODO: init write api
-    this.influxDbClient.initWriteApi();
-
-    // get validators
-    const paramsValidator = NODE_API.VALIDATOR;
-    const validatorData = await this._commonUtil.getDataAPI(
-      this.api,
-      paramsValidator,
-    );
-    const fetchingBlockHeight = syncBlock;
-
     try {
+      // TODO: init write api
+      this.influxDbClient.initWriteApi();
+
+      // get validators
+      const paramsValidator = NODE_API.VALIDATOR;
+      const validatorData = await this._commonUtil.getDataAPI(
+        this.api,
+        paramsValidator,
+      );
+      const fetchingBlockHeight = syncBlock;
+
       // fetching block from node
       const paramsBlock = `block?height=${fetchingBlockHeight}`;
       const blockData = await this._commonUtil.getDataRPC(
@@ -625,6 +625,9 @@ export class SyncTaskService implements ISyncTaskService {
 
       // Delete data on Block sync error table
       await this.removeBlockError(syncBlock);
+      this._logger.debug(
+        `============== Remove blockSyncError complete: ${syncBlock} ===============`,
+      );
 
       const idxSync = this.schedulesSync.indexOf(fetchingBlockHeight);
       if (idxSync > -1) {
@@ -633,11 +636,11 @@ export class SyncTaskService implements ISyncTaskService {
     } catch (error) {
       this._logger.error(
         null,
-        `Sync Blocked & Transaction were error height: ${fetchingBlockHeight}, ${error.name}: ${error.message}`,
+        `Sync Blocked & Transaction were error height: ${syncBlock}, ${error.name}: ${error.message}`,
       );
       this._logger.error(null, `${error.stack}`);
 
-      const idxSync = this.schedulesSync.indexOf(fetchingBlockHeight);
+      const idxSync = this.schedulesSync.indexOf(syncBlock);
       if (idxSync > -1) {
         this.schedulesSync.splice(idxSync, 1);
       }
