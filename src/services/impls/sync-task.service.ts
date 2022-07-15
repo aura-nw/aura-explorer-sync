@@ -1,4 +1,4 @@
-import { Catch, Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
