@@ -33,7 +33,7 @@ export class SyncContractCodeService implements ISyncContractCodeService {
     this.indexerChainId = this.configService.get('INDEXER_CHAIN_ID');
   }
 
-  @Interval(500)
+  // @Interval(2000)
   async handleInterval() {
     // check status
     if (this.isSyncContractCode) {
@@ -80,10 +80,9 @@ export class SyncContractCodeService implements ISyncContractCodeService {
       this.isSyncContractCode = false;
     } catch (error) {
       this._logger.error(
-        null,
         `Sync Contract Code was error, ${error.name}: ${error.message}`,
       );
-      this._logger.error(null, `${error.stack}`);
+      this._logger.error(`${error.stack}`);
       this.isSyncContractCode = false;
       throw error;
     }

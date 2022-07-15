@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
-import { InjectSchedule, Schedule, Cron } from 'nest-schedule';
+import { InjectSchedule, Schedule } from 'nest-schedule';
 import { ISmartContractRepository } from 'src/repositories/ismart-contract.repository';
 import { ITokenContractRepository } from 'src/repositories/itoken-contract.repository';
 import { v4 as uuidv4 } from 'uuid';
@@ -31,7 +31,8 @@ import { ENV_CONFIG } from '../../shared/services/config.service';
 import { CommonUtil } from '../../utils/common.util';
 import { InfluxDBClient } from '../../utils/influxdb-client';
 import { ISyncTaskService } from '../isync-task.service';
-
+const cluster = require('cluster');
+const numCPUs = require('os').cpus().length;
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -40,9 +41,7 @@ export class SyncTaskService implements ISyncTaskService {
   private influxDbClient: InfluxDBClient;
   private isSyncValidator = false;
   private isSyncMissBlock = false;
-  private isSyncBlockError = false;
   private currentBlock: number;
-  private threads = 0;
   private schedulesSync: Array<number> = [];
   private smartContractService;
 
@@ -91,11 +90,6 @@ export class SyncTaskService implements ISyncTaskService {
     );
 
     this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
-
-    // Get number thread from config
-    this.threads = ENV_CONFIG.THREADS;
-    // Call worker to process
-    // this.workerProcess();
   }
   @Interval(5000)
   async cronSync() {
@@ -112,8 +106,8 @@ export class SyncTaskService implements ISyncTaskService {
       const blockErrors = [];
 
       if (latestBlk > currentBlock.current_block) {
-        if (latestBlk - currentBlock.current_block > 10) {
-          latestBlk = currentBlock.current_block + 10;
+        if (latestBlk - currentBlock.current_block > 50) {
+          latestBlk = currentBlock.current_block + 50;
         }
         for (let i = currentBlock.current_block + 1; i < latestBlk; i++) {
           blockErrors.push({
@@ -133,13 +127,14 @@ export class SyncTaskService implements ISyncTaskService {
   @Interval(5000)
   async processBlock() {
     // Get the highest block and insert into SyncBlockError
+    console.log('-----------------',process.pid,);
     try {
       const results =
           await this.blockSyncErrorRepository.find({
             order:{
               height:'asc'
             },
-            take:10
+            take:5
           });
       results.forEach(el=>{ 
         try {
@@ -160,7 +155,7 @@ export class SyncTaskService implements ISyncTaskService {
             }
           );
         } catch (error) {
-          this._logger.log('Catch duplicate height ');
+          this._logger.log('Catch duplicate height ',error.stack);
         }
         
       })
@@ -170,31 +165,8 @@ export class SyncTaskService implements ISyncTaskService {
     }
 
   }
-  /**
-   * scheduleTimeoutJob
-   * @param height
-   */
-  scheduleTimeoutJob(height: number) {
-    this._logger.log(
-      null,
-      `Class ${SyncTaskService.name}, call scheduleTimeoutJob method with prameters: {currentBlk: ${height}}`,
-    );
 
-    this.schedule.scheduleTimeoutJob(
-      `schedule_sync_block_${uuidv4()}`,
-      100,
-      async () => {
-        //Update code sync data
-        await this.handleSyncData(height);
-
-        // Close thread
-        return true;
-      },
-    );
-  }
-
-
-  @Interval(500)
+  // @Interval(3000)
   async syncValidator() {
     // check status
     if (this.isSyncValidator) {
@@ -367,7 +339,7 @@ export class SyncTaskService implements ISyncTaskService {
     }
   }
 
-  @Interval(500)
+  // @Interval(3000)
   async syncMissedBlock() {
     // check status
     if (this.isSyncMissBlock) {
@@ -441,35 +413,6 @@ export class SyncTaskService implements ISyncTaskService {
     }
   }
 
-  @Interval(1000)
-  async blockSyncError() {
-    try {
-      if (!this.isSyncBlockError) {
-        this.isSyncBlockError = true;
-        const result: BlockSyncError =
-          await this.blockSyncErrorRepository.findOne();
-        if (result) {
-          this._logger.log(
-            null,
-            `Class ${SyncTaskService.name}, call blockSyncError method with prameters: {syncBlock: ${result.height}}`,
-          );
-          const idxSync = this.schedulesSync.indexOf(result.height);
-
-          // Check height has sync or not. If height hasn't sync when we recall handleSyncData method
-          if (idxSync < 0) {
-            await this.handleSyncData(result.height, true);
-            this.schedulesSync.splice(idxSync, 1);
-          }
-        }
-        this.isSyncBlockError = false;
-      } else {
-        this._logger.log(`BlockSyncError is proccesing...!`);
-      }
-    } catch (error) {
-      this.isSyncBlockError = false;
-    }
-  }
-
   async handleSyncData(syncBlock: number, recallSync = false): Promise<any> {
     this._logger.log(
       null,
@@ -527,6 +470,20 @@ export class SyncTaskService implements ISyncTaskService {
         const transactions = [];
         const listTransactions = [];
         const influxdbTrans = [];
+        let txDatas =[];
+        const txs=[];
+        for (const key in blockData.block.data.txs) {
+          const element = blockData.block.data.txs[key];
+          const txHash = sha256(Buffer.from(element, 'base64')).toUpperCase();
+          const paramsTx = `cosmos/tx/v1beta1/txs/${txHash}`;
+          txs.push(this._commonUtil.getDataAPI(this.api, paramsTx));
+         
+        }
+        console.log('get list of total ',txs.length,'transaction');
+        console.time(`get txs ${fetchingBlockHeight}`);
+        txDatas = await Promise.all(txs);
+        console.timeEnd(`get txs ${fetchingBlockHeight}`);
+        let i = 0;
         // create transaction
         for (const key in blockData.block.data.txs) {
           const element = blockData.block.data.txs[key];
@@ -535,10 +492,11 @@ export class SyncTaskService implements ISyncTaskService {
           this._logger.log(null, `processing tx: ${txHash}`);
 
           // fetch tx data
-          const paramsTx = `cosmos/tx/v1beta1/txs/${txHash}`;
+          // const paramsTx = `cosmos/tx/v1beta1/txs/${txHash}`;
 
-          const txData = await this._commonUtil.getDataAPI(this.api, paramsTx);
-
+          // const txData = await this._commonUtil.getDataAPI(this.api, paramsTx);
+          const txData = txDatas[i];
+          i+=1;
           const [txType, txRawLogData, txContractAddress] =
             SyncDataHelpers.makeTxRawLogData(txData);
           // Make up transaction data from block data
@@ -806,6 +764,7 @@ export class SyncTaskService implements ISyncTaskService {
                 compiler_version,
                 s3_location,
               };
+              if(smartContract.url)
               smartContracts.push(smartContract);
               // await this.smartContractRepository.create(smartContract);
             } catch (error) {

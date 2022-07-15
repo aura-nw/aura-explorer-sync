@@ -31,7 +31,7 @@ export class SyncProposalService implements ISyncProposalService {
     this.api = ENV_CONFIG.NODE.API;
   }
 
-  @Interval(500)
+  // @Interval(3000)
   async handleInterval() {
     // check status
     if (this.isSync) {
