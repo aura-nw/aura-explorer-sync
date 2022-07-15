@@ -2,6 +2,8 @@ import { PaginatorResponse } from '../dtos/responses/paginator.response';
 import { DeleteResult } from 'typeorm';
 
 export interface IBaseRepository {
+
+  find(options: any): Promise<any> ;
   /**
    * findOne
    * @param id

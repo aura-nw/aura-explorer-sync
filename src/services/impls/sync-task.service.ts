@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
-import { InjectSchedule, Schedule } from 'nest-schedule';
+import { InjectSchedule, Schedule, Cron } from 'nest-schedule';
 import { ISmartContractRepository } from 'src/repositories/ismart-contract.repository';
 import { ITokenContractRepository } from 'src/repositories/itoken-contract.repository';
 import { v4 as uuidv4 } from 'uuid';
@@ -94,11 +94,82 @@ export class SyncTaskService implements ISyncTaskService {
 
     // Get number thread from config
     this.threads = ENV_CONFIG.THREADS;
-
     // Call worker to process
-    this.workerProcess();
+    // this.workerProcess();
   }
+  @Interval(5000)
+  async cronSync() {
+    // Get the highest block and insert into SyncBlockError
+    try {
+      this._logger.log('start cron generate block sync error');
+      const [blockLatest, currentBlock] =
+        await Promise.all([
+          this.getBlockLatest(),
+          this.statusRepository.findOne()
+        ]);
 
+      let latestBlk = Number(blockLatest?.block?.header?.height || 0);
+      const blockErrors = [];
+
+      if (latestBlk > currentBlock.current_block) {
+        if (latestBlk - currentBlock.current_block > 10) {
+          latestBlk = currentBlock.current_block + 10;
+        }
+        for (let i = currentBlock.current_block + 1; i < latestBlk; i++) {
+          blockErrors.push({
+            height: i
+          })
+        }
+      }
+      if (blockErrors.length > 0) {
+        await this.blockSyncErrorRepository.upsert(blockErrors, [])
+      }
+    } catch (error) {
+      this._logger.log('error when generate base blocks', error.stack);
+      throw error;
+    }
+
+  }
+  @Interval(5000)
+  async processBlock() {
+    // Get the highest block and insert into SyncBlockError
+    try {
+      const results =
+          await this.blockSyncErrorRepository.find({
+            order:{
+              height:'asc'
+            },
+            take:10
+          });
+      results.forEach(el=>{ 
+        try {
+          this.schedule.scheduleTimeoutJob(
+            el.height,
+            100,
+            async () => {
+              try {
+                await this.handleSyncData(el.height,true);  
+              } catch (error) {
+                this._logger.log('Error when process blocks height',el.height);
+                return true;
+              }
+              return true;
+            },
+            {
+              maxRetry:-1
+            }
+          );
+        } catch (error) {
+          this._logger.log('Catch duplicate height ');
+        }
+        
+      })
+    } catch (error) {
+      this._logger.log('error when process blocks', error.stack);
+      throw error;
+    }
+
+  }
   /**
    * scheduleTimeoutJob
    * @param height
@@ -122,89 +193,6 @@ export class SyncTaskService implements ISyncTaskService {
     );
   }
 
-  /**
-   * threadProcess
-   * @param currentBlk Current block
-   * @param blockLatest The final block
-   */
-  threadProcess(currentBlk: number, latestBlk: number) {
-    let loop = 0;
-    let height = 0;
-    try {
-      const blockNotSync = latestBlk - currentBlk;
-      if (blockNotSync > 0) {
-        if (blockNotSync > this.threads) {
-          loop = this.threads;
-        } else {
-          loop = blockNotSync;
-        }
-
-        // Create 10 thread to sync data
-        for (let i = 1; i <= loop; i++) {
-          height = currentBlk + i;
-          this.scheduleTimeoutJob(height);
-        }
-      }
-    } catch (error) {
-      this._logger.log(
-        null,
-        `Call threadProcess method error: $${error.message}`,
-      );
-    }
-
-    // If current block not equal latest block when the symtem will call workerProcess method
-    this.schedule.scheduleIntervalJob(
-      `schedule_recall_${new Date().getTime()}`,
-      1000,
-      async () => {
-        // Update code sync data
-        this._logger.log(
-          null,
-          `Class ${SyncTaskService.name}, recall workerProcess method`,
-        );
-        this.workerProcess(height);
-
-        // Close thread
-        return true;
-      },
-    );
-  }
-
-  /**
-   * workerProcess
-   * @param height
-   */
-  async workerProcess(height: number = undefined) {
-    this._logger.log(
-      null,
-      `Class ${SyncTaskService.name}, call workerProcess method`,
-    );
-
-    let currentBlk = 0,
-      latestBlk = 0;
-    // Get blocks latest
-    try {
-      const blockLatest = await this.getBlockLatest();
-      latestBlk = Number(blockLatest?.block?.header?.height || 0);
-
-      if (height > 0) {
-        currentBlk = height;
-      } else {
-        //Get current height
-        const status = await this.statusRepository.findOne();
-        if (status) {
-          currentBlk = status.current_block;
-        }
-      }
-    } catch (err) {
-      this._logger.error(
-        null,
-        `WorkerProcess method has error ${err.name}: ${err.message}`,
-      );
-    }
-
-    this.threadProcess(currentBlk, latestBlk);
-  }
 
   @Interval(500)
   async syncValidator() {
