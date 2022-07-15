@@ -53,7 +53,7 @@ export class SmartContractRepository
         'smart_contracts.execute_msg_schema as execute_msg_schema',
         'smart_contracts.s3_location as s3_location',
       ]);
-    const res = await query.getRawMany();
+    const res = await query.getRawOne();
     return res;
   }
 }
