@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { SMART_CONTRACT_VERIFICATION } from 'src/common/constants/app.constant';
 import { ENTITIES_CONFIG } from 'src/module.config';
 import { ObjectLiteral, Repository } from 'typeorm';
 import { ISmartContractRepository } from '../ismart-contract.repository';
@@ -33,12 +34,15 @@ export class SmartContractRepository
     return 0;
   }
 
-  async findContractByHash(contract_hash: string) {
+  async findExactContractByHash(contract_hash: string) {
     const query = this.repos
       .createQueryBuilder('smart_contracts')
       .where('smart_contracts.contract_hash = :contract_hash', {
         contract_hash,
       })
+      .andWhere('smart_contracts.contract_verification = :contract_verification', {
+        contract_verification: SMART_CONTRACT_VERIFICATION.EXACT_MATCH,
+        })
       .select([
         'smart_contracts.contract_address as contract_address',
         'smart_contracts.url as url',
@@ -47,6 +51,7 @@ export class SmartContractRepository
         'smart_contracts.instantiate_msg_schema as instantiate_msg_schema',
         'smart_contracts.query_msg_schema as query_msg_schema',
         'smart_contracts.execute_msg_schema as execute_msg_schema',
+        'smart_contracts.s3_location as s3_location',
       ]);
     const res = await query.getRawMany();
     return res;
