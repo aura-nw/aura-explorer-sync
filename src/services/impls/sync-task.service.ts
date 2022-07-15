@@ -489,18 +489,18 @@ export class SyncTaskService implements ISyncTaskService {
     );
     // this.logger.log(null, `Already syncing Block: ${syncBlock}`);
 
-    // TODO: init write api
-    this.influxDbClient.initWriteApi();
-
-    // get validators
-    const paramsValidator = NODE_API.VALIDATOR;
-    const validatorData = await this._commonUtil.getDataAPI(
-      this.api,
-      paramsValidator,
-    );
-    const fetchingBlockHeight = syncBlock;
-
     try {
+      // TODO: init write api
+      this.influxDbClient.initWriteApi();
+
+      // get validators
+      const paramsValidator = NODE_API.VALIDATOR;
+      const validatorData = await this._commonUtil.getDataAPI(
+        this.api,
+        paramsValidator,
+      );
+      const fetchingBlockHeight = syncBlock;
+
       // fetching block from node
       const paramsBlock = `block?height=${fetchingBlockHeight}`;
       const blockData = await this._commonUtil.getDataRPC(
@@ -625,6 +625,9 @@ export class SyncTaskService implements ISyncTaskService {
 
       // Delete data on Block sync error table
       await this.removeBlockError(syncBlock);
+      this._logger.debug(
+        `============== Remove blockSyncError complete: ${syncBlock} ===============`,
+      );
 
       const idxSync = this.schedulesSync.indexOf(fetchingBlockHeight);
       if (idxSync > -1) {
@@ -633,11 +636,11 @@ export class SyncTaskService implements ISyncTaskService {
     } catch (error) {
       this._logger.error(
         null,
-        `Sync Blocked & Transaction were error height: ${fetchingBlockHeight}, ${error.name}: ${error.message}`,
+        `Sync Blocked & Transaction were error height: ${syncBlock}, ${error.name}: ${error.message}`,
       );
       this._logger.error(null, `${error.stack}`);
 
-      const idxSync = this.schedulesSync.indexOf(fetchingBlockHeight);
+      const idxSync = this.schedulesSync.indexOf(syncBlock);
       if (idxSync > -1) {
         this.schedulesSync.splice(idxSync, 1);
       }
@@ -770,24 +773,12 @@ export class SyncTaskService implements ISyncTaskService {
                     : '';
               }
               if (contract_hash !== '') {
-                const existContractHash =
-                  await this.smartContractRepository.findContractByHash(
+                const exactContract =
+                  await this.smartContractRepository.findExactContractByHash(
                     contract_hash,
                   );
-                if (
-                  existContractHash.filter(
-                    (e) =>
-                      e.contract_verification ==
-                      SMART_CONTRACT_VERIFICATION.EXACT_MATCH,
-                  ).length > 0
-                ) {
-                  contract_verification =
-                    SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-                  const exactContract = existContractHash.find(
-                    (x) =>
-                      x.contract_verification ==
-                      SMART_CONTRACT_VERIFICATION.EXACT_MATCH,
-                  );
+                if (exactContract) {
+                  contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
                   contract_match = exactContract.contract_address;
                   url = exactContract.url;
                   compiler_version = exactContract.compiler_version;
@@ -816,7 +807,6 @@ export class SyncTaskService implements ISyncTaskService {
                 s3_location,
               };
               smartContracts.push(smartContract);
-              // await this.smartContractRepository.create(smartContract);
             } catch (error) {
               this._logger.error(
                 null,
