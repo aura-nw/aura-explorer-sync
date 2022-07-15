@@ -114,7 +114,11 @@ export class SyncTaskService implements ISyncTaskService {
       100,
       async () => {
         //Update code sync data
-        await this.handleSyncData(height);
+          try{
+            await this.handleSyncData(height);
+          }catch(err){
+            this._logger.error(`Call scheduleTimeoutJob method error: ${err.massage}`, err.stack);
+          }
 
         // Close thread
         return true;
