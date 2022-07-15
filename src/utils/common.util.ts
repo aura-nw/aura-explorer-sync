@@ -20,7 +20,7 @@ export class CommonUtil {
   }
 
   async getDataAPI(api, params) {
-    const data = await lastValueFrom(this.httpService.get(api + params)).then(
+    const data = await lastValueFrom(this.httpService.get(api + params,{timeout:2000})).then(
       (rs) => rs.data,
     );
 
