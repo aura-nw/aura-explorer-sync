@@ -17,6 +17,7 @@ import * as util from 'util';
 export class SyncContractCodeService implements ISyncContractCodeService {
   private readonly _logger = new Logger(SyncContractCodeService.name);
   private indexerUrl;
+  private indexerChainId;
   private isSyncContractCode = false;
 
   constructor(
@@ -29,6 +30,7 @@ export class SyncContractCodeService implements ISyncContractCodeService {
       '============== Constructor Sync Contract Code Service ==============',
     );
     this.indexerUrl = this.configService.get('INDEXER_URL');
+    this.indexerChainId = this.configService.get('INDEXER_CHAIN_ID');
   }
 
   @Interval(500)
@@ -55,6 +57,7 @@ export class SyncContractCodeService implements ISyncContractCodeService {
           const contractCodeIndexer = await this._commonUtil.getDataAPI(
             `${this.indexerUrl}${util.format(
               INDEXER_API.CHECK_STATUS_CODE_ID,
+              this.indexerChainId,
               item.code_id,
             )}`,
             '',
