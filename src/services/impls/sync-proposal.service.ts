@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import { SyncDataHelpers } from 'src/helpers/sync-data.helpers';
+import { SyncDataHelpers } from '../../helpers/sync-data.helpers';
 import {
   CONST_PROPOSAL_STATUS,
   NODE_API,
