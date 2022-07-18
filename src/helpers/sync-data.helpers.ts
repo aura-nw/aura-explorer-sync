@@ -239,6 +239,14 @@ export class SyncDataHelpers {
             '',
           ),
         );
+        if (attributes.length > 3) {
+          delegation.amount = (Number(
+            attributes[5].value.replace(
+              ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
+              '',
+            ),
+          ) * -1) / this.precision;
+        }
       }
     }
     reward.tx_hash = txData.tx_response.txhash;
