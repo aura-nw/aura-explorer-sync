@@ -777,24 +777,12 @@ export class SyncTaskService implements ISyncTaskService {
                     : '';
               }
               if (contract_hash !== '') {
-                const existContractHash =
-                  await this.smartContractRepository.findContractByHash(
+                const exactContract =
+                  await this.smartContractRepository.findExactContractByHash(
                     contract_hash,
                   );
-                if (
-                  existContractHash.filter(
-                    (e) =>
-                      e.contract_verification ==
-                      SMART_CONTRACT_VERIFICATION.EXACT_MATCH,
-                  ).length > 0
-                ) {
-                  contract_verification =
-                    SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-                  const exactContract = existContractHash.find(
-                    (x) =>
-                      x.contract_verification ==
-                      SMART_CONTRACT_VERIFICATION.EXACT_MATCH,
-                  );
+                if (exactContract) {
+                  contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
                   contract_match = exactContract.contract_address;
                   url = exactContract.url;
                   compiler_version = exactContract.compiler_version;
@@ -823,7 +811,6 @@ export class SyncTaskService implements ISyncTaskService {
                 s3_location,
               };
               smartContracts.push(smartContract);
-              // await this.smartContractRepository.create(smartContract);
             } catch (error) {
               this._logger.error(
                 null,

@@ -10,5 +10,5 @@ export interface ISmartContractRepository extends IBaseRepository {
    * Find smart contract by contract hash
    * @param contract_hash
    */
-  findContractByHash(contract_hash: string);
+  findExactContractByHash(contract_hash: string);
 }
