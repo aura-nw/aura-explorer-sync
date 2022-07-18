@@ -3,8 +3,8 @@ import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
-import { ISmartContractRepository } from 'src/repositories/ismart-contract.repository';
-import { ITokenContractRepository } from 'src/repositories/itoken-contract.repository';
+import { ISmartContractRepository } from '../../repositories/ismart-contract.repository';
+import { ITokenContractRepository } from '../../repositories/itoken-contract.repository';
 import { v4 as uuidv4 } from 'uuid';
 import {
   CONST_CHAR,
