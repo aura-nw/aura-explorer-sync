@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { SMART_CONTRACT_VERIFICATION } from 'src/common/constants/app.constant';
-import { ENTITIES_CONFIG } from 'src/module.config';
+import { SMART_CONTRACT_VERIFICATION } from '../../common/constants/app.constant';
+import { ENTITIES_CONFIG } from '../../module.config';
 import { ObjectLiteral, Repository } from 'typeorm';
 import { ISmartContractRepository } from '../ismart-contract.repository';
 import { BaseRepository } from './base.repository';
