@@ -31,8 +31,7 @@ import { ENV_CONFIG } from '../../shared/services/config.service';
 import { CommonUtil } from '../../utils/common.util';
 import { InfluxDBClient } from '../../utils/influxdb-client';
 import { ISyncTaskService } from '../isync-task.service';
-const cluster = require('cluster');
-const numCPUs = require('os').cpus().length;
+
 @Injectable()
 export class SyncTaskService implements ISyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
