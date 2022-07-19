@@ -3,8 +3,8 @@ import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
-import { ISmartContractRepository } from 'src/repositories/ismart-contract.repository';
-import { ITokenContractRepository } from 'src/repositories/itoken-contract.repository';
+import { ISmartContractRepository } from '../../repositories/ismart-contract.repository';
+import { ITokenContractRepository } from '../../repositories/itoken-contract.repository';
 import { v4 as uuidv4 } from 'uuid';
 import {
   CONST_CHAR,
@@ -719,24 +719,12 @@ export class SyncTaskService implements ISyncTaskService {
                     : '';
               }
               if (contract_hash !== '') {
-                const existContractHash =
-                  await this.smartContractRepository.findContractByHash(
+                const exactContract =
+                  await this.smartContractRepository.findExactContractByHash(
                     contract_hash,
                   );
-                if (
-                  existContractHash.filter(
-                    (e) =>
-                      e.contract_verification ==
-                      SMART_CONTRACT_VERIFICATION.EXACT_MATCH,
-                  ).length > 0
-                ) {
-                  contract_verification =
-                    SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-                  const exactContract = existContractHash.find(
-                    (x) =>
-                      x.contract_verification ==
-                      SMART_CONTRACT_VERIFICATION.EXACT_MATCH,
-                  );
+                if (exactContract) {
+                  contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
                   contract_match = exactContract.contract_address;
                   url = exactContract.url;
                   compiler_version = exactContract.compiler_version;
@@ -766,7 +754,6 @@ export class SyncTaskService implements ISyncTaskService {
               };
               if(smartContract.url)
               smartContracts.push(smartContract);
-              // await this.smartContractRepository.create(smartContract);
             } catch (error) {
               this._logger.error(
                 null,

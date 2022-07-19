@@ -23,7 +23,6 @@ import { ProposalDepositRepository } from './repositories/impls/proposal-deposit
 import { ProposalVoteRepository } from './repositories/impls/proposal-vote.repository';
 import { SyncStatusRepository } from './repositories/impls/sync-status.repository';
 import { TransactionRepository } from './repositories/impls/transaction.repository';
-import { SyncWebsocketService } from './services/impls/sync-websocket.service';
 import { SmartContractRepository } from './repositories/impls/smart-contract.repository';
 import { TokenContractRepository } from './repositories/impls/token-contract.repository';
 import { SmartContractCodeRepository } from './repositories/impls/smart-contract-code.repository';
@@ -136,10 +135,6 @@ const entities = [
     {
       provide: SERVICE_INTERFACE.ISYNC_TASK_SERVICE,
       useClass: SyncTaskService,
-    },
-    {
-      provide: SERVICE_INTERFACE.ISYNC_WEBSOCKET_SERVICE,
-      useClass: SyncWebsocketService,
     },
     {
       provide: SERVICE_INTERFACE.ISYNC_CONTRACT_CODE_SERVICE,
