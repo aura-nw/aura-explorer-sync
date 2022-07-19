@@ -1,3 +1,3 @@
 import { IBaseRepository } from './ibase.repository';
 
-export type ISmartContractCodeRepository = IBaseRepository;
+export interface ISmartContractCodeRepository extends IBaseRepository{}
