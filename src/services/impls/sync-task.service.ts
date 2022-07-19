@@ -3,17 +3,14 @@ import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
-import { ISmartContractRepository } from '../../repositories/ismart-contract.repository';
-import { ITokenContractRepository } from '../../repositories/itoken-contract.repository';
-import { v4 as uuidv4 } from 'uuid';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
   CONST_PUBKEY_ADDR,
   NODE_API,
-  SMART_CONTRACT_VERIFICATION,
+  SMART_CONTRACT_VERIFICATION
 } from '../../common/constants/app.constant';
-import { BlockSyncError, MissedBlock, SyncStatus } from '../../entities';
+import { BlockSyncError, MissedBlock } from '../../entities';
 import { SyncDataHelpers } from '../../helpers/sync-data.helpers';
 import { REPOSITORY_INTERFACE } from '../../module.config';
 import { IBlockSyncErrorRepository } from '../../repositories/iblock-sync-error.repository';
@@ -24,6 +21,7 @@ import { IHistoryProposalRepository } from '../../repositories/ihistory-proposal
 import { IMissedBlockRepository } from '../../repositories/imissed-block.repository';
 import { IProposalDepositRepository } from '../../repositories/iproposal-deposit.repository';
 import { IProposalVoteRepository } from '../../repositories/iproposal-vote.repository';
+import { ISmartContractRepository } from '../../repositories/ismart-contract.repository';
 import { ISyncStatusRepository } from '../../repositories/isync-status.repository';
 import { ITransactionRepository } from '../../repositories/itransaction.repository';
 import { IValidatorRepository } from '../../repositories/ivalidator.repository';
@@ -40,7 +38,6 @@ export class SyncTaskService implements ISyncTaskService {
   private influxDbClient: InfluxDBClient;
   private isSyncValidator = false;
   private isSyncMissBlock = false;
-  private currentBlock: number;
   private threads = 0;
   private schedulesSync: Array<number> = [];
   private smartContractService;
@@ -834,21 +831,6 @@ export class SyncTaskService implements ISyncTaskService {
     if (newHeight > status.current_block) {
       status.current_block = newHeight;
       await this.statusRepository.create(status);
-    }
-  }
-
-  /**
-   * Get current status of block
-   */
-  async getCurrentStatus() {
-    const status = await this.statusRepository.findOne();
-    if (!status[0]) {
-      const newStatus = new SyncStatus();
-      newStatus.current_block = Number(ENV_CONFIG.START_HEIGHT);
-      await this.statusRepository.create(newStatus);
-      this.currentBlock = newStatus.current_block;
-    } else {
-      this.currentBlock = status[0].current_block;
     }
   }
 
