@@ -42,6 +42,7 @@ export class SyncTaskService implements ISyncTaskService {
   private isSyncValidator = false;
   private isSyncMissBlock = false;
   private currentBlock: number;
+  private threads = 0;
   private schedulesSync: Array<number> = [];
   private smartContractService;
 
@@ -90,6 +91,7 @@ export class SyncTaskService implements ISyncTaskService {
     );
 
     this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
+    this.threads = ENV_CONFIG.THREADS;
   }
   @Interval(5000)
   async cronSync() {
@@ -106,8 +108,8 @@ export class SyncTaskService implements ISyncTaskService {
       const blockErrors = [];
 
       if (latestBlk > currentBlock.current_block) {
-        if (latestBlk - currentBlock.current_block > 50) {
-          latestBlk = currentBlock.current_block + 50;
+        if (latestBlk - currentBlock.current_block > this.threads) {
+          latestBlk = currentBlock.current_block + this.threads;
         }
         for (let i = currentBlock.current_block + 1; i < latestBlk; i++) {
           blockErrors.push({
@@ -134,7 +136,7 @@ export class SyncTaskService implements ISyncTaskService {
             order:{
               height:'asc'
             },
-            take:5
+            take:this.threads
           });
       results.forEach(el=>{ 
         try {
@@ -166,7 +168,7 @@ export class SyncTaskService implements ISyncTaskService {
 
   }
 
-  // @Interval(3000)
+  @Interval(3000)
   async syncValidator() {
     // check status
     if (this.isSyncValidator) {
@@ -339,7 +341,7 @@ export class SyncTaskService implements ISyncTaskService {
     }
   }
 
-  // @Interval(3000)
+  @Interval(3000)
   async syncMissedBlock() {
     // check status
     if (this.isSyncMissBlock) {
