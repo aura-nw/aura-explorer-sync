@@ -301,7 +301,7 @@ export class SyncDataHelpers {
 
   static makeSubmitProposalData(txData: any, message: any, index: number) {
     const historyProposal = new HistoryProposal();
-    const proposalDeposit = undefined;
+    let proposalDeposit = undefined;
     const proposalTypeReturn = message.content['@type'];
     const proposalType = proposalTypeReturn.substring(
       proposalTypeReturn.lastIndexOf('.') + 1,
@@ -334,7 +334,7 @@ export class SyncDataHelpers {
           message.initial_deposit[0].amount,
         );
         //save data to proposal deposit
-        const proposalDeposit = new ProposalDeposit();
+        proposalDeposit = new ProposalDeposit();
         proposalDeposit.proposal_id = historyProposal.proposal_id;
         proposalDeposit.tx_hash = txData.tx_response.txhash;
         proposalDeposit.depositor = message.proposer;
