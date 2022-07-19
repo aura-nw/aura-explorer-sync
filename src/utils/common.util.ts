@@ -8,7 +8,7 @@ import axios from 'axios';
 
 @Injectable()
 export class CommonUtil {
-  constructor(private httpService: HttpService) {}
+  constructor(private httpService: HttpService) { }
 
   makeFileObjects(img) {
     // You can create File objects from a Buffer of binary data
@@ -20,11 +20,14 @@ export class CommonUtil {
   }
 
   async getDataAPI(api, params) {
-    const data = await lastValueFrom(this.httpService.get(api + params)).then(
+    return lastValueFrom(
+      this.httpService.get(api + params, {
+        timeout: 30000
+      })
+    ).then(
       (rs) => rs.data,
     );
 
-    return data;
   }
 
   async getDataService(api, params) {
