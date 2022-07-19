@@ -1,3 +1,3 @@
 import { IBaseRepository } from './ibase.repository';
 
-export type ISyncStatusRepository = IBaseRepository;
+export interface ISyncStatusRepository extends IBaseRepository{}

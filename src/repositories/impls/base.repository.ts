@@ -158,4 +158,14 @@ export class BaseRepository implements IBaseRepository {
 
     return results;
   }
+
+  /**
+  * Get max by column of table
+  * @param column 
+  */
+  max(column: string): Promise<any> {
+    return this._repos.createQueryBuilder()
+      .select(`max(${column}) as ${column}`)
+      .getRawOne();
+  }
 }

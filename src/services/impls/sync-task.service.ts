@@ -95,21 +95,29 @@ export class SyncTaskService implements ISyncTaskService {
   async cronSync() {
     // Get the highest block and insert into SyncBlockError
     try {
+      let currentHeight = 0;
       this._logger.log('start cron generate block sync error');
-      const [blockLatest, currentBlock] =
+      const [blockLatest, currentBlock, blockStatus] =
         await Promise.all([
           this.getBlockLatest(),
+          this.blockSyncErrorRepository.max('height'),
           this.statusRepository.findOne()
         ]);
+
+      if (Number(currentBlock?.height) > Number(blockStatus.current_block)) {
+        currentHeight = Number(currentBlock.height);
+      } else {
+        currentHeight = Number(blockStatus.current_block);
+      }
 
       let latestBlk = Number(blockLatest?.block?.header?.height || 0);
       const blockErrors = [];
 
-      if (latestBlk > currentBlock.current_block) {
-        if (latestBlk - currentBlock.current_block > 2 * this.threads) {
-          latestBlk = currentBlock.current_block + 2 * this.threads;
+      if (latestBlk > currentHeight) {
+        if (latestBlk - currentHeight > this.threads) {
+          latestBlk = currentHeight + this.threads;
         }
-        for (let i = currentBlock.current_block + 1; i < latestBlk; i++) {
+        for (let i = currentHeight + 1; i < latestBlk; i++) {
           blockErrors.push({
             height: i
           })
@@ -128,7 +136,7 @@ export class SyncTaskService implements ISyncTaskService {
   /**
    * Procces block insert data to db
   */
-  @Interval(5000)
+  @Interval(3000)
   async processBlock() {
     // Get the highest block and insert into SyncBlockError
     try {
@@ -394,7 +402,7 @@ export class SyncTaskService implements ISyncTaskService {
 
                 // insert into table missed-block
                 try {
-                  await this.missedBlockRepository.create(newMissedBlock);
+                  await this.missedBlockRepository.upsert([newMissedBlock], ['height']);
                   // TODO: Write missed block to influxdb
                   this.influxDbClient.writeMissedBlock(
                     newMissedBlock.validator_address,

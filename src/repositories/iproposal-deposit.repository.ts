@@ -1,3 +1,3 @@
 import { IBaseRepository } from './ibase.repository';
 
-export type IProposalDepositRepository = IBaseRepository;
+export interface IProposalDepositRepository extends IBaseRepository{}

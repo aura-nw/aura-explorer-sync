@@ -3,7 +3,7 @@ import { DeleteResult } from 'typeorm';
 
 export interface IBaseRepository {
 
-  find(options: any): Promise<any> ;
+  find(options: any): Promise<any>;
   /**
    * findOne
    * @param id
@@ -77,4 +77,10 @@ export interface IBaseRepository {
    * @param conflictPathsOrOptions
    */
   upsert(data: Array<any>, conflictPathsOrOptions: string[]);
+
+  /**
+  * Get max by column of table
+  * @param column 
+  */
+  max(column: string): Promise<any>;
 }
