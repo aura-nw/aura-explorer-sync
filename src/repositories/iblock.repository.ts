@@ -1,3 +1,3 @@
 import { IBaseRepository } from './ibase.repository';
 
-export type IBlockRepository = IBaseRepository;
+export interface IBlockRepository extends IBaseRepository{}
