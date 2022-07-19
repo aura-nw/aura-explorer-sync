@@ -10,6 +10,9 @@ export class BaseRepository implements IBaseRepository {
   public constructor(repos) {
     this._repos = repos;
   }
+  public find(options: any): Promise<any> {
+    return this._repos.find(options);
+  }
 
   /**
    * findOne
@@ -18,14 +21,8 @@ export class BaseRepository implements IBaseRepository {
    */
   public async findOne(id?: any): Promise<any> {
     if (id) {
-      this._log.log(
-        `============== Call method findOne width parameters:${id} ==============`,
-      );
       return this._repos.findOne(id);
     } else {
-      this._log.log(
-        `============== Call method findOne without parameters ==============`,
-      );
       return this._repos.findOne();
     }
   }
@@ -42,11 +39,6 @@ export class BaseRepository implements IBaseRepository {
     select?: string[],
     take?: number,
   ): Promise<any[]> {
-    this._log.log(
-      `============== Call method findOne width parameters: condition:${this.convertObjectToJson(
-        condition,
-      )}, orderBy: ${this.convertObjectToJson(orderBy)} ==============`,
-    );
     const opt = { where: condition };
     if (orderBy) opt['order'] = orderBy;
     if (select) opt['select'] = select;
@@ -165,5 +157,15 @@ export class BaseRepository implements IBaseRepository {
       .then((t) => t.identifiers);
 
     return results;
+  }
+
+  /**
+  * Get max by column of table
+  * @param column 
+  */
+  max(column: string): Promise<any> {
+    return this._repos.createQueryBuilder()
+      .select(`max(${column}) as ${column}`)
+      .getRawOne();
   }
 }

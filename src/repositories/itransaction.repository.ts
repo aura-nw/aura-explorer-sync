@@ -1,3 +1,3 @@
 import { IBaseRepository } from './ibase.repository';
 
-export type ITransactionRepository = IBaseRepository;
+export interface ITransactionRepository extends IBaseRepository{}
