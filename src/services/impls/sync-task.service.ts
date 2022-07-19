@@ -108,8 +108,8 @@ export class SyncTaskService implements ISyncTaskService {
       const blockErrors = [];
 
       if (latestBlk > currentBlock.current_block) {
-        if (latestBlk - currentBlock.current_block > this.threads) {
-          latestBlk = currentBlock.current_block + this.threads;
+        if (latestBlk - currentBlock.current_block > 2 * this.threads) {
+          latestBlk = currentBlock.current_block + 2 *this.threads;
         }
         for (let i = currentBlock.current_block + 1; i < latestBlk; i++) {
           blockErrors.push({
@@ -129,7 +129,6 @@ export class SyncTaskService implements ISyncTaskService {
   @Interval(5000)
   async processBlock() {
     // Get the highest block and insert into SyncBlockError
-    console.log('-----------------',process.pid,);
     try {
       const results =
           await this.blockSyncErrorRepository.find({
