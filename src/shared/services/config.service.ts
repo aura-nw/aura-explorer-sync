@@ -41,6 +41,7 @@ export class ConfigService {
       THREADS: Number(process.env.THREADS),
       SMART_CONTRACT_SERVICE: process.env.SMART_CONTRACT_SERVICE,
       START_HEIGHT: process.env.START_HEIGHT,
+      TIMES_SYNC: Number(process.env.TIMES_SYNC) || 3000,
       REDIS: {
         HOST: process.env.REDIS_HOST,
         PORT: process.env.REDIS_HOST,
