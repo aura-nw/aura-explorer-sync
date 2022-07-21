@@ -758,8 +758,7 @@ export class SyncTaskService implements ISyncTaskService {
                 compiler_version,
                 s3_location,
               };
-              if (smartContract.url)
-                smartContracts.push(smartContract);
+              smartContracts.push(smartContract);
             } catch (error) {
               this._logger.error(
                 null,
