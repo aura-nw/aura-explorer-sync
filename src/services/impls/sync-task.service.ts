@@ -91,7 +91,7 @@ export class SyncTaskService implements ISyncTaskService {
   /**
    * Get latest block to insert Block Sync Error table
    */
-  @Interval(5000)
+  @Interval(ENV_CONFIG.TIMES_SYNC)
   async cronSync() {
     // Get the highest block and insert into SyncBlockError
     try {
@@ -758,8 +758,7 @@ export class SyncTaskService implements ISyncTaskService {
                 compiler_version,
                 s3_location,
               };
-              if (smartContract.url)
-                smartContracts.push(smartContract);
+              smartContracts.push(smartContract);
             } catch (error) {
               this._logger.error(
                 null,
