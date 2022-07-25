@@ -218,4 +218,12 @@ export class InfluxDBClient {
       .stringField('height', height);
     this.writeApi.writePoint(point);
   }
+
+
+  /**
+   * Flush data to insert record influxdb
+   */
+  flushData(){
+    this.writeApi.flush();
+  }
 }
