@@ -301,6 +301,7 @@ export class SyncTaskService implements ISyncTaskService {
             newValidator.jailed,
             newValidator.power,
           );
+          this.influxDbClient.flushData();
 
           this.isSyncValidator = false;
         } catch (error) {
@@ -408,6 +409,7 @@ export class SyncTaskService implements ISyncTaskService {
                     newMissedBlock.validator_address,
                     newMissedBlock.height,
                   );
+                  this.influxDbClient.flushData();
                 } catch (error) {
                   this._logger.error(null, `Missed is already existed!`);
                 }
@@ -563,6 +565,8 @@ export class SyncTaskService implements ISyncTaskService {
         newBlock.timestamp,
         newBlock.proposer,
       );
+
+      this.influxDbClient.flushData();
 
       /**
        * TODO: Flush pending writes and close writeApi.
