@@ -577,7 +577,7 @@ export class SyncTaskService implements ISyncTaskService {
 
       // Delete data on Block sync error table
       await this.removeBlockError(syncBlock);
-      this._logger.debug(
+      this._logger.log(
         `============== Remove blockSyncError complete: ${syncBlock} ===============`,
       );
 
