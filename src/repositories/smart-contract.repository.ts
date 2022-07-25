@@ -1,16 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { SMART_CONTRACT_VERIFICATION } from '../../common/constants/app.constant';
-import { ENTITIES_CONFIG } from '../../module.config';
 import { ObjectLiteral, Repository } from 'typeorm';
-import { ISmartContractRepository } from '../ismart-contract.repository';
+import { SMART_CONTRACT_VERIFICATION } from '../common/constants/app.constant';
+import { ENTITIES_CONFIG } from '../module.config';
 import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class SmartContractRepository
-  extends BaseRepository
-  implements ISmartContractRepository
-{
+export class SmartContractRepository extends BaseRepository {
   private readonly _logger = new Logger(SmartContractRepository.name);
   constructor(
     @InjectRepository(ENTITIES_CONFIG.SMART_CONTRACT)
@@ -42,7 +38,7 @@ export class SmartContractRepository
       })
       .andWhere('smart_contracts.contract_verification = :contract_verification', {
         contract_verification: SMART_CONTRACT_VERIFICATION.EXACT_MATCH,
-        })
+      })
       .select([
         'smart_contracts.contract_address as contract_address',
         'smart_contracts.url as url',

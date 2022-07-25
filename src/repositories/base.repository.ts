@@ -1,9 +1,8 @@
-import { DeleteResult, In, Repository } from 'typeorm';
-import { IBaseRepository } from '../ibase.repository';
-import { PaginatorResponse } from '../../dtos/responses/paginator.response';
 import { Logger } from '@nestjs/common';
+import { DeleteResult, Repository } from 'typeorm';
+import { PaginatorResponse } from '../dtos/responses/paginator.response';
 
-export class BaseRepository implements IBaseRepository {
+export class BaseRepository {
   private _repos: Repository<any>;
   private _log = new Logger(BaseRepository.name);
 

@@ -1,15 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ENTITIES_CONFIG } from '../../module.config';
 import { ObjectLiteral, Repository } from 'typeorm';
-import { ITokenContractRepository } from '../itoken-contract.repository';
+import { ENTITIES_CONFIG } from '../module.config';
 import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class TokenContractRepository
-  extends BaseRepository
-  implements ITokenContractRepository
-{
+export class TokenContractRepository extends BaseRepository {
   private readonly _logger = new Logger(TokenContractRepository.name);
   constructor(
     @InjectRepository(ENTITIES_CONFIG.TOKEN_CONTRACT)

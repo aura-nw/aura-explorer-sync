@@ -1,8 +1,7 @@
-import { IBaseService } from '../ibase.service';
-import { ErrorMap } from '../../common/error.map';
-import { ResponseDto } from '../../dtos/responses/response.dto';
+import { ErrorMap } from '../common/error.map';
+import { ResponseDto } from '../dtos/responses/response.dto';
 
-export class BaseService implements IBaseService {
+export class BaseService {
   private _repos: any;
   public constructor(repos: any) {
     this._repos = repos;

@@ -1,29 +1,25 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import { SyncDataHelpers } from '../../helpers/sync-data.helpers';
 import {
   CONST_PROPOSAL_STATUS,
-  NODE_API,
-} from '../../common/constants/app.constant';
-import { REPOSITORY_INTERFACE } from '../../module.config';
-import { IProposalRepository } from '../../repositories/iproposal.repository';
-import { IValidatorRepository } from '../../repositories/ivalidator.repository';
-import { ENV_CONFIG } from '../../shared/services/config.service';
-import { CommonUtil } from '../../utils/common.util';
-import { ISyncProposalService } from '../isync-proposal.service';
+  NODE_API
+} from '\../common/constants/app.constant';
+import { SyncDataHelpers } from '../helpers/sync-data.helpers';
+import { ProposalRepository } from '../repositories/proposal.repository';
+import { ValidatorRepository } from '../repositories/validator.repository';
+import { ENV_CONFIG } from '../shared/services/config.service';
+import { CommonUtil } from '../utils/common.util';
 
 @Injectable()
-export class SyncProposalService implements ISyncProposalService {
+export class SyncProposalService {
   private readonly _logger = new Logger(SyncProposalService.name);
   private api;
   private isSync = false;
 
   constructor(
     private _commonUtil: CommonUtil,
-    @Inject(REPOSITORY_INTERFACE.IVALIDATOR_REPOSITORY)
-    private validatorRepository: IValidatorRepository,
-    @Inject(REPOSITORY_INTERFACE.IPROPOSAL_REPOSITORY)
-    private proposalRepository: IProposalRepository,
+    private validatorRepository: ValidatorRepository,
+    private proposalRepository: ProposalRepository,
   ) {
     this._logger.log(
       '============== Constructor Sync Proposal Service ==============',
@@ -89,7 +85,7 @@ export class SyncProposalService implements ISyncProposalService {
 
           //sync turnout
           if (item.status !== CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_PASSED
-              && item.status !== CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_REJECTED) {
+            && item.status !== CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_REJECTED) {
             //get bonded token
             const bondedTokens = await this._commonUtil.getDataAPI(
               this.api,

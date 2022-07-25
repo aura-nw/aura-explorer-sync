@@ -32,31 +32,4 @@ export const ENTITIES_CONFIG = {
   SMART_CONTRACT: SmartContract,
   TOKEN_CONTRACT: TokenContract,
   SMART_CONTRACT_CODE: SmartContractCode,
-};
-
-export const SERVICE_INTERFACE = {
-  ISYNC_PROPOSAL_SERVICE: 'ISyncProposalService',
-  ISYNC_TASK_SERVICE: 'ISyncTaskService',
-  ISYNC_WEBSOCKET_SERVICE: 'ISyncWebsocketService',
-  ISYNC_CONTRACT_CODE_SERVICE: 'ISyncContractCodeService',
-};
-
-export const REPOSITORY_INTERFACE = {
-  IVALIDATOR_REPOSITORY: 'IValidatorRepository',
-  IPROPOSAL_REPOSITORY: 'IProposalRepository',
-  IMISSED_BLOCK_REPOSITORY: 'IMissedBlockRepository',
-  IBLOCK_SYNC_ERROR_REPOSITORY: 'IBlockSyncErrorRepository',
-  IBLOCK_REPOSITORY: 'IBlockRepository',
-  ITRANSACTION_REPOSITORY: 'ITransactionRepository',
-  IDELEGATION_REPOSITORY: 'IDelegationRepository',
-  IDELEGATOR_REWARD_REPOSITORY: 'IDelegatorRewardRepository',
-  IHISTORY_PROPOSAL_REPOSITORY: 'IHistoryProposalRepository',
-  IPROPOSAL_DEPOSIT_REPOSITORY: 'IProposalDepositRepository',
-  IPROPOSAL_VOTE_REPOSITORY: 'IProposalVoteRepository',
-  ISYNC_STATUS_REPOSITORY: 'ISyncStatusRepository',
-  ISMART_CONTRACT_REPOSITORY: 'ISmartContractRepository',
-  ITOKEN_CONTRACT_REPOSITORY: 'ITokenContractRepository',
-  ISMART_CONTRACT_CODE_REPOSITORY: 'ISmartContractCodeRepository',
-};
-
-export const PROVIDER_INTERFACE = {};
+}

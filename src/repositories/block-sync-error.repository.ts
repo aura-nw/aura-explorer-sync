@@ -1,15 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ENTITIES_CONFIG } from '../../module.config';
 import { ObjectLiteral, Repository } from 'typeorm';
-import { IBlockSyncErrorRepository } from '../iblock-sync-error.repository';
+import { ENTITIES_CONFIG } from '../module.config';
 import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class BlockSyncErrorRepository
-  extends BaseRepository
-  implements IBlockSyncErrorRepository
-{
+export class BlockSyncErrorRepository extends BaseRepository {
   private readonly _logger = new Logger(BlockSyncErrorRepository.name);
   constructor(
     @InjectRepository(ENTITIES_CONFIG.BLOCK_SYNC_ERROR)

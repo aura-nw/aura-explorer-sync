@@ -1,15 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ENTITIES_CONFIG } from '../../module.config';
 import { ObjectLiteral, Repository } from 'typeorm';
-import { IBlockRepository } from '../iblock.repository';
+import { ENTITIES_CONFIG } from '../module.config';
 import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class BlockRepository
-  extends BaseRepository
-  implements IBlockRepository
-{
+export class BlockRepository extends BaseRepository {
   private readonly _logger = new Logger(BlockRepository.name);
   constructor(
     @InjectRepository(ENTITIES_CONFIG.BLOCK)
