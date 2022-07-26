@@ -2,14 +2,15 @@ import { Logger } from '@nestjs/common';
 import { DeleteResult, Repository } from 'typeorm';
 import { PaginatorResponse } from '../dtos/responses/paginator.response';
 
-export class BaseRepository {
-  private _repos: Repository<any>;
+export class BaseRepository<T> {
+  private _repos: Repository<T>;
   private _log = new Logger(BaseRepository.name);
 
-  public constructor(repos) {
+  public constructor(repos: Repository<T>) {
     this._repos = repos;
   }
-  public find(options: any): Promise<any> {
+
+  public find(options: any): Promise<T[]> {
     return this._repos.find(options);
   }
 
@@ -18,7 +19,7 @@ export class BaseRepository {
    * @param condition
    * @returns
    */
-  public async findOne(id?: any): Promise<any> {
+  public async findOne(id?: any): Promise<T> {
     if (id) {
       return this._repos.findOne(id);
     } else {
@@ -37,7 +38,7 @@ export class BaseRepository {
     orderBy?: any,
     select?: string[],
     take?: number,
-  ): Promise<any[]> {
+  ): Promise<T[]> {
     const opt = { where: condition };
     if (orderBy) opt['order'] = orderBy;
     if (select) opt['select'] = select;
@@ -60,7 +61,7 @@ export class BaseRepository {
    * @param orderBy
    * @returns
    */
-  public async findAll(orderBy?: any): Promise<any[]> {
+  public async findAll(orderBy?: any): Promise<T[]> {
     if (orderBy) {
       return this._repos.find({ order: orderBy });
     } else {
@@ -139,10 +140,6 @@ export class BaseRepository {
    */
   public async remove(id: any): Promise<DeleteResult> {
     return this._repos.delete(id);
-  }
-
-  private convertObjectToJson(obj: any) {
-    return JSON.stringify(obj);
   }
 
   /**

@@ -2,9 +2,7 @@ import { HttpModule } from '@nestjs/axios';
 import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
-import {
-  ENTITIES_CONFIG
-} from './module.config';
+import { Block, BlockSyncError, Delegation, DelegatorReward, HistoryProposal, MissedBlock, Proposal, ProposalDeposit, ProposalVote, SmartContract, SmartContractCode, SyncStatus, TokenContract, Transaction, Validator } from './entities';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
 import { BlockRepository } from './repositories/block.repository';
 import { DelegationRepository } from './repositories/delegation.repository';
@@ -28,21 +26,21 @@ import { SharedModule } from './shared/shared.module';
 
 const controllers = [];
 const entities = [
-  ENTITIES_CONFIG.BLOCK_SYNC_ERROR,
-  ENTITIES_CONFIG.MISSED_BLOCK,
-  ENTITIES_CONFIG.PROPOSAL,
-  ENTITIES_CONFIG.VALIDATOR,
-  ENTITIES_CONFIG.BLOCK,
-  ENTITIES_CONFIG.DELEGATION,
-  ENTITIES_CONFIG.DELEGATOR_REWARD,
-  ENTITIES_CONFIG.HISTORY_PROPOSAL,
-  ENTITIES_CONFIG.PROPOSAL_DEPOSIT,
-  ENTITIES_CONFIG.PROPOSAL_VOTE,
-  ENTITIES_CONFIG.SYNC_STATUS,
-  ENTITIES_CONFIG.TRANSACTION,
-  ENTITIES_CONFIG.SMART_CONTRACT,
-  ENTITIES_CONFIG.TOKEN_CONTRACT,
-  ENTITIES_CONFIG.SMART_CONTRACT_CODE,
+  BlockSyncError,
+  MissedBlock,
+  Proposal,
+  Validator,
+  Block,
+  Delegation,
+  DelegatorReward,
+  HistoryProposal,
+  ProposalDeposit,
+  ProposalVote,
+  SyncStatus,
+  Transaction,
+  SmartContract,
+  TokenContract,
+  SmartContractCode,
 ];
 
 const repositories = [

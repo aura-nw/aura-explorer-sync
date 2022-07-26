@@ -136,7 +136,7 @@ export class SyncTaskService {
       results.forEach(el => {
         try {
           this.schedule.scheduleTimeoutJob(
-            el.height,
+            el.height.toString(),
             100,
             async () => {
               try {

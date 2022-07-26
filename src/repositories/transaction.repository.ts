@@ -1,15 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ObjectLiteral, Repository } from 'typeorm';
-import { ENTITIES_CONFIG } from '../module.config';
+import { Repository } from 'typeorm';
+import { Transaction } from '../entities';
 import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class TransactionRepository extends BaseRepository {
+export class TransactionRepository extends BaseRepository<Transaction> {
   private readonly _logger = new Logger(TransactionRepository.name);
   constructor(
-    @InjectRepository(ENTITIES_CONFIG.TRANSACTION)
-    private readonly repos: Repository<ObjectLiteral>,
+    @InjectRepository(Transaction)
+    private readonly repos: Repository<Transaction>,
   ) {
     super(repos);
     this._logger.log(
