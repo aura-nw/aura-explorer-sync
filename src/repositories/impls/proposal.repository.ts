@@ -8,8 +8,7 @@ import { BaseRepository } from './base.repository';
 @Injectable()
 export class ProposalRepository
   extends BaseRepository
-  implements IProposalRepository
-{
+  implements IProposalRepository {
   private readonly _logger = new Logger(ProposalRepository.name);
   constructor(
     @InjectRepository(ENTITIES_CONFIG.PROPOSAL)
@@ -22,7 +21,11 @@ export class ProposalRepository
   }
 
   async deleteProposals() {
-    const sql = `UPDATE proposals SET is_delete = 1 WHERE pro_status = 'PROPOSAL_STATUS_DEPOSIT_PERIOD' AND is_delete = 0 AND (current_timestamp()) > pro_deposit_end_time`;
+    const sql = `
+    SET SQL_SAFE_UPDATES = 0;
+      UPDATE proposals SET is_delete = 1 WHERE pro_status = 'PROPOSAL_STATUS_DEPOSIT_PERIOD' AND is_delete = 0 AND (current_timestamp()) > pro_deposit_end_time;
+    SET SQL_SAFE_UPDATES = 1;
+    `;
     return await this.repos.query(sql, []);
   }
 }
