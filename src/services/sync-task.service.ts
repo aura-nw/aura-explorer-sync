@@ -80,6 +80,7 @@ export class SyncTaskService {
   @Interval(ENV_CONFIG.TIMES_SYNC)
   async cronSync() {
     // Get the highest block and insert into SyncBlockError
+    const blockErrors = [];
     try {
       let currentHeight = 0;
       this._logger.log('start cron generate block sync error');
@@ -97,23 +98,23 @@ export class SyncTaskService {
       }
 
       let latestBlk = Number(blockLatest?.block?.header?.height || 0);
-      const blockErrors = [];
 
       if (latestBlk > currentHeight) {
         if (latestBlk - currentHeight > this.threads) {
           latestBlk = currentHeight + this.threads;
         }
         for (let i = currentHeight + 1; i < latestBlk; i++) {
-          blockErrors.push({
-            height: i
-          })
+          const blockError = new BlockSyncError();
+          blockError.height = i;
+          blockErrors.push(blockError);
         }
       }
       if (blockErrors.length > 0) {
-        await this.blockSyncErrorRepository.upsert(blockErrors, [])
+        this._logger.log(`blockErrors:${blockErrors}`);
+        await this.blockSyncErrorRepository.upsert(blockErrors, ['height'])
       }
     } catch (error) {
-      this._logger.log('error when generate base blocks', error.stack);
+      this._logger.log(`error when generate base blocks:${blockErrors}`, error.stack);
       throw error;
     }
 

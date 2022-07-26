@@ -18,7 +18,11 @@ export class ProposalRepository extends BaseRepository<Proposal> {
   }
 
   async deleteProposals() {
-    const sql = `UPDATE proposals SET is_delete = 1 WHERE pro_status = 'PROPOSAL_STATUS_DEPOSIT_PERIOD' AND is_delete = 0 AND (current_timestamp()) > pro_deposit_end_time`;
+    const sql = `
+    SET SQL_SAFE_UPDATES = 0;
+      UPDATE proposals SET is_delete = 1 WHERE pro_status = 'PROPOSAL_STATUS_DEPOSIT_PERIOD' AND is_delete = 0 AND (current_timestamp()) > pro_deposit_end_time;
+    SET SQL_SAFE_UPDATES = 1;
+    `;
     return await this.repos.query(sql, []);
   }
 }
