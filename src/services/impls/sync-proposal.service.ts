@@ -55,11 +55,15 @@ export class SyncProposalService implements ISyncProposalService {
           if (
             item.status === CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_VOTING_PERIOD
           ) {
-            const paramsTally = `cosmos/gov/v1beta1/proposals/${item.proposal_id}/tally`;
-            proposalTally = await this._commonUtil.getDataAPI(
-              this.api,
-              paramsTally,
-            );
+            try {
+              const paramsTally = `cosmos/gov/v1beta1/proposals/${item.proposal_id}/tally`;
+              proposalTally = await this._commonUtil.getDataAPI(
+                this.api,
+                paramsTally,
+              );
+            } catch (err) {
+              this._logger.error(`Proposal ${item.proposal_id} end voting`);
+            }
           }
           //create proposal
           const proposal = SyncDataHelpers.makerProposalData(
@@ -89,7 +93,7 @@ export class SyncProposalService implements ISyncProposalService {
 
           //sync turnout
           if (item.status !== CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_PASSED
-              && item.status !== CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_REJECTED) {
+            && item.status !== CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_REJECTED) {
             //get bonded token
             const bondedTokens = await this._commonUtil.getDataAPI(
               this.api,
