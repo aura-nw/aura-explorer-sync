@@ -55,11 +55,16 @@ export class SyncProposalService implements ISyncProposalService {
           if (
             item.status === CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_VOTING_PERIOD
           ) {
-            const paramsTally = `cosmos/gov/v1beta1/proposals/${item.proposal_id}/tally`;
-            proposalTally = await this._commonUtil.getDataAPI(
-              this.api,
-              paramsTally,
-            );
+            // Get tally of proposal
+            try {
+              const paramsTally = `cosmos/gov/v1beta1/proposals/${item.proposal_id}/tally`;
+              proposalTally = await this._commonUtil.getDataAPI(
+                this.api,
+                paramsTally,
+              );
+            } catch (err) {
+              this._logger.error(`Proposal ${item.proposal_id} end voting`);
+            }
           }
           //create proposal
           const proposal = SyncDataHelpers.makerProposalData(
@@ -67,29 +72,34 @@ export class SyncProposalService implements ISyncProposalService {
             proposalTally,
           );
 
-          const paramsProposer = `gov/proposals/${item.proposal_id}/proposer`;
-          const dataProposer = await this._commonUtil.getDataAPI(
-            this.api,
-            paramsProposer,
-          );
+          // Set proposer for proposal
+          try{
+            const paramsProposer = `gov/proposals/${item.proposal_id}/proposer`;
+            const dataProposer = await this._commonUtil.getDataAPI(
+              this.api,
+              paramsProposer,
+            );
 
-          if (dataProposer && dataProposer.result) {
-            proposal.pro_proposer_address = dataProposer.result.proposer;
-            const validator = await this.validatorRepository.findOne({
-              where: { acc_address: dataProposer.result.proposer },
-            });
-            if (validator) {
-              proposal.pro_proposer = validator.title;
+            if (dataProposer && dataProposer.result) {
+              proposal.pro_proposer_address = dataProposer.result.proposer;
+              const validator = await this.validatorRepository.findOne({
+                where: { acc_address: dataProposer.result.proposer },
+              });
+              if (validator) {
+                proposal.pro_proposer = validator.title;
+              }
             }
+          }catch(err){
+            this._logger.error(`Proposal ${item.proposal_id} haven't proposer`);            
           }
 
           if (item.total_deposit && item.total_deposit.length > 0) {
             proposal.pro_total_deposits = item.total_deposit[0].amount;
           }
 
-          //sync turnout
+          // sync turnout
           if (item.status !== CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_PASSED
-              && item.status !== CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_REJECTED) {
+            && item.status !== CONST_PROPOSAL_STATUS.PROPOSAL_STATUS_REJECTED) {
             //get bonded token
             const bondedTokens = await this._commonUtil.getDataAPI(
               this.api,
