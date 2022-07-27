@@ -80,6 +80,8 @@ export class InfluxDBClient {
    * @param proposer
    */
   writeBlock(height, block_hash, num_txs, chainid, timestamp, proposer): void {
+    // const convertTime = new Date(timestamp.toString());
+    // convertTime.setMilliseconds(Number(String(height).slice(-3)));
     const point = new Point('blocks')
       .tag('chainid', chainid)
       .stringField('block_hash', block_hash)
@@ -223,7 +225,64 @@ export class InfluxDBClient {
   /**
    * Flush data to insert record influxdb
    */
-  flushData(){
+  flushData() {
     this.writeApi.flush();
+  }
+
+  /**
+   * Get max data by column
+   * @param measurement 
+   * @param start 
+   * @param coloumn 
+   * @returns 
+   */
+  getMax(measurement: string, start: string, coloumn: string): Promise<any> {
+    const query = `from(bucket: "${this.bucket}") |> range(start: ${start}) |> filter(fn: (r) => r._measurement == "${measurement}")|> filter(fn: (r) => r._field == "${coloumn}")|> max() `;
+
+    const results: { max: number } = { max: 0 };
+
+    const output = new Promise((resolve) => {
+      this.queryApi.queryRows(query, {
+        next(row, tableMeta) {
+          const o = tableMeta.toObject(row);
+          results.max = Number(o._value);
+        },
+        error(error) {
+          console.error(error);
+          console.log('Finished ERROR');
+          return resolve(results);
+        },
+        complete() {
+          console.log('Finished SUCCESS');
+          return resolve(results);
+        },
+      });
+    });
+    return output;
+  }
+
+  /**
+   * Write blocks to Influxd
+   * @param values 
+   */
+  writeBlocks(values: Array<any>): void {
+    const points: Array<Point> = [];
+    values.forEach((item) => {
+      const timestamp = new Date(item.timestamp.toString());
+      timestamp.setMilliseconds(Number(String(item.height).slice(-3)));
+      const point = new Point('blocks_data')
+        .tag('chainid', item.chainid)
+        .stringField('block_hash', item.block_hash)
+        .intField('height', item.height)
+        .intField('num_txs', item.num_txs)
+        .timestamp(timestamp)
+        .stringField('proposer', item.proposer);
+      points.push(point);
+    });
+
+    if (points.length > 0) {
+      this.writeApi.writePoints(points);
+      this.writeApi.flush();
+    }
   }
 }
