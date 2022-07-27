@@ -3,6 +3,7 @@ import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
+import { Between } from 'typeorm';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
@@ -41,6 +42,9 @@ export class SyncTaskService implements ISyncTaskService {
   private threads = 0;
   private schedulesSync: Array<number> = [];
   private smartContractService;
+
+  isCompleteWrite = false;
+  maxHeight = 0;
 
   constructor(
     private _commonUtil: CommonUtil,
@@ -118,9 +122,10 @@ export class SyncTaskService implements ISyncTaskService {
           latestBlk = currentHeight + this.threads;
         }
         for (let i = currentHeight + 1; i < latestBlk; i++) {
-          blockErrors.push({
-            height: i
-          })
+          const blockSyncError = new BlockSyncError();
+          blockSyncError.height = i;
+          blockSyncError.block_hash = '';
+          blockErrors.push(blockSyncError)
         }
       }
       if (blockErrors.length > 0) {
@@ -860,5 +865,65 @@ export class SyncTaskService implements ISyncTaskService {
       paramsBlockLatest,
     );
     return results;
+  }
+
+
+  /**
+   * Write block were to influxdb
+   * @returns 
+   */
+  @Interval(2000)
+  async BlockMissToInfluxdb() {
+    const numRow = 100;
+    try {
+      if (this.isCompleteWrite) {
+        this._logger.debug(`BlockMissToInfluxdb is running...!`);
+        return;
+      } else {
+        this._logger.debug(`BlockMissToInfluxdb is start write...!`);
+      }
+      this.influxDbClient.initQueryApi();
+
+      if (this.maxHeight === 0) {
+        const output = await this.influxDbClient.getMax('blocks_data', '-300d', 'height');
+        if (parseInt(output.max) > 0) {
+          this.maxHeight = Number(output.max);
+        }
+      }
+
+      const blocks = await this.blockRepository.find({
+        where: {
+          height: Between((this.maxHeight + 1), this.maxHeight + numRow)
+        }
+      });
+
+      if (blocks.length > 0) {
+        this.isCompleteWrite = true;
+        // TODO: init write api
+        this.influxDbClient.initWriteApi();
+        const points: Array<any> = [];
+        for (let idx = 0; idx < blocks.length; idx++) {
+          const block = blocks[idx];
+          points.push({
+            chainid: block.chainid,
+            block_hash: block.block_hash,
+            height: block.height,
+            num_txs: block.num_txs,
+            timestamp: block.timestamp,
+            proposer: block.proposer
+          });
+        }
+
+        if (points.length > 0) {
+          await this.influxDbClient.writeBlocks(points);
+        }
+        this.isCompleteWrite = false;
+        this.maxHeight = this.maxHeight + numRow;
+        this._logger.debug(`BlockMissToInfluxdb is start write successfully`);
+      }
+    } catch (err) {
+      this.isCompleteWrite = false;
+      this._logger.error(`BlockMissToInfluxdb call error: ${err.stack}`);
+    }
   }
 }
