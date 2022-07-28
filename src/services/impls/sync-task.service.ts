@@ -44,7 +44,7 @@ export class SyncTaskService implements ISyncTaskService {
   private smartContractService;
 
   isCompleteWrite = false;
-  maxHeight = 0;
+  maxHeight = ENV_CONFIG.BLOCK_START;
 
   constructor(
     private _commonUtil: CommonUtil,
@@ -520,13 +520,13 @@ export class SyncTaskService implements ISyncTaskService {
 
           transactions.push(newTx);
 
-          // Push data to array, it's insert data to Influxd db
-          influxdbTrans.push({
-            tx_hash: newTx.tx_hash,
-            height: newTx.height,
-            type: newTx.type,
-            timestamp: newTx.timestamp,
-          });
+          // // Push data to array, it's insert data to Influxd db
+          // influxdbTrans.push({
+          //   tx_hash: newTx.tx_hash,
+          //   height: newTx.height,
+          //   type: newTx.type,
+          //   timestamp: newTx.timestamp,
+          // });
 
           // Check to push into list transaction
           const txTypeCheck = txType.substring(txType.lastIndexOf('.') + 1);
@@ -551,8 +551,8 @@ export class SyncTaskService implements ISyncTaskService {
 
         //sync data with transactions
         if (listTransactions.length > 0) {
-          // TODO: Write tx to influxdb
-          this.influxDbClient.writeTxs([...influxdbTrans]);
+          // // TODO: Write tx to influxdb
+          // this.influxDbClient.writeTxs([...influxdbTrans]);
 
           await this.syncDataWithTransactions(listTransactions);
         }
@@ -571,7 +571,7 @@ export class SyncTaskService implements ISyncTaskService {
         newBlock.proposer,
       );
 
-      this.influxDbClient.flushData();
+      await this.influxDbClient.flushData();
 
       /**
        * TODO: Flush pending writes and close writeApi.
@@ -867,63 +867,71 @@ export class SyncTaskService implements ISyncTaskService {
     return results;
   }
 
-
   /**
    * Write block were to influxdb
    * @returns 
    */
   @Interval(2000)
   async BlockMissToInfluxdb() {
-    const numRow = 100;
-    try {
-      if (this.isCompleteWrite) {
-        this._logger.debug(`BlockMissToInfluxdb is running...!`);
-        return;
-      } else {
-        this._logger.debug(`BlockMissToInfluxdb is start write...!`);
-      }
-      this.influxDbClient.initQueryApi();
-
-      if (this.maxHeight === 0) {
-        const output = await this.influxDbClient.getMax('blocks_data', '-300d', 'height');
-        if (parseInt(output.max) > 0) {
-          this.maxHeight = Number(output.max);
+    const numRow = 1000;    
+    if (ENV_CONFIG.SYNC_DATA_INFLUXD) {
+      try {
+        if (this.isCompleteWrite) {
+          this._logger.debug(`BlockMissToInfluxdb is running...!`);
+          return;
+        } else {
+          this._logger.debug(`BlockMissToInfluxdb is start write...!`);
         }
-      }
+        this.influxDbClient.initQueryApi();
 
-      const blocks = await this.blockRepository.find({
-        where: {
-          height: Between((this.maxHeight + 1), this.maxHeight + numRow)
-        }
-      });
+        // if (this.maxHeight === 0) {
+        //   const output = await this.influxDbClient.getMax('blocks_measurement', '-300d', 'height');
+        //   if (parseInt(output.max) > 0) {
+        //     this.maxHeight = Number(output.max);
+        //   }
+        // }
+        const blocks = await this.blockRepository.find({
+          where: {
+            height: Between((this.maxHeight + 1), this.maxHeight + numRow)
+          }
+        });
 
-      if (blocks.length > 0) {
-        this.isCompleteWrite = true;
-        // TODO: init write api
-        this.influxDbClient.initWriteApi();
-        const points: Array<any> = [];
-        for (let idx = 0; idx < blocks.length; idx++) {
-          const block = blocks[idx];
-          points.push({
-            chainid: block.chainid,
-            block_hash: block.block_hash,
-            height: block.height,
-            num_txs: block.num_txs,
-            timestamp: block.timestamp,
-            proposer: block.proposer
-          });
-        }
+        this._logger.debug(` Start idx: ${this.maxHeight + 1} --- end idx: ${this.maxHeight + numRow}`);
+        if (blocks && blocks.length > 0) {
+          this.isCompleteWrite = true;
+          // TODO: init write api
+          this.influxDbClient.initWriteApi();
+          const points: Array<any> = [];
+          for (let idx = 0; idx < blocks.length; idx++) {
+            const block = blocks[idx];
+            points.push({
+              chainid: block.chainid,
+              block_hash: block.block_hash,
+              height: block.height,
+              num_txs: block.num_txs,
+              timestamp: block.timestamp,
+              proposer: block.proposer
+            });
+          }
 
-        if (points.length > 0) {
-          await this.influxDbClient.writeBlocks(points);
+          if (points.length > 0) {
+            this.influxDbClient.writeBlocks(points);
+            this._logger.debug(`BlockMissToInfluxdb is start write successfully`);
+          }
+          this.isCompleteWrite = false;
+          this.maxHeight = this.maxHeight + numRow;
+        } else {
+          // if block empty then get height
+          const output = await this.influxDbClient.getMax('blocks_measurement', '-300d', 'height');
+          if (parseInt(output.max) > 0) {
+            this.maxHeight = Number(output.max);
+          }
         }
+      } catch (err) {
         this.isCompleteWrite = false;
-        this.maxHeight = this.maxHeight + numRow;
-        this._logger.debug(`BlockMissToInfluxdb is start write successfully`);
+        this._logger.error(`BlockMissToInfluxdb call error: ${err.stack}`);
+        throw err;
       }
-    } catch (err) {
-      this.isCompleteWrite = false;
-      this._logger.error(`BlockMissToInfluxdb call error: ${err.stack}`);
     }
   }
 }

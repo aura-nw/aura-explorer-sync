@@ -16,7 +16,7 @@ export class InfluxDBClient {
     public url: string,
     public token: string,
   ) {
-    this.client = new InfluxDB({ url, token });
+    this.client = new InfluxDB({ url, token});
   }
 
   initQueryApi(): void {
@@ -80,14 +80,14 @@ export class InfluxDBClient {
    * @param proposer
    */
   writeBlock(height, block_hash, num_txs, chainid, timestamp, proposer): void {
-    // const convertTime = new Date(timestamp.toString());
-    // convertTime.setMilliseconds(Number(String(height).slice(-3)));
+    const convertTime =  this.convertDate(timestamp);
+    convertTime.setMilliseconds(0);
     const point = new Point('blocks')
       .tag('chainid', chainid)
-      .stringField('block_hash', block_hash)
+      .stringField('blocks_measurement', block_hash)
       .intField('height', height)
       .intField('num_txs', num_txs)
-      .timestamp(this.convertDate(timestamp))
+      .timestamp(convertTime)
       .stringField('proposer', proposer);
     this.writeApi.writePoint(point);
   }
@@ -225,8 +225,8 @@ export class InfluxDBClient {
   /**
    * Flush data to insert record influxdb
    */
-  flushData() {
-    this.writeApi.flush();
+  async flushData() {
+    await this.writeApi.flush();
   }
 
   /**
@@ -265,12 +265,13 @@ export class InfluxDBClient {
    * Write blocks to Influxd
    * @param values 
    */
-  writeBlocks(values: Array<any>): void {
+  async writeBlocks(values: Array<any>): Promise<void> {
     const points: Array<Point> = [];
     values.forEach((item) => {
-      const timestamp = new Date(item.timestamp.toString());
-      timestamp.setMilliseconds(Number(String(item.height).slice(-3)));
-      const point = new Point('blocks_data')
+      const timestamp = this.convertDate(item.timestamp);
+      timestamp.setMilliseconds(0);
+
+      const point = new Point('blocks_measurement')
         .tag('chainid', item.chainid)
         .stringField('block_hash', item.block_hash)
         .intField('height', item.height)
@@ -282,7 +283,7 @@ export class InfluxDBClient {
 
     if (points.length > 0) {
       this.writeApi.writePoints(points);
-      this.writeApi.flush();
+      await this.writeApi.flush();
     }
   }
 }
