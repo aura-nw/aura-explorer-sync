@@ -82,9 +82,9 @@ export class InfluxDBClient {
   writeBlock(height, block_hash, num_txs, chainid, timestamp, proposer): void {
     const convertTime =  this.convertDate(timestamp);
     convertTime.setMilliseconds(0);
-    const point = new Point('blocks')
+    const point = new Point('blocks_measurement')
       .tag('chainid', chainid)
-      .stringField('blocks_measurement', block_hash)
+      .stringField('block_hash', block_hash)
       .intField('height', height)
       .intField('num_txs', num_txs)
       .timestamp(convertTime)
