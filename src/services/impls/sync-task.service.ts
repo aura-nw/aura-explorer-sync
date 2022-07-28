@@ -892,11 +892,7 @@ export class SyncTaskService implements ISyncTaskService {
         // }
 
         this._logger.debug(` Start idx: ${this.maxHeight + 1} --- end idx: ${this.maxHeight + numRow}`);
-        const blocks = await this.blockRepository.find({
-          where: {
-            height: Between((this.maxHeight + 1), this.maxHeight + numRow)
-          }
-        });
+        const blocks = await this.blockRepository.getBlockByRange((this.maxHeight + 1), (this.maxHeight + numRow));
 
         this._logger.debug(` Push data to array to write Influxdb`);
         if (blocks && blocks.length > 0) {
