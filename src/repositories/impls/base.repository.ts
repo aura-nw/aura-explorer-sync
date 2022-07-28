@@ -10,6 +10,12 @@ export class BaseRepository implements IBaseRepository {
   public constructor(repos) {
     this._repos = repos;
   }
+
+  /**
+   * Find data
+   * @param options 
+   * @returns 
+   */
   public find(options: any): Promise<any> {
     return this._repos.find(options);
   }
