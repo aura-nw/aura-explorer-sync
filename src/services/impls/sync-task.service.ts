@@ -873,7 +873,7 @@ export class SyncTaskService implements ISyncTaskService {
    */
   @Interval(2000)
   async BlockMissToInfluxdb() {
-    const numRow = 1000;    
+    const numRow = 500;    
     if (ENV_CONFIG.SYNC_DATA_INFLUXD) {
       try {
         if (this.isCompleteWrite) {
@@ -890,13 +890,11 @@ export class SyncTaskService implements ISyncTaskService {
         //     this.maxHeight = Number(output.max);
         //   }
         // }
-        const blocks = await this.blockRepository.find({
-          where: {
-            height: Between((this.maxHeight + 1), this.maxHeight + numRow)
-          }
-        });
 
         this._logger.debug(` Start idx: ${this.maxHeight + 1} --- end idx: ${this.maxHeight + numRow}`);
+        const blocks = await this.blockRepository.getBlockByRange((this.maxHeight + 1), (this.maxHeight + numRow));
+
+        this._logger.debug(` Push data to array to write Influxdb`);
         if (blocks && blocks.length > 0) {
           this.isCompleteWrite = true;
           // TODO: init write api
@@ -913,7 +911,7 @@ export class SyncTaskService implements ISyncTaskService {
               proposer: block.proposer
             });
           }
-
+          this._logger.debug(` Push data complete`);
           if (points.length > 0) {
             this.influxDbClient.writeBlocks(points);
             this._logger.debug(`BlockMissToInfluxdb is start write successfully`);
