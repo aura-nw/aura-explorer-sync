@@ -520,14 +520,6 @@ export class SyncTaskService implements ISyncTaskService {
 
           transactions.push(newTx);
 
-          // // Push data to array, it's insert data to Influxd db
-          // influxdbTrans.push({
-          //   tx_hash: newTx.tx_hash,
-          //   height: newTx.height,
-          //   type: newTx.type,
-          //   timestamp: newTx.timestamp,
-          // });
-
           // Check to push into list transaction
           const txTypeCheck = txType.substring(txType.lastIndexOf('.') + 1);
           if (
@@ -883,13 +875,6 @@ export class SyncTaskService implements ISyncTaskService {
           this._logger.debug(`BlockMissToInfluxdb is start write...!`);
         }
         this.influxDbClient.initQueryApi();
-
-        // if (this.maxHeight === 0) {
-        //   const output = await this.influxDbClient.getMax('blocks_measurement', '-300d', 'height');
-        //   if (parseInt(output.max) > 0) {
-        //     this.maxHeight = Number(output.max);
-        //   }
-        // }
 
         this._logger.debug(` Start idx: ${this.maxHeight + 1} --- end idx: ${this.maxHeight + numRow}`);
         const blocks = await this.blockRepository.getBlockByRange((this.maxHeight + 1), (this.maxHeight + numRow));
