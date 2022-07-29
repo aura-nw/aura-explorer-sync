@@ -16,7 +16,7 @@ export class InfluxDBClient {
     public url: string,
     public token: string,
   ) {
-    this.client = new InfluxDB({ url, token });
+    this.client = new InfluxDB({ url, token});
   }
 
   initQueryApi(): void {
@@ -80,12 +80,14 @@ export class InfluxDBClient {
    * @param proposer
    */
   writeBlock(height, block_hash, num_txs, chainid, timestamp, proposer): void {
-    const point = new Point('blocks')
+    const convertTime =  this.convertDate(timestamp);
+    convertTime.setMilliseconds(0);
+    const point = new Point('blocks_measurement')
       .tag('chainid', chainid)
       .stringField('block_hash', block_hash)
       .intField('height', height)
       .intField('num_txs', num_txs)
-      .timestamp(this.convertDate(timestamp))
+      .timestamp(convertTime)
       .stringField('proposer', proposer);
     this.writeApi.writePoint(point);
   }
@@ -217,5 +219,71 @@ export class InfluxDBClient {
       .stringField('validator_address', validator_address)
       .stringField('height', height);
     this.writeApi.writePoint(point);
+  }
+
+
+  /**
+   * Flush data to insert record influxdb
+   */
+  async flushData() {
+    await this.writeApi.flush();
+  }
+
+  /**
+   * Get max data by column
+   * @param measurement 
+   * @param start 
+   * @param coloumn 
+   * @returns 
+   */
+  getMax(measurement: string, start: string, coloumn: string): Promise<any> {
+    const query = `from(bucket: "${this.bucket}") |> range(start: ${start}) |> filter(fn: (r) => r._measurement == "${measurement}")|> filter(fn: (r) => r._field == "${coloumn}")|> max() `;
+
+    const results: { max: number } = { max: 0 };
+
+    const output = new Promise((resolve) => {
+      this.queryApi.queryRows(query, {
+        next(row, tableMeta) {
+          const o = tableMeta.toObject(row);
+          results.max = Number(o._value);
+        },
+        error(error) {
+          console.error(error);
+          console.log('Finished ERROR');
+          return resolve(results);
+        },
+        complete() {
+          console.log('Finished SUCCESS');
+          return resolve(results);
+        },
+      });
+    });
+    return output;
+  }
+
+  /**
+   * Write blocks to Influxd
+   * @param values 
+   */
+  async writeBlocks(values: Array<any>): Promise<void> {
+    const points: Array<Point> = [];
+    values.forEach((item) => {
+      const timestamp = this.convertDate(item.timestamp);
+      timestamp.setMilliseconds(0);
+
+      const point = new Point('blocks_measurement')
+        .tag('chainid', item.chainid)
+        .stringField('block_hash', item.block_hash)
+        .intField('height', item.height)
+        .intField('num_txs', item.num_txs)
+        .timestamp(timestamp)
+        .stringField('proposer', item.proposer);
+      points.push(point);
+    });
+
+    if (points.length > 0) {
+      this.writeApi.writePoints(points);
+      await this.writeApi.flush();
+    }
   }
 }
