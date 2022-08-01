@@ -133,7 +133,7 @@ export class InfluxDBClient {
    * @param timestamp
    * @returns
    */
-  private convertDate(timestamp: any): Date {
+  convertDate(timestamp: any): Date {
     const strTime = String(timestamp);
     const idx = strTime.lastIndexOf('.');
     let dateConvert = (idx > (-1)) ? strTime.substring(0, idx) + '.000Z' : strTime;
