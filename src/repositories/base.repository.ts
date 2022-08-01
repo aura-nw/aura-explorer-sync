@@ -10,6 +10,11 @@ export class BaseRepository<T> {
     this._repos = repos;
   }
 
+  /**
+   * Find data
+   * @param options 
+   * @returns 
+   */
   public find(options: any): Promise<T[]> {
     return this._repos.find(options);
   }
