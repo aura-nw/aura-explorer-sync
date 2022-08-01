@@ -443,6 +443,7 @@ export class SyncTaskService {
       );
 
       // make block object from block data
+      blockData.block.header.time = this.influxDbClient.convertDate(blockData.block.header.time);
       const newBlock = SyncDataHelpers.makeBlockData(blockData);
 
       const operatorAddress = blockData.block.header.proposer_address;
