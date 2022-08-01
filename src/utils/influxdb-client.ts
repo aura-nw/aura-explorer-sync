@@ -16,7 +16,7 @@ export class InfluxDBClient {
     public url: string,
     public token: string,
   ) {
-    this.client = new InfluxDB({ url, token});
+    this.client = new InfluxDB({ url, token });
   }
 
   initQueryApi(): void {
@@ -80,14 +80,12 @@ export class InfluxDBClient {
    * @param proposer
    */
   writeBlock(height, block_hash, num_txs, chainid, timestamp, proposer): void {
-    const convertTime =  this.convertDate(timestamp);
-    convertTime.setMilliseconds(0);
     const point = new Point('blocks_measurement')
       .tag('chainid', chainid)
       .stringField('block_hash', block_hash)
       .intField('height', height)
       .intField('num_txs', num_txs)
-      .timestamp(convertTime)
+      .timestamp(this.convertDate(timestamp))
       .stringField('proposer', proposer);
     this.writeApi.writePoint(point);
   }
@@ -136,7 +134,10 @@ export class InfluxDBClient {
    * @returns
    */
   private convertDate(timestamp: any): Date {
-    return new Date(timestamp.toString());
+    const strTime = String(timestamp);
+    const idx = strTime.lastIndexOf('.');
+    let dateConvert = (idx > (-1)) ? strTime.substring(0, idx) + '.000Z' : strTime;
+    return new Date(dateConvert);
   }
 
   /**
@@ -268,15 +269,12 @@ export class InfluxDBClient {
   async writeBlocks(values: Array<any>): Promise<void> {
     const points: Array<Point> = [];
     values.forEach((item) => {
-      const timestamp = this.convertDate(item.timestamp);
-      timestamp.setMilliseconds(0);
-
       const point = new Point('blocks_measurement')
         .tag('chainid', item.chainid)
         .stringField('block_hash', item.block_hash)
         .intField('height', item.height)
         .intField('num_txs', item.num_txs)
-        .timestamp(timestamp)
+        .timestamp(this.convertDate(item.timestamp))
         .stringField('proposer', item.proposer);
       points.push(point);
     });
