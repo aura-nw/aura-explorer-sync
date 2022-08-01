@@ -21,6 +21,7 @@ import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
 import { SyncProposalService } from './services/sync-proposal.service';
 import { SyncTaskService } from './services/sync-task.service';
+import { SyncTokenService } from './services/sync-token.service';
 import { ConfigService } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 
@@ -65,6 +66,7 @@ const services = [
   SyncProposalService,
   SyncTaskService,
   SyncContractCodeService,
+  SyncTokenService
 ]
 @Module({
   imports: [

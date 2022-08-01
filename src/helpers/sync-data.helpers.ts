@@ -14,6 +14,7 @@ import {
   ProposalDeposit,
   ProposalVote,
   SmartContract,
+  TokenContract,
   Transaction,
   Validator,
 } from '../entities';
@@ -468,5 +469,32 @@ export class SyncDataHelpers {
     }
 
     return proposal;
+  }
+
+  static makerCw20TokenData(item: any, marketingInfo: any) {
+    const tokenContract = new TokenContract();
+    tokenContract.asset_id = item.asset_id;
+    tokenContract.image = '';
+    tokenContract.contract_address = item.constract_address;
+    tokenContract.balance = Number(item.balance);
+    tokenContract.owner = item.owner;
+    tokenContract.created_at = item.createdAt;
+    tokenContract.updated_at = item.updatedAt;
+    tokenContract.name = '';
+    tokenContract.symbol = '';
+    tokenContract.decimals = 0;
+    tokenContract.total_supply = 0;
+    if (item?.asset_info && item.asset_info?.data) {
+      tokenContract.name = item.asset_info.data.name;
+      tokenContract.symbol = item.asset_info.data.symbol;
+      tokenContract.decimals = Number(item.asset_info.data.decimals);
+      tokenContract.total_supply = Number(item.asset_info.data.total_supply);
+    }
+    tokenContract.description = '';
+    if (marketingInfo?.data && marketingInfo.data?.description) {
+      tokenContract.description = marketingInfo.data.description;
+    }
+
+    return tokenContract;
   }
 }
