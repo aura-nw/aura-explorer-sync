@@ -3,12 +3,14 @@ import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
 import { Block, BlockSyncError, Delegation, DelegatorReward, HistoryProposal, MissedBlock, Proposal, ProposalDeposit, ProposalVote, SmartContract, SmartContractCode, SyncStatus, TokenContract, Transaction, Validator } from './entities';
+import { Nft } from './entities/nft.entity';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
 import { BlockRepository } from './repositories/block.repository';
 import { DelegationRepository } from './repositories/delegation.repository';
 import { DelegatorRewardRepository } from './repositories/delegator-reward.repository';
 import { HistoryProposalRepository } from './repositories/history-proposal.repository';
 import { MissedBlockRepository } from './repositories/missed-block.repository';
+import { NftRepository } from './repositories/nft.repository';
 import { ProposalDepositRepository } from './repositories/proposal-deposit.repository';
 import { ProposalVoteRepository } from './repositories/proposal-vote.repository';
 import { ProposalRepository } from './repositories/proposal.repository';
@@ -42,6 +44,7 @@ const entities = [
   SmartContract,
   TokenContract,
   SmartContractCode,
+  Nft
 ];
 
 const repositories = [
@@ -59,7 +62,8 @@ const repositories = [
   TransactionRepository,
   SmartContractRepository,
   TokenContractRepository,
-  SmartContractCodeRepository
+  SmartContractCodeRepository,
+  NftRepository
 ];
 
 const services = [

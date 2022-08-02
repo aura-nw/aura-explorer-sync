@@ -1,8 +1,10 @@
+import { Nft } from '../entities/nft.entity';
 import {
   CONST_CHAR,
   CONST_DELEGATE_TYPE,
   CONST_MSG_TYPE,
   CONST_PROPOSAL_TYPE,
+  CONTRACT_TYPE,
   SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
 import {
@@ -473,6 +475,7 @@ export class SyncDataHelpers {
 
   static makerCw20TokenData(item: any, marketingInfo: any) {
     const tokenContract = new TokenContract();
+    tokenContract.type = CONTRACT_TYPE.CW20;
     tokenContract.contract_address = item.constract_address;
     tokenContract.balance = Number(item.balance);
     tokenContract.owner = item.owner;
@@ -490,11 +493,46 @@ export class SyncDataHelpers {
     }
     tokenContract.description = '';
     tokenContract.image = '';
-    if (marketingInfo?.data && marketingInfo.data?.description) {
-      tokenContract.description = marketingInfo.data.description;
-      tokenContract.image = marketingInfo.data.logo.url;
+    if (marketingInfo?.data) {
+      tokenContract.description = marketingInfo.data?.description ? marketingInfo.data.description : '';
+      tokenContract.image = marketingInfo.data?.logo?.url ? marketingInfo.data.logo.url : '';
     }
 
     return tokenContract;
+  }
+
+  static makerCw721TokenData(item: any, tokenInfo: any) {
+    //sync data token
+    const tokenContract = new TokenContract();
+    tokenContract.type = CONTRACT_TYPE.CW721;
+    tokenContract.image = '';
+    tokenContract.description = '';
+    tokenContract.contract_address = item.constract_address;
+    tokenContract.decimals = 0;
+    tokenContract.total_supply = 0;
+    tokenContract.balance = 0;
+    tokenContract.owner = item.owner;
+    tokenContract.created_at = item.createdAt;
+    tokenContract.updated_at = item.updatedAt;
+    tokenContract.name = '';
+    tokenContract.symbol = '';
+    if (tokenInfo?.data) {
+      tokenContract.name = tokenInfo.data.name;
+      tokenContract.symbol = tokenInfo.data.symbol;
+    }
+    //sync data nft
+    const nft = new Nft();
+    nft.contract_address = item.constract_address;
+    nft.token_id = item.token_id;
+    nft.created_at = item.createdAt;
+    nft.updated_at = item.updatedAt;
+    nft.owner = '';
+    nft.uri = '';
+    if (item?.asset_info && item.asset_info?.data) {
+      nft.owner = item.asset_info.data?.access?.owner ? item.asset_info.data.access.owner : '';
+      nft.uri = item.asset_info.data?.info?.token_uri ? item.asset_info.data.info.token_uri : '';
+    }
+
+    return [tokenContract, nft];
   }
 }
