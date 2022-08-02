@@ -473,7 +473,6 @@ export class SyncDataHelpers {
 
   static makerCw20TokenData(item: any, marketingInfo: any) {
     const tokenContract = new TokenContract();
-    tokenContract.image = '';
     tokenContract.contract_address = item.constract_address;
     tokenContract.balance = Number(item.balance);
     tokenContract.owner = item.owner;
@@ -490,8 +489,10 @@ export class SyncDataHelpers {
       tokenContract.total_supply = Number(item.asset_info.data.total_supply);
     }
     tokenContract.description = '';
+    tokenContract.image = '';
     if (marketingInfo?.data && marketingInfo.data?.description) {
       tokenContract.description = marketingInfo.data.description;
+      tokenContract.image = marketingInfo.data.logo.url;
     }
 
     return tokenContract;
