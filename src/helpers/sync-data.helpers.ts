@@ -473,7 +473,6 @@ export class SyncDataHelpers {
 
   static makerCw20TokenData(item: any, marketingInfo: any) {
     const tokenContract = new TokenContract();
-    tokenContract.asset_id = item.asset_id;
     tokenContract.image = '';
     tokenContract.contract_address = item.constract_address;
     tokenContract.balance = Number(item.balance);
