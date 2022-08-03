@@ -95,10 +95,10 @@ export class SyncTaskService {
           this.statusRepository.findOne()
         ]);
 
-      if (Number(currentBlock?.height) > Number(blockStatus.current_block)) {
+      if (Number(currentBlock?.height) > Number(blockStatus?.current_block)) {
         currentHeight = Number(currentBlock.height);
       } else {
-        currentHeight = Number(blockStatus.current_block);
+        currentHeight = Number(blockStatus.current_block) || 0;
       }
 
       let latestBlk = Number(blockLatest?.block?.header?.height || 0);
