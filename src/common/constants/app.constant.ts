@@ -113,6 +113,6 @@ export enum CONTRACT_CODE_STATUS {
 
 export enum INDEXER_API {
   CHECK_STATUS_CODE_ID = 'api/v1/codeid/%s/%s/checkStatus',
-  GET_LIST_CW20_TOKENS_FIRST_TIME = 'api/v1/asset/getByContractType?contractType=%s&chainid=%s&pageLimit=100&pageOffset=0&countTotal=true',
-  GET_LIST_CW20_TOKENS_WITH_NEXT_KEY = 'api/v1/asset/getByContractType?contractType=%s&chainid=%s&pageLimit=100&nextKey=%s'
+  GET_LIST_TOKENS_FIRST_TIME = 'api/v1/asset/getByContractType?contractType=%s&chainid=%s&pageLimit=100&pageOffset=0&countTotal=true',
+  GET_LIST_TOKENS_WITH_NEXT_KEY = 'api/v1/asset/getByContractType?contractType=%s&chainid=%s&pageLimit=100&nextKey=%s'
 }
