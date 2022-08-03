@@ -55,7 +55,7 @@ export class SyncTokenService {
                         this.api,
                         `${util.format(
                             NODE_API.CONTRACT_INFO,
-                            item.constract_address,
+                            item.contract_address,
                             base64Request
                         )}`
                     );
@@ -108,7 +108,7 @@ export class SyncTokenService {
         return result;
     }
 
-    // @Interval(2000)
+    @Interval(2000)
     async syncCw721Tokens() {
         // check status
         if (this.isSyncCw721Tokens) {
@@ -132,7 +132,7 @@ export class SyncTokenService {
                         this.api,
                         `${util.format(
                             NODE_API.CONTRACT_INFO,
-                            item.constract_address,
+                            item.contract_address,
                             base64Request
                         )}`
                     );

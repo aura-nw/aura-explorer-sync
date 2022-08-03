@@ -476,7 +476,7 @@ export class SyncDataHelpers {
   static makerCw20TokenData(item: any, marketingInfo: any) {
     const tokenContract = new TokenContract();
     tokenContract.type = CONTRACT_TYPE.CW20;
-    tokenContract.contract_address = item.constract_address;
+    tokenContract.contract_address = item.contract_address;
     tokenContract.balance = Number(item.balance);
     tokenContract.owner = item.owner;
     tokenContract.created_at = item.createdAt;
@@ -507,7 +507,7 @@ export class SyncDataHelpers {
     tokenContract.type = CONTRACT_TYPE.CW721;
     tokenContract.image = '';
     tokenContract.description = '';
-    tokenContract.contract_address = item.constract_address;
+    tokenContract.contract_address = item.contract_address;
     tokenContract.decimals = 0;
     tokenContract.total_supply = 0;
     tokenContract.balance = 0;
@@ -522,7 +522,7 @@ export class SyncDataHelpers {
     }
     //sync data nft
     const nft = new Nft();
-    nft.contract_address = item.constract_address;
+    nft.contract_address = item.contract_address;
     nft.token_id = item.token_id;
     nft.created_at = item.createdAt;
     nft.updated_at = item.updatedAt;
