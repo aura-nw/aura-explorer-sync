@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import {
   CONST_PROPOSAL_STATUS,
+  CONST_PROPOSAL_TYPE,
   NODE_API
 } from '\../common/constants/app.constant';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -109,6 +110,14 @@ export class SyncProposalService {
                 100) /
               Number(bondedTokens.pool.bonded_tokens);
           }
+
+          // sync request amount
+          const proposalType = proposal.pro_type.substring(
+            proposal.pro_type.lastIndexOf('.') + 1,
+          );
+          if (proposalType === CONST_PROPOSAL_TYPE.COMMUNITY_POOL_SPEND_PROPOSAL && item.content?.amount.length > 0) {
+            proposal.request_amount = Number(item.content.amount[0].amount);
+          } 
 
           // insert into table proposals
           await this.proposalRepository.upsert([proposal], []);
