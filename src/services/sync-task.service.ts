@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
@@ -10,29 +10,27 @@ import {
   CONST_PUBKEY_ADDR,
   NODE_API,
   SMART_CONTRACT_VERIFICATION
-} from '../../common/constants/app.constant';
-import { BlockSyncError, MissedBlock } from '../../entities';
-import { SyncDataHelpers } from '../../helpers/sync-data.helpers';
-import { REPOSITORY_INTERFACE } from '../../module.config';
-import { IBlockSyncErrorRepository } from '../../repositories/iblock-sync-error.repository';
-import { IBlockRepository } from '../../repositories/iblock.repository';
-import { IDelegationRepository } from '../../repositories/idelegation.repository';
-import { IDelegatorRewardRepository } from '../../repositories/idelegator-reward.repository';
-import { IHistoryProposalRepository } from '../../repositories/ihistory-proposal.repository';
-import { IMissedBlockRepository } from '../../repositories/imissed-block.repository';
-import { IProposalDepositRepository } from '../../repositories/iproposal-deposit.repository';
-import { IProposalVoteRepository } from '../../repositories/iproposal-vote.repository';
-import { ISmartContractRepository } from '../../repositories/ismart-contract.repository';
-import { ISyncStatusRepository } from '../../repositories/isync-status.repository';
-import { ITransactionRepository } from '../../repositories/itransaction.repository';
-import { IValidatorRepository } from '../../repositories/ivalidator.repository';
-import { ENV_CONFIG } from '../../shared/services/config.service';
-import { CommonUtil } from '../../utils/common.util';
-import { InfluxDBClient } from '../../utils/influxdb-client';
-import { ISyncTaskService } from '../isync-task.service';
+} from '../common/constants/app.constant';
+import { BlockSyncError, MissedBlock } from '../entities';
+import { SyncDataHelpers } from '../helpers/sync-data.helpers';
+import { BlockSyncErrorRepository } from '../repositories/block-sync-error.repository';
+import { BlockRepository } from '../repositories/block.repository';
+import { DelegationRepository } from '../repositories/delegation.repository';
+import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
+import { HistoryProposalRepository } from '../repositories/history-proposal.repository';
+import { MissedBlockRepository } from '../repositories/missed-block.repository';
+import { ProposalDepositRepository } from '../repositories/proposal-deposit.repository';
+import { ProposalVoteRepository } from '../repositories/proposal-vote.repository';
+import { SmartContractRepository } from '../repositories/smart-contract.repository';
+import { SyncStatusRepository } from '../repositories/sync-status.repository';
+import { TransactionRepository } from '../repositories/transaction.repository';
+import { ValidatorRepository } from '../repositories/validator.repository';
+import { ENV_CONFIG } from '../shared/services/config.service';
+import { CommonUtil } from '../utils/common.util';
+import { InfluxDBClient } from '../utils/influxdb-client';
 
 @Injectable()
-export class SyncTaskService implements ISyncTaskService {
+export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
   private rpc;
   private api;
@@ -48,30 +46,18 @@ export class SyncTaskService implements ISyncTaskService {
 
   constructor(
     private _commonUtil: CommonUtil,
-    @Inject(REPOSITORY_INTERFACE.IVALIDATOR_REPOSITORY)
-    private validatorRepository: IValidatorRepository,
-    @Inject(REPOSITORY_INTERFACE.IMISSED_BLOCK_REPOSITORY)
-    private missedBlockRepository: IMissedBlockRepository,
-    @Inject(REPOSITORY_INTERFACE.IBLOCK_SYNC_ERROR_REPOSITORY)
-    private blockSyncErrorRepository: IBlockSyncErrorRepository,
-    @Inject(REPOSITORY_INTERFACE.IBLOCK_REPOSITORY)
-    private blockRepository: IBlockRepository,
-    @Inject(REPOSITORY_INTERFACE.ITRANSACTION_REPOSITORY)
-    private txRepository: ITransactionRepository,
-    @Inject(REPOSITORY_INTERFACE.ISYNC_STATUS_REPOSITORY)
-    private statusRepository: ISyncStatusRepository,
-    @Inject(REPOSITORY_INTERFACE.IPROPOSAL_DEPOSIT_REPOSITORY)
-    private proposalDepositRepository: IProposalDepositRepository,
-    @Inject(REPOSITORY_INTERFACE.IPROPOSAL_VOTE_REPOSITORY)
-    private proposalVoteRepository: IProposalVoteRepository,
-    @Inject(REPOSITORY_INTERFACE.IHISTORY_PROPOSAL_REPOSITORY)
-    private historyProposalRepository: IHistoryProposalRepository,
-    @Inject(REPOSITORY_INTERFACE.IDELEGATION_REPOSITORY)
-    private delegationRepository: IDelegationRepository,
-    @Inject(REPOSITORY_INTERFACE.IDELEGATOR_REWARD_REPOSITORY)
-    private delegatorRewardRepository: IDelegatorRewardRepository,
-    @Inject(REPOSITORY_INTERFACE.ISMART_CONTRACT_REPOSITORY)
-    private smartContractRepository: ISmartContractRepository,
+    private validatorRepository: ValidatorRepository,
+    private missedBlockRepository: MissedBlockRepository,
+    private blockSyncErrorRepository: BlockSyncErrorRepository,
+    private blockRepository: BlockRepository,
+    private txRepository: TransactionRepository,
+    private statusRepository: SyncStatusRepository,
+    private proposalDepositRepository: ProposalDepositRepository,
+    private proposalVoteRepository: ProposalVoteRepository,
+    private historyProposalRepository: HistoryProposalRepository,
+    private delegationRepository: DelegationRepository,
+    private delegatorRewardRepository: DelegatorRewardRepository,
+    private smartContractRepository: SmartContractRepository,
     @InjectSchedule() private readonly schedule: Schedule,
   ) {
     this._logger.log(
@@ -98,6 +84,7 @@ export class SyncTaskService implements ISyncTaskService {
   @Interval(ENV_CONFIG.TIMES_SYNC)
   async cronSync() {
     // Get the highest block and insert into SyncBlockError
+    const blockErrors = [];
     try {
       let currentHeight = 0;
       this._logger.log('start cron generate block sync error');
@@ -108,14 +95,13 @@ export class SyncTaskService implements ISyncTaskService {
           this.statusRepository.findOne()
         ]);
 
-      if (Number(currentBlock?.height) > Number(blockStatus.current_block)) {
+      if (Number(currentBlock?.height) > Number(blockStatus?.current_block)) {
         currentHeight = Number(currentBlock.height);
       } else {
-        currentHeight = Number(blockStatus.current_block);
+        currentHeight = Number(blockStatus.current_block) || 0;
       }
 
       let latestBlk = Number(blockLatest?.block?.header?.height || 0);
-      const blockErrors = [];
 
       if (latestBlk > currentHeight) {
         if (latestBlk - currentHeight > this.threads) {
@@ -129,10 +115,11 @@ export class SyncTaskService implements ISyncTaskService {
         }
       }
       if (blockErrors.length > 0) {
-        await this.blockSyncErrorRepository.upsert(blockErrors, [])
+        this._logger.log(`blockErrors:${blockErrors}`);
+        await this.blockSyncErrorRepository.upsert(blockErrors, ['height'])
       }
     } catch (error) {
-      this._logger.log('error when generate base blocks', error.stack);
+      this._logger.log(`error when generate base blocks:${blockErrors}`, error.stack);
       throw error;
     }
 
@@ -155,7 +142,7 @@ export class SyncTaskService implements ISyncTaskService {
       results.forEach(el => {
         try {
           this.schedule.scheduleTimeoutJob(
-            el.height,
+            el.height.toString(),
             100,
             async () => {
               try {
@@ -456,6 +443,7 @@ export class SyncTaskService implements ISyncTaskService {
       );
 
       // make block object from block data
+      blockData.block.header.time = this.influxDbClient.convertDate(blockData.block.header.time);
       const newBlock = SyncDataHelpers.makeBlockData(blockData);
 
       const operatorAddress = blockData.block.header.proposer_address;
@@ -865,7 +853,7 @@ export class SyncTaskService implements ISyncTaskService {
    */
   @Interval(2000)
   async BlockMissToInfluxdb() {
-    const numRow = 500;    
+    const numRow = 500;
     if (ENV_CONFIG.SYNC_DATA_INFLUXD) {
       try {
         if (this.isCompleteWrite) {
@@ -880,12 +868,13 @@ export class SyncTaskService implements ISyncTaskService {
         const blocks = await this.blockRepository.getBlockByRange((this.maxHeight + 1), (this.maxHeight + numRow));
 
         this._logger.debug(` Push data to array to write Influxdb`);
-        if (blocks && blocks.length > 0) {
+        const length = blocks?.length;
+        if (blocks && length > 0) {
           this.isCompleteWrite = true;
           // TODO: init write api
           this.influxDbClient.initWriteApi();
           const points: Array<any> = [];
-          for (let idx = 0; idx < blocks.length; idx++) {
+          for (let idx = 0; idx < length; idx++) {
             const block = blocks[idx];
             points.push({
               chainid: block.chainid,
@@ -901,14 +890,15 @@ export class SyncTaskService implements ISyncTaskService {
             this.influxDbClient.writeBlocks(points);
             this._logger.debug(`BlockMissToInfluxdb is start write successfully`);
           }
-          this.isCompleteWrite = false;
-          this.maxHeight = this.maxHeight + numRow;
-        } else {
-          // if block empty then get height
-          const output = await this.influxDbClient.getMax('blocks_measurement', '-300d', 'height');
-          if (parseInt(output.max) > 0) {
-            this.maxHeight = Number(output.max);
+
+          // If the result is of length numRow or not? If equals set maxHeight = this.maxHeight + numRow else set maxHeight = this.maxHeight + length
+          if (length === numRow) {
+            this.maxHeight = this.maxHeight + numRow;
+          } else {
+            this.maxHeight = this.maxHeight + length;
           }
+
+          this.isCompleteWrite = false;
         }
       } catch (err) {
         this.isCompleteWrite = false;

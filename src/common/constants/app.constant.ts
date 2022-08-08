@@ -24,6 +24,7 @@ export enum NODE_API {
   SLASHING_PARAM = `cosmos/slashing/v1beta1/params`,
   SIGNING_INFOS = `cosmos/slashing/v1beta1/signing_infos`,
   LATEST_BLOCK = `blocks/latest`,
+  CONTRACT_INFO = `cosmwasm/wasm/v1/contract/%s/smart/%s`
 }
 
 export enum CONST_PUBKEY_ADDR {
@@ -112,4 +113,6 @@ export enum CONTRACT_CODE_STATUS {
 
 export enum INDEXER_API {
   CHECK_STATUS_CODE_ID = 'api/v1/codeid/%s/%s/checkStatus',
+  GET_LIST_TOKENS_FIRST_TIME = 'api/v1/asset/getByContractType?contractType=%s&chainid=%s&pageLimit=100&pageOffset=0&countTotal=true',
+  GET_LIST_TOKENS_WITH_NEXT_KEY = 'api/v1/asset/getByContractType?contractType=%s&chainid=%s&pageLimit=100&nextKey=%s'
 }

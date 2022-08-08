@@ -98,8 +98,9 @@ export class Validator extends BaseEntityIncrementId {
   website: string;
 
   @Column({
-    default: '',
     name: 'details',
+    nullable: true,
+    type: 'text'
   })
   details: string;
 

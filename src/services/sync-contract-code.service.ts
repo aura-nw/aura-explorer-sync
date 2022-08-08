@@ -1,20 +1,18 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { REPOSITORY_INTERFACE } from '../../module.config';
-import { CommonUtil } from '../../utils/common.util';
-import { ConfigService } from '../../shared/services/config.service';
-import { ISyncContractCodeService } from '../isync-contract-code.service';
-import { ISmartContractCodeRepository } from '../../repositories/ismart-contract-code.repository';
+import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
+import * as util from 'util';
 import {
   CONTRACT_CODE_RESULT,
   CONTRACT_CODE_STATUS,
-  INDEXER_API,
-} from '../../common/constants/app.constant';
-import { SmartContractCode } from '../../entities/smart-contract-code.entity';
-import * as util from 'util';
+  INDEXER_API
+} from '../common/constants/app.constant';
+import { SmartContractCode } from '../entities/smart-contract-code.entity';
+import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
+import { ConfigService } from '../shared/services/config.service';
+import { CommonUtil } from '../utils/common.util';
 
 @Injectable()
-export class SyncContractCodeService implements ISyncContractCodeService {
+export class SyncContractCodeService {
   private readonly _logger = new Logger(SyncContractCodeService.name);
   private indexerUrl;
   private indexerChainId;
@@ -23,8 +21,7 @@ export class SyncContractCodeService implements ISyncContractCodeService {
   constructor(
     private configService: ConfigService,
     private _commonUtil: CommonUtil,
-    @Inject(REPOSITORY_INTERFACE.ISMART_CONTRACT_CODE_REPOSITORY)
-    private smartContractCodeRepository: ISmartContractCodeRepository,
+    private smartContractCodeRepository: SmartContractCodeRepository,
   ) {
     this._logger.log(
       '============== Constructor Sync Contract Code Service ==============',

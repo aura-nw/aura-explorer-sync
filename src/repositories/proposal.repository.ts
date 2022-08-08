@@ -1,18 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ENTITIES_CONFIG } from '../../module.config';
-import { ObjectLiteral, Repository } from 'typeorm';
-import { IProposalRepository } from '../iproposal.repository';
+import { Repository } from 'typeorm';
+import { Proposal } from '../entities';
 import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class ProposalRepository
-  extends BaseRepository
-  implements IProposalRepository {
+export class ProposalRepository extends BaseRepository<Proposal> {
   private readonly _logger = new Logger(ProposalRepository.name);
   constructor(
-    @InjectRepository(ENTITIES_CONFIG.PROPOSAL)
-    private readonly repos: Repository<ObjectLiteral>,
+    @InjectRepository(Proposal)
+    private readonly repos: Repository<Proposal>,
   ) {
     super(repos);
     this._logger.log(
