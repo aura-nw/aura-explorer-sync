@@ -72,6 +72,7 @@ export class Transaction extends BaseEntityIncrementId {
   @Column({
     type: 'text',
     name: 'raw_log_data',
+    nullable: true
   })
   raw_log_data: string;
 

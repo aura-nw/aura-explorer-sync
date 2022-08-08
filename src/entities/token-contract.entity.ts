@@ -1,8 +1,16 @@
+import { CONTRACT_TYPE } from '../common/constants/app.constant';
 import { Column, Entity } from 'typeorm';
 import { BaseEntityIncrementId } from './base/base.entity';
 
 @Entity('token_contracts')
 export class TokenContract extends BaseEntityIncrementId {
+  @Column({
+    name: 'type',
+    type: 'enum',
+    enum: CONTRACT_TYPE,
+  })
+  type: CONTRACT_TYPE;
+
   @Column({ name: 'name' })
   name: string;
 
@@ -18,12 +26,15 @@ export class TokenContract extends BaseEntityIncrementId {
   @Column({ name: 'contract_address' })
   contract_address: string;
 
-  @Column({ name: 'decimal' })
-  decimal: number;
+  @Column({ name: 'decimals' })
+  decimals: number;
 
-  @Column({ name: 'max_total_supply' })
-  max_total_supply: number;
+  @Column({ name: 'total_supply' })
+  total_supply: number;
 
-  @Column({ name: 'is_main_token' })
-  is_main_token: boolean;
+  @Column({ name: 'balance' })
+  balance: number;
+
+  @Column({ name: 'owner' })
+  owner: string;
 }
