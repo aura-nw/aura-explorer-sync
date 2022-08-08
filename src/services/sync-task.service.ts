@@ -684,69 +684,26 @@ export class SyncTaskService {
               const code_id = txData.tx.body.messages[0].code_id;
               const tx_hash = txData.tx_response.txhash;
 
-              const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
-              let smartContractResponse;
-              try {
-                smartContractResponse = await this._commonUtil.getDataAPI(
-                  this.smartContractService,
-                  paramGetHash,
+              const liquidityContractAddr = txData.tx_response.logs[0].events
+                .find(({ type }) => type === CONST_CHAR.WASM)
+                .attributes.find(
+                  ({ key }) => key === CONST_CHAR.LIQUIDITY_TOKEN_ADDR,
+                ).value;
+              if (liquidityContractAddr !== undefined) {
+                const paramGetContract = `/cosmwasm/wasm/v1/contract/${liquidityContractAddr}`;
+                let contractResponse = await this._commonUtil.getDataAPI(
+                  this.api,
+                  paramGetContract,
                 );
-              } catch (error) {
-                this._logger.error(
-                  'Can not connect to smart contract verify service or LCD service',
-                  error,
-                );
+                const liquidityCodeId = contractResponse.contract_info.code_id;
+                const liquidityContractName = contractResponse.contract_info.label;
+                const liquidityContractCreator = contractResponse.contract_info.creator;
+                
+                const liquidityContract = await this.makeInstantiateContractData(height, liquidityCodeId, liquidityContractName, liquidityContractAddr, liquidityContractCreator, tx_hash);
+                smartContracts.push(liquidityContract);
               }
 
-              let contract_hash = '',
-                contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED,
-                contract_match,
-                url,
-                compiler_version,
-                instantiate_msg_schema,
-                query_msg_schema,
-                execute_msg_schema,
-                s3_location;
-              if (smartContractResponse) {
-                contract_hash =
-                  smartContractResponse.Message.length === 64
-                    ? smartContractResponse.Message
-                    : '';
-              }
-              if (contract_hash !== '') {
-                const exactContract =
-                  await this.smartContractRepository.findExactContractByHash(
-                    contract_hash,
-                  );
-                if (exactContract) {
-                  contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-                  contract_match = exactContract.contract_address;
-                  url = exactContract.url;
-                  compiler_version = exactContract.compiler_version;
-                  instantiate_msg_schema = exactContract.instantiate_msg_schema;
-                  query_msg_schema = exactContract.query_msg_schema;
-                  execute_msg_schema = exactContract.execute_msg_schema;
-                  s3_location = exactContract.s3_location;
-                }
-              }
-
-              const smartContract = {
-                height,
-                code_id,
-                contract_name,
-                contract_address,
-                creator_address,
-                contract_hash,
-                tx_hash,
-                url,
-                instantiate_msg_schema,
-                query_msg_schema,
-                execute_msg_schema,
-                contract_match,
-                contract_verification,
-                compiler_version,
-                s3_location,
-              };
+              const smartContract = await this.makeInstantiateContractData(height, code_id, contract_name, contract_address, creator_address, tx_hash);
               smartContracts.push(smartContract);
             } catch (error) {
               this._logger.error(
@@ -796,6 +753,73 @@ export class SyncTaskService {
       });
       await this.smartContractRepository.upsert(smartContracts, []);
     }
+  }
+
+  async makeInstantiateContractData(height: string, code_id: string, contract_name: string, contract_address: string, creator_address: string, tx_hash: string) {
+    const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
+    let smartContractResponse;
+    try {
+      smartContractResponse = await this._commonUtil.getDataAPI(
+        this.smartContractService,
+        paramGetHash,
+      );
+    } catch (error) {
+      this._logger.error(
+        'Can not connect to smart contract verify service or LCD service',
+        error,
+      );
+    }
+
+    let contract_hash = '',
+      contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED,
+      contract_match,
+      url,
+      compiler_version,
+      instantiate_msg_schema,
+      query_msg_schema,
+      execute_msg_schema,
+      s3_location;
+    if (smartContractResponse) {
+      contract_hash =
+        smartContractResponse.Message.length === 64
+          ? smartContractResponse.Message
+          : '';
+    }
+    if (contract_hash !== '') {
+      const exactContract =
+        await this.smartContractRepository.findExactContractByHash(
+          contract_hash,
+        );
+      if (exactContract) {
+        contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
+        contract_match = exactContract.contract_address;
+        url = exactContract.url;
+        compiler_version = exactContract.compiler_version;
+        instantiate_msg_schema = exactContract.instantiate_msg_schema;
+        query_msg_schema = exactContract.query_msg_schema;
+        execute_msg_schema = exactContract.execute_msg_schema;
+        s3_location = exactContract.s3_location;
+      }
+    }
+
+    const smartContract = {
+      height,
+      code_id,
+      contract_name,
+      contract_address,
+      creator_address,
+      contract_hash,
+      tx_hash,
+      url,
+      instantiate_msg_schema,
+      query_msg_schema,
+      execute_msg_schema,
+      contract_match,
+      contract_verification,
+      compiler_version,
+      s3_location,
+    };
+    return smartContract;
   }
 
   /**
