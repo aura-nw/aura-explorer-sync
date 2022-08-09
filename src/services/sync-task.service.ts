@@ -660,14 +660,18 @@ export class SyncTaskService {
                 txData,
                 message,
               );
-              if (_smartContracts.length > 0) {
-                smartContracts = smartContracts.concat(_smartContracts);
-              }
+              _smartContracts.map((item) => {
+                const smartContract = this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
+                smartContracts.push(smartContract);
+              });
+              // if (_smartContracts.length > 0) {
+              //   smartContracts = smartContracts.concat(_smartContracts);
+              // }
               // await this.smartContractRepository.create(contracts);
             } catch (error) {
               this._logger.error(
                 null,
-                `Got error in create minter transaction`,
+                `Got error in execute contract transaction`,
               );
               this._logger.error(null, `${error.stack}`);
             }
