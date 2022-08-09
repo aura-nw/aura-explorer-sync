@@ -477,8 +477,6 @@ export class SyncDataHelpers {
     const tokenContract = new TokenContract();
     tokenContract.type = CONTRACT_TYPE.CW20;
     tokenContract.contract_address = item.contract_address;
-    tokenContract.balance = Number(item.balance);
-    tokenContract.owner = item.owner;
     tokenContract.created_at = item.createdAt;
     tokenContract.updated_at = item.updatedAt;
     tokenContract.name = '';
@@ -510,8 +508,6 @@ export class SyncDataHelpers {
     tokenContract.contract_address = item.contract_address;
     tokenContract.decimals = 0;
     tokenContract.total_supply = 0;
-    tokenContract.balance = 0;
-    tokenContract.owner = item.owner;
     tokenContract.created_at = item.createdAt;
     tokenContract.updated_at = item.updatedAt;
     tokenContract.name = '';
