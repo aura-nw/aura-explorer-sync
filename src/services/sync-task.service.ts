@@ -688,11 +688,19 @@ export class SyncTaskService {
               const code_id = txData.tx.body.messages[0].code_id;
               const tx_hash = txData.tx_response.txhash;
 
-              const liquidityContractAddr = txData.tx_response.logs[0].events
-                .find(({ type }) => type === CONST_CHAR.WASM)
-                .attributes.find(
-                  ({ key }) => key === CONST_CHAR.LIQUIDITY_TOKEN_ADDR,
-                ).value;
+              let liquidityContractAddr;
+              try {
+                liquidityContractAddr = txData.tx_response.logs[0].events
+                  .find(({ type }) => type === CONST_CHAR.WASM)
+                  .attributes.find(
+                    ({ key }) => key === CONST_CHAR.LIQUIDITY_TOKEN_ADDR,
+                  ).value;
+              } catch (error) {
+                this._logger.log(
+                  null,
+                  `This transaction doesn't create a liquidity token`,
+                );
+              }
               if (liquidityContractAddr !== undefined) {
                 const paramGetContract = `/cosmwasm/wasm/v1/contract/${liquidityContractAddr}`;
                 let contractResponse = await this._commonUtil.getDataAPI(
@@ -702,7 +710,7 @@ export class SyncTaskService {
                 const liquidityCodeId = contractResponse.contract_info.code_id;
                 const liquidityContractName = contractResponse.contract_info.label;
                 const liquidityContractCreator = contractResponse.contract_info.creator;
-                
+
                 const liquidityContract = await this.makeInstantiateContractData(height, liquidityCodeId, liquidityContractName, liquidityContractAddr, liquidityContractCreator, tx_hash);
                 smartContracts.push(liquidityContract);
               }
