@@ -499,7 +499,7 @@ export class SyncDataHelpers {
     return tokenContract;
   }
 
-  static makerCw721TokenData(item: any, tokenInfo: any) {
+  static makerCw721TokenData(item: any, tokenInfo: any, nftInfo: any) {
     //sync data token
     const tokenContract = new TokenContract();
     tokenContract.type = CONTRACT_TYPE.CW721;
@@ -525,8 +525,10 @@ export class SyncDataHelpers {
     nft.owner = '';
     nft.uri = '';
     if (item?.asset_info && item.asset_info?.data) {
-      nft.owner = item.asset_info.data?.access?.owner ? item.asset_info.data.access.owner : '';
       nft.uri = item.asset_info.data?.info?.token_uri ? item.asset_info.data.info.token_uri : '';
+    }
+    if (nftInfo?.data) {
+      nft.owner = nftInfo.data.owner;
     }
 
     return [tokenContract, nft];
