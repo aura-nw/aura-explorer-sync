@@ -138,7 +138,7 @@ export class SyncTokenService {
                     });
                     if (contract) {
                         //get token info
-                        const base64Request = Buffer.from(`{
+                        const base64RequestToken = Buffer.from(`{
                             "contract_info": {}
                         }`).toString('base64');
                         const tokenInfo = await this._commonUtil.getDataAPI(
@@ -146,12 +146,25 @@ export class SyncTokenService {
                             `${util.format(
                                 NODE_API.CONTRACT_INFO,
                                 item.contract_address,
-                                base64Request
+                                base64RequestToken
+                            )}`
+                        );
+                        //get nft info
+                        const base64RequestNft = Buffer.from(`{
+                            "owner_of": { "token_id": "${item.token_id}" }
+                        }`).toString('base64');
+                        const nftInfo = await this._commonUtil.getDataAPI(
+                            this.api,
+                            `${util.format(
+                                NODE_API.CONTRACT_INFO,
+                                item.contract_address,
+                                base64RequestNft
                             )}`
                         );
                         const [tokenContract, nft] = SyncDataHelpers.makerCw721TokenData(
                             item,
-                            tokenInfo
+                            tokenInfo,
+                            nftInfo
                         );
 
                         //insert/update table token_contracts
