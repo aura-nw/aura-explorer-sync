@@ -8,6 +8,7 @@ import { CONTRACT_TYPE, INDEXER_API, NODE_API } from "../common/constants/app.co
 import { SyncDataHelpers } from "../helpers/sync-data.helpers";
 import { NftRepository } from "../repositories/nft.repository";
 import { SmartContractRepository } from "../repositories/smart-contract.repository";
+import { Cw20TokenOwnerRepository } from "../repositories/cw20-token-owner.repository";
 
 @Injectable()
 export class SyncTokenService {
@@ -23,7 +24,8 @@ export class SyncTokenService {
         private _commonUtil: CommonUtil,
         private tokenContractRepository: TokenContractRepository,
         private nftRepository: NftRepository,
-        private smartContractRepository: SmartContractRepository
+        private smartContractRepository: SmartContractRepository,
+        private cw20TokenOwnerRepository: Cw20TokenOwnerRepository
     ) {
         this._logger.log(
             '============== Constructor Sync Token Service ==============',
@@ -66,13 +68,15 @@ export class SyncTokenService {
                                 base64Request
                             )}`
                         );
-                        const tokenContract = SyncDataHelpers.makerCw20TokenData(
+                        const [tokenContract, cw20TokenOwner] = SyncDataHelpers.makerCw20TokenData(
                             item,
                             marketingInfo,
                         );
 
                         //insert/update table token_contracts
                         await this.tokenContractRepository.upsert([tokenContract], []);
+                        //insert/update table cw20_token_owners
+                        await this.cw20TokenOwnerRepository.upsert([cw20TokenOwner], []);
                     }
                 }
             }
