@@ -21,6 +21,7 @@ import {
   Validator,
 } from '../entities';
 import { ENV_CONFIG } from '../shared/services/config.service';
+import { Cw20TokenOwner } from '../entities/cw20-token-owner.entity';
 export class SyncDataHelpers {
   private static precision = ENV_CONFIG.CHAIN_INFO.PRECISION_DIV;
   private static toDecimal = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
@@ -474,6 +475,7 @@ export class SyncDataHelpers {
   }
 
   static makerCw20TokenData(item: any, marketingInfo: any) {
+    //sync data token
     const tokenContract = new TokenContract();
     tokenContract.type = CONTRACT_TYPE.CW20;
     tokenContract.contract_address = item.contract_address;
@@ -495,8 +497,14 @@ export class SyncDataHelpers {
       tokenContract.description = marketingInfo.data?.description ? marketingInfo.data.description : '';
       tokenContract.image = marketingInfo.data?.logo?.url ? marketingInfo.data.logo.url : '';
     }
+    //sync data token owner
+    const cw20TokenOwner = new Cw20TokenOwner();
+    cw20TokenOwner.contract_address = item.contract_address;
+    cw20TokenOwner.owner = item.owner;
+    cw20TokenOwner.balance = Number(item.balance);
+    cw20TokenOwner.percent_hold = item.percent_hold;
 
-    return tokenContract;
+    return [tokenContract, cw20TokenOwner];
   }
 
   static makerCw721TokenData(item: any, tokenInfo: any, nftInfo: any) {

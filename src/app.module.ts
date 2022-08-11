@@ -3,9 +3,11 @@ import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
 import { Block, BlockSyncError, Delegation, DelegatorReward, HistoryProposal, MissedBlock, Proposal, ProposalDeposit, ProposalVote, SmartContract, SmartContractCode, SyncStatus, TokenContract, Transaction, Validator } from './entities';
+import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
 import { Nft } from './entities/nft.entity';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
 import { BlockRepository } from './repositories/block.repository';
+import { Cw20TokenOwnerRepository } from './repositories/cw20-token-owner.repository';
 import { DelegationRepository } from './repositories/delegation.repository';
 import { DelegatorRewardRepository } from './repositories/delegator-reward.repository';
 import { HistoryProposalRepository } from './repositories/history-proposal.repository';
@@ -44,7 +46,8 @@ const entities = [
   SmartContract,
   TokenContract,
   SmartContractCode,
-  Nft
+  Nft,
+  Cw20TokenOwner
 ];
 
 const repositories = [
@@ -63,7 +66,8 @@ const repositories = [
   SmartContractRepository,
   TokenContractRepository,
   SmartContractCodeRepository,
-  NftRepository
+  NftRepository,
+  Cw20TokenOwnerRepository
 ];
 
 const services = [
