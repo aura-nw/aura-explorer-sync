@@ -165,10 +165,23 @@ export class SyncTokenService {
                                 base64RequestNft
                             )}`
                         );
+                        //get num tokens
+                        const base64RequestNumToken = Buffer.from(`{
+                            "num_tokens": {}
+                        }`).toString('base64');
+                        const numTokenInfo = await this._commonUtil.getDataAPI(
+                            this.api,
+                            `${util.format(
+                                NODE_API.CONTRACT_INFO,
+                                item.contract_address,
+                                base64RequestNumToken
+                            )}`
+                        );
                         const [tokenContract, nft] = SyncDataHelpers.makerCw721TokenData(
                             item,
                             tokenInfo,
-                            nftInfo
+                            nftInfo,
+                            numTokenInfo
                         );
 
                         //insert/update table token_contracts

@@ -497,6 +497,7 @@ export class SyncDataHelpers {
       tokenContract.description = marketingInfo.data?.description ? marketingInfo.data.description : '';
       tokenContract.image = marketingInfo.data?.logo?.url ? marketingInfo.data.logo.url : '';
     }
+    tokenContract.num_tokens = 0;
     //sync data token owner
     const cw20TokenOwner = new Cw20TokenOwner();
     cw20TokenOwner.contract_address = item.contract_address;
@@ -507,7 +508,7 @@ export class SyncDataHelpers {
     return [tokenContract, cw20TokenOwner];
   }
 
-  static makerCw721TokenData(item: any, tokenInfo: any, nftInfo: any) {
+  static makerCw721TokenData(item: any, tokenInfo: any, nftInfo: any, numTokenInfo: any) {
     //sync data token
     const tokenContract = new TokenContract();
     tokenContract.type = CONTRACT_TYPE.CW721;
@@ -523,6 +524,10 @@ export class SyncDataHelpers {
     if (tokenInfo?.data) {
       tokenContract.name = tokenInfo.data.name;
       tokenContract.symbol = tokenInfo.data.symbol;
+    }
+    tokenContract.num_tokens = 0;
+    if (numTokenInfo?.data) {
+      tokenContract.num_tokens = Number(numTokenInfo.data.count);
     }
     //sync data nft
     const nft = new Nft();
