@@ -31,4 +31,7 @@ export class TokenContract extends BaseEntityIncrementId {
 
   @Column({ name: 'total_supply' })
   total_supply: number;
+
+  @Column({ name: 'num_tokens' })
+  num_tokens: number;
 }
