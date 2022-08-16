@@ -60,14 +60,7 @@ export class SyncTokenService {
                         const base64Request = Buffer.from(`{
                             "marketing_info": {}
                         }`).toString('base64');
-                        const marketingInfo = await this._commonUtil.getDataAPI(
-                            this.api,
-                            `${util.format(
-                                NODE_API.CONTRACT_INFO,
-                                item.contract_address,
-                                base64Request
-                            )}`
-                        );
+                        const marketingInfo = await this.getDataContractFromBase64Query(item.contract_address, base64Request);
                         const [tokenContract, cw20TokenOwner] = SyncDataHelpers.makerCw20TokenData(
                             item,
                             marketingInfo,
@@ -145,38 +138,20 @@ export class SyncTokenService {
                         const base64RequestToken = Buffer.from(`{
                             "contract_info": {}
                         }`).toString('base64');
-                        const tokenInfo = await this._commonUtil.getDataAPI(
-                            this.api,
-                            `${util.format(
-                                NODE_API.CONTRACT_INFO,
-                                item.contract_address,
-                                base64RequestToken
-                            )}`
-                        );
+                        const tokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestToken);
                         //get nft info
-                        const base64RequestNft = Buffer.from(`{
-                            "owner_of": { "token_id": "${item.token_id}" }
-                        }`).toString('base64');
-                        const nftInfo = await this._commonUtil.getDataAPI(
-                            this.api,
-                            `${util.format(
-                                NODE_API.CONTRACT_INFO,
-                                item.contract_address,
-                                base64RequestNft
-                            )}`
-                        );
+                        let nftInfo = {};
+                        if (item?.is_burned && !item.is_burned) {
+                            const base64RequestNft = Buffer.from(`{
+                                "owner_of": { "token_id": "${item.token_id}" }
+                            }`).toString('base64');
+                            nftInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestNft);
+                        }
                         //get num tokens
                         const base64RequestNumToken = Buffer.from(`{
                             "num_tokens": {}
                         }`).toString('base64');
-                        const numTokenInfo = await this._commonUtil.getDataAPI(
-                            this.api,
-                            `${util.format(
-                                NODE_API.CONTRACT_INFO,
-                                item.contract_address,
-                                base64RequestNumToken
-                            )}`
-                        );
+                        const numTokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestNumToken);
                         const [tokenContract, nft] = SyncDataHelpers.makerCw721TokenData(
                             item,
                             tokenInfo,
@@ -229,5 +204,16 @@ export class SyncTokenService {
             result = dataTokens.data.assets.length > 0 ? [...result, ...dataTokens.data.assets] : result;
         }
         return result;
+    }
+
+    private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
+        return await this._commonUtil.getDataAPI(
+            this.api,
+            `${util.format(
+                NODE_API.CONTRACT_INFO,
+                contract_address,
+                base64String
+            )}`
+        );
     }
 }
