@@ -141,7 +141,7 @@ export class SyncTokenService {
                         const tokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestToken);
                         //get nft info
                         let nftInfo = {};
-                        if (item?.is_burned && !item.is_burned) {
+                        if (!item.is_burned) {
                             const base64RequestNft = Buffer.from(`{
                                 "owner_of": { "token_id": "${item.token_id}" }
                             }`).toString('base64');
