@@ -7,6 +7,8 @@ import * as util from 'util';
 import { CONTRACT_TYPE, INDEXER_API, NODE_API } from "../common/constants/app.constant";
 import { SyncDataHelpers } from "../helpers/sync-data.helpers";
 import { NftRepository } from "../repositories/nft.repository";
+import { SmartContractRepository } from "../repositories/smart-contract.repository";
+import { Cw20TokenOwnerRepository } from "../repositories/cw20-token-owner.repository";
 
 @Injectable()
 export class SyncTokenService {
@@ -21,7 +23,9 @@ export class SyncTokenService {
         private configService: ConfigService,
         private _commonUtil: CommonUtil,
         private tokenContractRepository: TokenContractRepository,
-        private nftRepository: NftRepository
+        private nftRepository: NftRepository,
+        private smartContractRepository: SmartContractRepository,
+        private cw20TokenOwnerRepository: Cw20TokenOwnerRepository
     ) {
         this._logger.log(
             '============== Constructor Sync Token Service ==============',
@@ -47,25 +51,26 @@ export class SyncTokenService {
             if (tokens.length > 0) {
                 for (let i = 0; i < tokens.length; i++) {
                     const item: any = tokens[i];
-                    //get marketing info of token
-                    const base64Request = Buffer.from(`{
-                        "marketing_info": {}
-                    }`).toString('base64');
-                    const marketingInfo = await this._commonUtil.getDataAPI(
-                        this.api,
-                        `${util.format(
-                            NODE_API.CONTRACT_INFO,
-                            item.contract_address,
-                            base64Request
-                        )}`
-                    );
-                    const tokenContract = SyncDataHelpers.makerCw20TokenData(
-                        item,
-                        marketingInfo,
-                    );
+                    //check exist contract in db
+                    const contract = await this.smartContractRepository.findOne({
+                        where: { contract_address: item.contract_address },
+                    });
+                    if (contract) {
+                        //get marketing info of token
+                        const base64Request = Buffer.from(`{
+                            "marketing_info": {}
+                        }`).toString('base64');
+                        const marketingInfo = await this.getDataContractFromBase64Query(item.contract_address, base64Request);
+                        const [tokenContract, cw20TokenOwner] = SyncDataHelpers.makerCw20TokenData(
+                            item,
+                            marketingInfo,
+                        );
 
-                    //insert/update table token_contracts
-                    await this.tokenContractRepository.upsert([tokenContract], []);
+                        //insert/update table token_contracts
+                        await this.tokenContractRepository.upsert([tokenContract], []);
+                        //insert/update table cw20_token_owners
+                        await this.cw20TokenOwnerRepository.upsert([cw20TokenOwner], []);
+                    }
                 }
             }
 
@@ -124,27 +129,41 @@ export class SyncTokenService {
             if (tokens.length > 0) {
                 for (let i = 0; i < tokens.length; i++) {
                     const item: any = tokens[i];
-                    //get token info
-                    const base64Request = Buffer.from(`{
-                        "contract_info": {}
-                    }`).toString('base64');
-                    const tokenInfo = await this._commonUtil.getDataAPI(
-                        this.api,
-                        `${util.format(
-                            NODE_API.CONTRACT_INFO,
-                            item.contract_address,
-                            base64Request
-                        )}`
-                    );
-                    const [tokenContract, nft] = SyncDataHelpers.makerCw721TokenData(
-                        item,
-                        tokenInfo
-                    );
+                    //check exist contract in db
+                    const contract = await this.smartContractRepository.findOne({
+                        where: { contract_address: item.contract_address },
+                    });
+                    if (contract) {
+                        //get token info
+                        const base64RequestToken = Buffer.from(`{
+                            "contract_info": {}
+                        }`).toString('base64');
+                        const tokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestToken);
+                        //get nft info
+                        let nftInfo = {};
+                        if (!item.is_burned) {
+                            const base64RequestNft = Buffer.from(`{
+                                "owner_of": { "token_id": "${item.token_id}" }
+                            }`).toString('base64');
+                            nftInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestNft);
+                        }
+                        //get num tokens
+                        const base64RequestNumToken = Buffer.from(`{
+                            "num_tokens": {}
+                        }`).toString('base64');
+                        const numTokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestNumToken);
+                        const [tokenContract, nft] = SyncDataHelpers.makerCw721TokenData(
+                            item,
+                            tokenInfo,
+                            nftInfo,
+                            numTokenInfo
+                        );
 
-                    //insert/update table token_contracts
-                    await this.tokenContractRepository.upsert([tokenContract], []);
-                    //insert/update table nfts
-                    await this.nftRepository.upsert([nft], []);
+                        //insert/update table token_contracts
+                        await this.tokenContractRepository.upsert([tokenContract], []);
+                        //insert/update table nfts
+                        await this.nftRepository.upsert([nft], []);
+                    }
                 }
             }
 
@@ -185,5 +204,16 @@ export class SyncTokenService {
             result = dataTokens.data.assets.length > 0 ? [...result, ...dataTokens.data.assets] : result;
         }
         return result;
+    }
+
+    private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
+        return await this._commonUtil.getDataAPI(
+            this.api,
+            `${util.format(
+                NODE_API.CONTRACT_INFO,
+                contract_address,
+                base64String
+            )}`
+        );
     }
 }
