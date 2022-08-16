@@ -543,6 +543,10 @@ export class SyncDataHelpers {
     if (nftInfo?.data) {
       nft.owner = nftInfo.data.owner;
     }
+    nft.is_burn = false;
+    if (item?.is_burned && item.is_burned) {
+      nft.is_burn = true;
+    }
 
     return [tokenContract, nft];
   }
