@@ -1,20 +1,17 @@
 import { Column, Entity } from "typeorm";
 import { BaseEntityIncrementId } from "./base/base.entity";
 
-@Entity('nfts')
-export class Nft extends BaseEntityIncrementId {
+@Entity('cw20_token_owners')
+export class Cw20TokenOwner extends BaseEntityIncrementId {
     @Column({ name: 'contract_address' })
     contract_address: string;
-
-    @Column({ name: 'token_id' })
-    token_id: string;
 
     @Column({ name: 'owner' })
     owner: string;
 
-    @Column({ name: 'uri' })
-    uri: string;
+    @Column({ name: 'balance' })
+    balance: number;
 
-    @Column({ name: 'is_burn' })
-    is_burn: boolean;
+    @Column({ name: 'percent_hold' })
+    percent_hold: number;
 }
