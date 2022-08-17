@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { DeleteResult, Repository } from 'typeorm';
+import { DeleteResult, FindManyOptions, OrderByCondition, Repository } from 'typeorm';
 import { PaginatorResponse } from '../dtos/responses/paginator.response';
 
 export class BaseRepository<T> {
@@ -168,5 +168,52 @@ export class BaseRepository<T> {
     return this._repos.createQueryBuilder()
       .select(`max(${column}) as ${column}`)
       .getRawOne();
+  }
+
+  /**
+   * Query Data
+   * @param column 
+   * @param conditions 
+   * @param groupBy 
+   * @param orderBy 
+   * @returns 
+   */
+  queryData(column: string, conditions?: any, groupBy?: string, orderBy?: OrderByCondition) {
+    let query = this._repos.createQueryBuilder().select(`${column}`);
+
+    if (conditions) {
+      query = query.where(conditions)
+    }
+
+    if (groupBy) {
+      query = query.groupBy(groupBy);
+    }
+
+    if (orderBy) {
+      query = query.orderBy(orderBy)
+    }
+
+    return query.getRawMany()
+  }
+
+  queryPaging(column: string, limit: number, offset: number, conditions?: any, groupBy?: string, orderBy?: OrderByCondition,) {
+    let query = this._repos.createQueryBuilder()
+      .select(`${column}`)
+      .take(limit)
+      .offset(offset * limit);
+
+    if (conditions) {
+      query = query.where(conditions)
+    }
+
+    if (groupBy) {
+      query = query.groupBy(groupBy);
+    }
+
+    if (orderBy) {
+      query = query.orderBy(orderBy)
+    }
+
+    return query.getRawOne();
   }
 }

@@ -1,4 +1,5 @@
 import { HttpModule } from '@nestjs/axios';
+import { BullModule } from '@nestjs/bull';
 import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
@@ -24,7 +25,7 @@ import { SyncContractCodeService } from './services/sync-contract-code.service';
 import { SyncProposalService } from './services/sync-proposal.service';
 import { SyncTaskService } from './services/sync-task.service';
 import { SyncTokenService } from './services/sync-token.service';
-import { ConfigService } from './shared/services/config.service';
+import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 
 const controllers = [];
@@ -81,6 +82,13 @@ const services = [
         maxRedirects: 5,
       }),
     }),
+    // BullModule.forRoot({
+    //   redis: {
+    //     host: ENV_CONFIG.REDIS.HOST,
+    //     port: ENV_CONFIG.REDIS.PORT,
+    //     keyPrefix: 'EXPLORER_SYNC'
+    //   }
+    // }),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
     TypeOrmModule.forFeature([...entities]),
