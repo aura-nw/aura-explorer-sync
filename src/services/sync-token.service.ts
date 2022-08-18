@@ -23,7 +23,6 @@ export class SyncTokenService {
     private isSyncCw20Tokens = false;
     private isSyncCw721Tokens = false;
     private influxDbClient: InfluxDBClient;
-    private isConnectRedis = false;
     private syncInprogress = false;
 
     constructor(

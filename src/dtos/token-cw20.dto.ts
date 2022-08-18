@@ -1,5 +1,3 @@
-import { TokenDto } from "./token.dto";
-
 export class TokenCW20Dto{
     coinId: string;
     usd: number;
