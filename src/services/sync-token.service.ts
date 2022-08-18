@@ -40,10 +40,15 @@ export class SyncTokenService {
         );
         this.indexerUrl = this.configService.get('INDEXER_URL');
         this.indexerChainId = this.configService.get('INDEXER_CHAIN_ID');
-        this.api = this.configService.get('API');
+        this.api = ENV_CONFIG.NODE.API;
 
         // Connect influxdb
         this.connectInfluxdb();
+
+        // Call method when init app
+        (async() => {
+            await this.createThreads();
+        })();
     }
 
 
@@ -238,13 +243,13 @@ export class SyncTokenService {
     /**
      * Create thread to sync data
      */
-    @Cron('59 * * * * *')
+    @Cron('0 */3 * * * *')
     async createThreads() {
         if (this.syncInprogress) {
             this._logger.log(`============== Thread sync data In-progress ==============`);
             return;
         }
-        // Conect reids server
+        // Connect reids server
         await this.redisUtil.connect();
 
         this.syncInprogress = true;
@@ -266,8 +271,7 @@ export class SyncTokenService {
                             i,
                             { type: CONTRACT_TYPE.CW20 },
                             null,
-                            { id: 'DESC' });
-
+                            { id: 'DESC' });                           
 
                         // Create list IDs to call  Coingecko api
                         let coinIds = 'aura-network,bitcoin';
@@ -303,7 +307,7 @@ export class SyncTokenService {
             const cw20Dtos: TokenCW20Dto[] = [];
             const coingecko = ENV_CONFIG.COINGECKO;
             this._logger.log(`============== Call Coingecko Api ==============`);
-            const para = `${util.format(COINGECKO_API.GET_COINS_MARKET, coinIds, 100)}`;
+            const para = `${util.format(COINGECKO_API.GET_COINS_MARKET, coinIds, coingecko.MAX_REQUEST)}`;
             const [response] = await Promise.all([this._commonUtil.getDataAPI(coingecko.API, para)]);
             if (response) {
 
@@ -320,6 +324,9 @@ export class SyncTokenService {
                     tokenDto.last_updated = data.last_updated;
                     tokenDto.total_volume = data.usd_24h_vol;
                     tokenDto.timestamp = data.last_updated;
+                    tokenDto.type = CONTRACT_TYPE.CW20;
+                    tokenDto.circulating_supply = data.circulating_supply;
+                    tokenDto.max_supply = data.max_supply;
                     cw20Dtos.push(tokenDto);
 
                     this._logger.log(`============== Write data to Redis ==============`);

@@ -292,13 +292,15 @@ export class InfluxDBClient {
     tokens.forEach(token => {
       const point = new Point('token_cw20_measurement')
         .stringField('coinId', token.coinId)
-        .stringField('current_price', token.current_price)
+        .stringField('type', token.type)
         .stringField('last_updated', token.last_updated)
-        .stringField('market_cap_rank', token.market_cap_rank)
-        .stringField('price_change_24h', token.price_change_24h)
-        .stringField('price_change_percentage_24h', token.price_change_percentage_24h)
-        .stringField('total_volume', token.total_volume)
-        .stringField('usd_24h_change', token.usd_24h_change)
+        .intField('current_price', token.current_price)
+        .intField('market_cap_rank', token.market_cap_rank)
+        .intField('price_change_24h', token.price_change_24h)
+        .intField('price_change_percentage_24h', token.price_change_percentage_24h)
+        .intField('total_volume', token.total_volume)
+        .intField('usd_24h_change', token.usd_24h_change)
+        .intField('circulating_supply', token.circulating_supply)
         .timestamp(this.convertDate(token.timestamp));
       points.push(point);
     });
@@ -308,5 +310,4 @@ export class InfluxDBClient {
       await this.writeApi.flush();
     }
   }
-
 }
