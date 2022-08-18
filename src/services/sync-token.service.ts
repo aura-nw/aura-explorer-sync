@@ -273,7 +273,7 @@ export class SyncTokenService {
                         let coinIds = 'aura-network,bitcoin';
                         dataPage.forEach(async (item) => {
                             const coinId = item.coin_id;
-                            coinIds += (coinId)? `, ${coinId}`: '';
+                            coinIds += (coinId) ? `, ${coinId}` : '';
                         });
 
                         this._logger.log(`============== Call syncPriceAndVolume method: ${coinIds} ==============`);
@@ -284,7 +284,9 @@ export class SyncTokenService {
 
                     return true;
                 },
-                    { maxRetry: -1 });
+                {
+                    maxRetry: -1
+                });
 
             }
         }
@@ -332,7 +334,7 @@ export class SyncTokenService {
         } catch (err) {
             this._logger.log(`${SyncTokenService.name} call syncPriceAndVolume method has error: ${err.message}`, err.stack);
         }
-    } 
+    }
 
     private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
         return await this._commonUtil.getDataAPI(

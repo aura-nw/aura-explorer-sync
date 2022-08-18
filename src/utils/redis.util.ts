@@ -11,9 +11,8 @@ export class RedisUtil {
     constructor() {
         const redisURL = { url: `redis://${ENV_CONFIG.REDIS.USERNAME}:${ENV_CONFIG.REDIS.PASSWORD}@${ENV_CONFIG.REDIS.HOST}:${ENV_CONFIG.REDIS.PORT}` };
         this.redisClient = redis.createClient(redisURL);
-       
+
     }
-    
 
     public convertDateToString(date: Date) {
         const timestamp = new Date();
@@ -24,18 +23,17 @@ export class RedisUtil {
 
     public async connect() {
         try {
-          
+
             if (!this.redisClient.isOpen) {
-                await this.redisClient.connect();               
+                await this.redisClient.connect();
             }
-            // await this.redisClient.auth('h', ENV_CONFIG.REDIS.PASSWORD);
             console.log('Auth complete...');
-            
 
         } catch (err) {
             console.log(err);
         }
     }
+
     public async setValue(key: string, data: any) {
         await this.redisClient.set(key, JSON.stringify(data));
     }

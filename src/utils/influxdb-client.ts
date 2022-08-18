@@ -309,8 +309,4 @@ export class InfluxDBClient {
     }
   }
 
-
-  writeHolder() {
-
-  }
 }
