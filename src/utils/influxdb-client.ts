@@ -286,25 +286,11 @@ export class InfluxDBClient {
     }
   }
 
-  async writeTokenPriceAndVolume(token: TokenCW20Dto) {
-    const point = new Point('token_cw20')
-      .stringField('coinId', token.coinId)
-      .stringField('current_price', token.current_price)
-      .stringField('last_updated', token.last_updated)
-      .stringField('market_cap_rank', token.market_cap_rank)
-      .stringField('price_change_24h', token.price_change_24h)
-      .stringField('price_change_percentage_24h', token.price_change_percentage_24h)
-      .stringField('total_volume', token.total_volume)
-      .stringField('usd_24h_change', token.usd_24h_change)
-      .timestamp(token.timestamp);
-    this.writeApi.writePoint(point);
-    await this.writeApi.flush();
-  }
 
   async writeBlockTokenPriceAndVolume(tokens: TokenCW20Dto[]) {
     const points: Array<Point> = [];
     tokens.forEach(token => {
-      const point = new Point('token_cw20')
+      const point = new Point('token_cw20_measurement')
         .stringField('coinId', token.coinId)
         .stringField('current_price', token.current_price)
         .stringField('last_updated', token.last_updated)
@@ -313,7 +299,7 @@ export class InfluxDBClient {
         .stringField('price_change_percentage_24h', token.price_change_percentage_24h)
         .stringField('total_volume', token.total_volume)
         .stringField('usd_24h_change', token.usd_24h_change)
-        .timestamp(token.timestamp);
+        .timestamp(this.convertDate(token.timestamp));
       points.push(point);
     });
 

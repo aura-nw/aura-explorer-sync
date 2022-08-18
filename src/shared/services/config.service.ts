@@ -49,8 +49,8 @@ export class ConfigService {
         PORT: Number(process.env.REDIS_PORT) || 6379,
         PREFIX: process.env.REDIS_PREFIX,
         DB: process.env.REDIS_DB,
-        USERNAME: process.env.REDIS_USERNAME,
-        PASSWORD: process.env.REDIS_PASSWORD
+        USERNAME: (!process.env.REDIS_USERNAME || (process.env.REDIS_USERNAME === 'default')) ? '' : process.env.REDIS_USERNAME,
+        PASSWORD: process.env.REDIS_PASSWORD || ''
       },
       NODE: {
         API: process.env.API,

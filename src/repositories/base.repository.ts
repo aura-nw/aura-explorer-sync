@@ -196,11 +196,11 @@ export class BaseRepository<T> {
     return query.getRawMany()
   }
 
-  queryPaging(column: string, limit: number, offset: number, conditions?: any, groupBy?: string, orderBy?: OrderByCondition,) {
+  queryPaging(column: string, limit: number, pageIndex: number, conditions?: any, groupBy?: string, orderBy?: OrderByCondition,) {
     let query = this._repos.createQueryBuilder()
       .select(`${column}`)
       .take(limit)
-      .offset(offset * limit);
+      .offset(pageIndex * limit);
 
     if (conditions) {
       query = query.where(conditions)
@@ -214,6 +214,6 @@ export class BaseRepository<T> {
       query = query.orderBy(orderBy)
     }
 
-    return query.getRawOne();
+    return query.getRawMany();
   }
 }

@@ -40,24 +40,6 @@ export class SyncTokenService {
 
         // Connect influxdb
         this.connectInfluxdb();
-
-        // Connect redis
-        // this.schedule.scheduleCronJob('SYNC_PRICE_VOLUME', '60 * * * * *', async () => {
-        //     await this.redisUtil.connect();
-        //     await this.syncPriceAndVolume();
-        //     return false;
-        // });
-        this.schedule.scheduleIntervalJob('SYNC_PRICE_VOLUME', 6000, async () => {
-            try {
-                await this.redisUtil.connect();
-                await this.redisUtil.setValue('datakey1', { data: 'datakey====vaule' });
-                // await this.redisUtil.getValue('datakey');
-
-            } catch (err) {
-                console.log(err);
-            }
-            return true;
-        });
     }
 
 
@@ -237,12 +219,14 @@ export class SyncTokenService {
     /**
      * Create thread to sync data
      */
-    // @Cron('60 * * * * *')
+    @Cron('59 * * * * *')
     async createThreads() {
         if (this.syncInprogress) {
             this._logger.log(`============== Thread sync data In-progress ==============`);
             return;
         }
+        // Conect reids server
+        await this.redisUtil.connect();
 
         this.syncInprogress = true;
         const count = await this.tokenContractRepository.queryData('COUNT(id) AS countData', { type: CONTRACT_TYPE.CW20 });
@@ -260,7 +244,7 @@ export class SyncTokenService {
                         const dataPage = await this.tokenContractRepository.queryPaging(
                             selections,
                             limit,
-                            (i * limit),
+                            i,
                             { type: CONTRACT_TYPE.CW20 },
                             null,
                             { id: 'DESC' });
@@ -270,7 +254,7 @@ export class SyncTokenService {
                         let coinIds = 'aura-network,bitcoin';
                         dataPage.forEach(async (item) => {
                             const coinId = item.coin_id;
-                            coinIds += (coinId) ? `${coinId},` : `${coinId}`;
+                            coinIds += (coinId)? `, ${coinId}`: '';
                         });
 
                         this._logger.log(`============== Call syncPriceAndVolume method: ${coinIds} ==============`);
@@ -314,20 +298,20 @@ export class SyncTokenService {
                     tokenDto.price_change_percentage_24h = data.price_change_percentage_24h;
                     tokenDto.last_updated = data.last_updated;
                     tokenDto.total_volume = data.usd_24h_vol;
-                    tokenDto.timestamp = timestamp.toISOString();
+                    tokenDto.timestamp = data.last_updated;
                     cw20Dtos.push(tokenDto);
 
                     this._logger.log(`============== Write data to Redis ==============`);
                     // Write data to Redis
-                    // await this.redisUtil.setValue(tokenDto.coinId, tokenDto);
+                    await this.redisUtil.setValue(tokenDto.coinId, tokenDto);
 
                 });
             }
             this._logger.log(`============== Write data to Influxdb ==============`);
-            // await this.influxDbClient.writeBlockTokenPriceAndVolume(cw20Dtos);
+            await this.influxDbClient.writeBlockTokenPriceAndVolume(cw20Dtos);
 
         } catch (err) {
             this._logger.log(`${SyncTokenService.name} call syncPriceAndVolume method has error: ${err.message}`, err.stack);
         }
-    }
+    } 
 }

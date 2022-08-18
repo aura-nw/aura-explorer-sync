@@ -9,7 +9,7 @@ export class RedisUtil {
     private redisClient;
 
     constructor() {
-        const redisURL = { url: `redis://:${ENV_CONFIG.REDIS.PASSWORD}@${ENV_CONFIG.REDIS.HOST}:${ENV_CONFIG.REDIS.PORT}` };
+        const redisURL = { url: `redis://${ENV_CONFIG.REDIS.USERNAME}:${ENV_CONFIG.REDIS.PASSWORD}@${ENV_CONFIG.REDIS.HOST}:${ENV_CONFIG.REDIS.PORT}` };
         this.redisClient = redis.createClient(redisURL);
        
     }
@@ -41,11 +41,6 @@ export class RedisUtil {
     }
 
     public async getValue(key: string) {
-
-
-        // const values = this.redisClient.getAsync(key).then((reply) =>{
-        //     return reply;
-        // });
-        // return Promise.all([values]);
+        return this.redisClient.get(key);
     }
 }
