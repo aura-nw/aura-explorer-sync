@@ -47,8 +47,16 @@ export class SyncTokenService {
         try {
             this.isSyncCw20Tokens = true;
             //get list tokens from indexer
-            const tokens = await this.getCw20TokensFromIndexer();
-            if (tokens.length > 0) {
+            const tokensData = await this._commonUtil.getDataAPI(
+                `${this.indexerUrl}${util.format(
+                    INDEXER_API.GET_LIST_TOKENS,
+                    CONTRACT_TYPE.CW20,
+                    this.indexerChainId
+                )}`,
+                '',
+            );
+            if (tokensData?.data && tokensData.data.count > 0) {
+                const tokens = tokensData.data.assets;
                 for (let i = 0; i < tokens.length; i++) {
                     const item: any = tokens[i];
                     //check exist contract in db
@@ -85,34 +93,6 @@ export class SyncTokenService {
         }
     }
 
-    private async getCw20TokensFromIndexer(): Promise<any> {
-        let key = '';
-        let result = await this._commonUtil.getDataAPI(
-            `${this.indexerUrl}${util.format(
-                INDEXER_API.GET_LIST_TOKENS_FIRST_TIME,
-                CONTRACT_TYPE.CW20,
-                this.indexerChainId
-            )}`,
-            '',
-        );
-        key = result.data.nextKey;
-        result = result.data.assets;
-        while (key != null) {
-            const dataTokens = await this._commonUtil.getDataAPI(
-                `${this.indexerUrl}${util.format(
-                    INDEXER_API.GET_LIST_TOKENS_WITH_NEXT_KEY,
-                    CONTRACT_TYPE.CW20,
-                    this.indexerChainId,
-                    key
-                )}`,
-                '',
-            );
-            key = dataTokens.data.nextKey;
-            result = dataTokens.data.assets.length > 0 ? [...result, ...dataTokens.data.assets] : result;
-        }
-        return result;
-    }
-
     @Interval(2000)
     async syncCw721Tokens() {
         // check status
@@ -125,8 +105,16 @@ export class SyncTokenService {
         try {
             this.isSyncCw721Tokens = true;
             //get list tokens from indexer
-            const tokens = await this.getCw721TokensFromIndexer();
-            if (tokens.length > 0) {
+            const tokensData = await this._commonUtil.getDataAPI(
+                `${this.indexerUrl}${util.format(
+                    INDEXER_API.GET_LIST_TOKENS,
+                    CONTRACT_TYPE.CW721,
+                    this.indexerChainId
+                )}`,
+                '',
+            );
+            if (tokensData?.data && tokensData.data.count > 0) {
+                const tokens = tokensData.data.assets;
                 for (let i = 0; i < tokens.length; i++) {
                     const item: any = tokens[i];
                     //check exist contract in db
@@ -176,34 +164,6 @@ export class SyncTokenService {
             this.isSyncCw721Tokens = false;
             throw error;
         }
-    }
-
-    private async getCw721TokensFromIndexer(): Promise<any> {
-        let key = '';
-        let result = await this._commonUtil.getDataAPI(
-            `${this.indexerUrl}${util.format(
-                INDEXER_API.GET_LIST_TOKENS_FIRST_TIME,
-                CONTRACT_TYPE.CW721,
-                this.indexerChainId
-            )}`,
-            '',
-        );
-        key = result.data.nextKey;
-        result = result.data.assets;
-        while (key != null) {
-            const dataTokens = await this._commonUtil.getDataAPI(
-                `${this.indexerUrl}${util.format(
-                    INDEXER_API.GET_LIST_TOKENS_WITH_NEXT_KEY,
-                    CONTRACT_TYPE.CW721,
-                    this.indexerChainId,
-                    key
-                )}`,
-                '',
-            );
-            key = dataTokens.data.nextKey;
-            result = dataTokens.data.assets.length > 0 ? [...result, ...dataTokens.data.assets] : result;
-        }
-        return result;
     }
 
     private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
