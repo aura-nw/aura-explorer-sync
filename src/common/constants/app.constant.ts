@@ -50,6 +50,8 @@ export enum CONST_CHAR {
   _CONTRACT_ADDRESS = '_contract_address',
   CODE_ID = 'code_id',
   EXECUTE = 'execute',
+  WASM = 'wasm',
+  LIQUIDITY_TOKEN_ADDR = 'liquidity_token_addr',
 }
 
 export enum CONST_MSG_TYPE {
