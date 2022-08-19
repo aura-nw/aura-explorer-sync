@@ -2,7 +2,6 @@ export class TokenCW20Dto{
     coinId: string;
     usd: number;
     total_volume: number;
-    usd_24h_change: number;
     last_updated: string;
     timestamp: string;
     current_price: number;

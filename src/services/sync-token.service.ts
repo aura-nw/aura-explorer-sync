@@ -294,11 +294,11 @@ export class SyncTokenService {
                     tokenDto.price_change_24h = data.price_change_24h;
                     tokenDto.price_change_percentage_24h = data.price_change_percentage_24h;
                     tokenDto.last_updated = data.last_updated;
-                    tokenDto.total_volume = data.usd_24h_vol;
+                    tokenDto.total_volume = data.total_volume;
                     tokenDto.timestamp = data.last_updated;
                     tokenDto.type = CONTRACT_TYPE.CW20;
                     tokenDto.circulating_supply = data.circulating_supply;
-                    tokenDto.max_supply = data.max_supply;
+                    tokenDto.max_supply = Number(data.max_supply) || 0;
                     cw20Dtos.push(tokenDto);
 
                     this._logger.log(`============== Write data to Redis ==============`);
