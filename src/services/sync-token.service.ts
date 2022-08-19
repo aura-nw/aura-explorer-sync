@@ -13,6 +13,7 @@ import { InfluxDBClient } from "../utils/influxdb-client";
 import { RedisUtil } from "../utils/redis.util";
 import { SmartContractRepository } from "../repositories/smart-contract.repository";
 import { Cw20TokenOwnerRepository } from "../repositories/cw20-token-owner.repository";
+import { env } from "process";
 
 @Injectable()
 export class SyncTokenService {
@@ -256,7 +257,7 @@ export class SyncTokenService {
         const count = await this.tokenContractRepository.queryData('COUNT(id) AS countData', { type: CONTRACT_TYPE.CW20 });
         const countData = (count) ? Number(count[0]?.countData) : 0;
         if (countData > 0) {
-            const limit = 100;
+            const limit = ENV_CONFIG.COINGECKO.MAX_REQUEST;
             const pages = Math.ceil(countData / limit);
             const sefl = this;
             for (let i = 0; i < pages; i++) {

@@ -71,7 +71,7 @@ export class ConfigService {
       COINGECKO: {
         API: process.env.COINGECKO_API,
         COIN_ID: process.env.COINGECKO_COIN_ID,
-        MAX_REQUEST: Number(process.env.COINGECKO_MAX_REQUEST) || 100,
+        MAX_REQUEST: Number(process.env.COINGECKO_MAX_REQUEST) || 250,
       }
     };
   }
