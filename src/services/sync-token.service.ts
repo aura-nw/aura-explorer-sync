@@ -47,7 +47,7 @@ export class SyncTokenService {
         this.connectInfluxdb();
 
         // Call method when init app
-        (async() => {
+        (async () => {
             await this.createThreads();
         })();
     }
@@ -65,8 +65,16 @@ export class SyncTokenService {
         try {
             this.isSyncCw20Tokens = true;
             //get list tokens from indexer
-            const tokens = await this.getCw20TokensFromIndexer();
-            if (tokens.length > 0) {
+            const tokensData = await this._commonUtil.getDataAPI(
+                `${this.indexerUrl}${util.format(
+                    INDEXER_API.GET_LIST_TOKENS,
+                    CONTRACT_TYPE.CW20,
+                    this.indexerChainId
+                )}`,
+                '',
+            );
+            if (tokensData?.data && tokensData.data.count > 0) {
+                const tokens = tokensData.data.assets;
                 for (let i = 0; i < tokens.length; i++) {
                     const item: any = tokens[i];
                     //check exist contract in db
@@ -103,51 +111,6 @@ export class SyncTokenService {
         }
     }
 
-    private async getCw20TokensFromIndexer(): Promise<any> {
-        let key = '';
-        let result = await this._commonUtil.getDataAPI(
-            `${this.indexerUrl}${util.format(
-                INDEXER_API.GET_LIST_TOKENS_FIRST_TIME,
-                CONTRACT_TYPE.CW20,
-                this.indexerChainId
-            )}`,
-            '',
-        );
-        key = result.data.nextKey;
-        result = result.data.assets;
-        while (key != null) {
-            const dataTokens = await this._commonUtil.getDataAPI(
-                `${this.indexerUrl}${util.format(
-                    INDEXER_API.GET_LIST_TOKENS_WITH_NEXT_KEY,
-                    CONTRACT_TYPE.CW20,
-                    this.indexerChainId,
-                    key
-                )}`,
-                '',
-            );
-            key = dataTokens.data.nextKey;
-            result = dataTokens.data.assets.length > 0 ? [...result, ...dataTokens.data.assets] : result;
-        }
-        return result;
-    }
-
-    connectInfluxdb() {
-        this._logger.log(`============== ${SyncTokenService.name}  call connectInfluxdb method ==============`);
-        try {
-            this.influxDbClient = new InfluxDBClient(
-                ENV_CONFIG.INFLUX_DB.BUCKET,
-                ENV_CONFIG.INFLUX_DB.ORGANIZTION,
-                ENV_CONFIG.INFLUX_DB.URL,
-                ENV_CONFIG.INFLUX_DB.TOKEN,
-            );
-            if (this.influxDbClient) {
-                this.influxDbClient.initWriteApi();
-            }
-        } catch (err) {
-            this._logger.log(`${SyncTokenService.name} call connectInfluxdb method has error: ${err.message}`, err.stack);
-        }
-    }
-
     @Interval(2000)
     async syncCw721Tokens() {
         // check status
@@ -160,8 +123,16 @@ export class SyncTokenService {
         try {
             this.isSyncCw721Tokens = true;
             //get list tokens from indexer
-            const tokens = await this.getCw721TokensFromIndexer();
-            if (tokens.length > 0) {
+            const tokensData = await this._commonUtil.getDataAPI(
+                `${this.indexerUrl}${util.format(
+                    INDEXER_API.GET_LIST_TOKENS,
+                    CONTRACT_TYPE.CW721,
+                    this.indexerChainId
+                )}`,
+                '',
+            );
+            if (tokensData?.data && tokensData.data.count > 0) {
+                const tokens = tokensData.data.assets;
                 for (let i = 0; i < tokens.length; i++) {
                     const item: any = tokens[i];
                     //check exist contract in db
@@ -213,32 +184,32 @@ export class SyncTokenService {
         }
     }
 
-    private async getCw721TokensFromIndexer(): Promise<any> {
-        let key = '';
-        let result = await this._commonUtil.getDataAPI(
-            `${this.indexerUrl}${util.format(
-                INDEXER_API.GET_LIST_TOKENS_FIRST_TIME,
-                CONTRACT_TYPE.CW721,
-                this.indexerChainId
-            )}`,
-            '',
+    private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
+        return await this._commonUtil.getDataAPI(
+            this.api,
+            `${util.format(
+                NODE_API.CONTRACT_INFO,
+                contract_address,
+                base64String
+            )}`
         );
-        key = result.data.nextKey;
-        result = result.data.assets;
-        while (key != null) {
-            const dataTokens = await this._commonUtil.getDataAPI(
-                `${this.indexerUrl}${util.format(
-                    INDEXER_API.GET_LIST_TOKENS_WITH_NEXT_KEY,
-                    CONTRACT_TYPE.CW721,
-                    this.indexerChainId,
-                    key
-                )}`,
-                '',
+    }
+
+    connectInfluxdb() {
+        this._logger.log(`============== ${SyncTokenService.name}  call connectInfluxdb method ==============`);
+        try {
+            this.influxDbClient = new InfluxDBClient(
+                ENV_CONFIG.INFLUX_DB.BUCKET,
+                ENV_CONFIG.INFLUX_DB.ORGANIZTION,
+                ENV_CONFIG.INFLUX_DB.URL,
+                ENV_CONFIG.INFLUX_DB.TOKEN,
             );
-            key = dataTokens.data.nextKey;
-            result = dataTokens.data.assets.length > 0 ? [...result, ...dataTokens.data.assets] : result;
+            if (this.influxDbClient) {
+                this.influxDbClient.initWriteApi();
+            }
+        } catch (err) {
+            this._logger.log(`${SyncTokenService.name} call connectInfluxdb method has error: ${err.message}`, err.stack);
         }
-        return result;
     }
 
     /**
@@ -272,7 +243,7 @@ export class SyncTokenService {
                             i,
                             { type: CONTRACT_TYPE.CW20 },
                             null,
-                            { id: 'DESC' });                           
+                            { id: 'DESC' });
 
                         // Create list IDs to call  Coingecko api
                         let coinIds = 'aura-network,bitcoin';
@@ -289,9 +260,9 @@ export class SyncTokenService {
 
                     return true;
                 },
-                {
-                    maxRetry: -1
-                });
+                    {
+                        maxRetry: -1
+                    });
 
             }
         }
@@ -342,16 +313,5 @@ export class SyncTokenService {
         } catch (err) {
             this._logger.log(`${SyncTokenService.name} call syncPriceAndVolume method has error: ${err.message}`, err.stack);
         }
-    }
-
-    private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
-        return await this._commonUtil.getDataAPI(
-            this.api,
-            `${util.format(
-                NODE_API.CONTRACT_INFO,
-                contract_address,
-                base64String
-            )}`
-        );
     }
 }

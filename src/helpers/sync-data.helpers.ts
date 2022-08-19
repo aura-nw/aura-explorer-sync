@@ -498,6 +498,7 @@ export class SyncDataHelpers {
       tokenContract.image = marketingInfo.data?.logo?.url ? marketingInfo.data.logo.url : '';
     }
     tokenContract.num_tokens = 0;
+    tokenContract.coin_id = '';
     //sync data token owner
     const cw20TokenOwner = new Cw20TokenOwner();
     cw20TokenOwner.contract_address = item.contract_address;
@@ -529,6 +530,7 @@ export class SyncDataHelpers {
     if (numTokenInfo?.data) {
       tokenContract.num_tokens = Number(numTokenInfo.data.count);
     }
+    tokenContract.coin_id = '';
     //sync data nft
     const nft = new Nft();
     nft.contract_address = item.contract_address;
