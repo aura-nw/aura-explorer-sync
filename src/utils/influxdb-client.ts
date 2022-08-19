@@ -2,8 +2,9 @@ import {
   InfluxDB,
   Point,
   QueryApi,
-  WriteApi,
+  WriteApi
 } from '@influxdata/influxdb-client';
+import { TokenCW20Dto } from '../dtos/token-cw20.dto';
 
 export class InfluxDBClient {
   private client: InfluxDB;
@@ -276,6 +277,31 @@ export class InfluxDBClient {
         .intField('num_txs', item.num_txs)
         .timestamp(this.convertDate(item.timestamp))
         .stringField('proposer', item.proposer);
+      points.push(point);
+    });
+
+    if (points.length > 0) {
+      this.writeApi.writePoints(points);
+      await this.writeApi.flush();
+    }
+  }
+
+
+  async writeBlockTokenPriceAndVolume(tokens: TokenCW20Dto[]) {
+    const points: Array<Point> = [];
+    tokens.forEach(token => {
+      const point = new Point('token_cw20_measurement')
+        .stringField('coinId', token.coinId)
+        .stringField('type', token.type)
+        .stringField('last_updated', token.last_updated)
+        .intField('current_price', token.current_price)
+        .intField('market_cap_rank', token.market_cap_rank)
+        .intField('price_change_24h', token.price_change_24h)
+        .intField('price_change_percentage_24h', token.price_change_percentage_24h)
+        .intField('total_volume', token.total_volume)
+        .intField('usd_24h_change', token.usd_24h_change)
+        .intField('circulating_supply', token.circulating_supply)
+        .timestamp(this.convertDate(token.timestamp));
       points.push(point);
     });
 

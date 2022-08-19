@@ -3,7 +3,6 @@ import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
-import { Between } from 'typeorm';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
