@@ -87,9 +87,22 @@ export class SyncTokenService {
                             "marketing_info": {}
                         }`).toString('base64');
                         const marketingInfo = await this.getDataContractFromBase64Query(item.contract_address, base64Request);
+                        //get token info
+                        const tokenContractData = await this.tokenContractRepository.findOne({
+                            where: { contract_address: item.contract_address },
+                        });
+                        let tokenInfo = null;
+                        if (tokenContractData) {
+                            await this.redisUtil.connect();
+                            const data = await this.redisUtil.getValue(tokenContractData.coin_id);
+                            if (data) {
+                                tokenInfo = JSON.parse(data);
+                            }
+                        }
                         const [tokenContract, cw20TokenOwner] = SyncDataHelpers.makerCw20TokenData(
                             item,
                             marketingInfo,
+                            tokenInfo
                         );
 
                         //insert/update table token_contracts
