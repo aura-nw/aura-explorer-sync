@@ -474,7 +474,7 @@ export class SyncDataHelpers {
     return proposal;
   }
 
-  static makerCw20TokenData(item: any, marketingInfo: any) {
+  static makerCw20TokenData(item: any, marketingInfo: any, tokenInfo: any) {
     //sync data token
     const tokenContract = new TokenContract();
     tokenContract.type = CONTRACT_TYPE.CW20;
@@ -497,6 +497,16 @@ export class SyncDataHelpers {
     }
     tokenContract.num_tokens = 0;
     tokenContract.coin_id = '';
+    if (tokenInfo) {
+      tokenContract.max_total_supply = tokenInfo.max_supply;
+      tokenContract.price = tokenInfo.current_price;
+      tokenContract.price_change_percentage_24h = tokenInfo.price_change_percentage_24h;
+      tokenContract.volume_24h = tokenInfo.total_volume;
+      tokenContract.circulating_market_cap = tokenInfo.current_price * tokenInfo.circulating_supply;
+      tokenContract.fully_diluted_market_cap = tokenInfo.current_price * tokenInfo.max_supply;
+      // tokenContract.holders = tokenInfo.holders;
+      // tokenContract.holders_change_percentage_24h = tokenInfo.holders_change_percentage_24h;
+    }
     //sync data token owner
     const cw20TokenOwner = new Cw20TokenOwner();
     cw20TokenOwner.contract_address = item.contract_address;
