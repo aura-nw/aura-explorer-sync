@@ -484,12 +484,10 @@ export class SyncDataHelpers {
     tokenContract.name = '';
     tokenContract.symbol = '';
     tokenContract.decimals = 0;
-    tokenContract.total_supply = 0;
     if (item?.asset_info && item.asset_info?.data) {
       tokenContract.name = item.asset_info.data.name;
       tokenContract.symbol = item.asset_info.data.symbol;
       tokenContract.decimals = Number(item.asset_info.data.decimals);
-      tokenContract.total_supply = Number(item.asset_info.data.total_supply);
     }
     tokenContract.description = '';
     tokenContract.image = '';
@@ -517,7 +515,6 @@ export class SyncDataHelpers {
     tokenContract.description = '';
     tokenContract.contract_address = item.contract_address;
     tokenContract.decimals = 0;
-    tokenContract.total_supply = 0;
     tokenContract.created_at = item.createdAt;
     tokenContract.updated_at = item.updatedAt;
     tokenContract.name = '';
