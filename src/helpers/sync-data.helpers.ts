@@ -498,6 +498,7 @@ export class SyncDataHelpers {
     tokenContract.num_tokens = 0;
     tokenContract.coin_id = '';
     if (tokenInfo) {
+      tokenContract.coin_id = tokenInfo.coinId;
       tokenContract.max_total_supply = tokenInfo.max_supply;
       tokenContract.price = tokenInfo.current_price;
       tokenContract.price_change_percentage_24h = tokenInfo.price_change_percentage_24h;

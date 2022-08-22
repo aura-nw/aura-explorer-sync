@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron, Interval } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from "nest-schedule";
 import * as util from 'util';
-import { COINGECKO_API, CONTRACT_TYPE, INDEXER_API, NODE_API } from "../common/constants/app.constant";
+import { AURA_INFO, COINGECKO_API, CONTRACT_TYPE, INDEXER_API, NODE_API } from "../common/constants/app.constant";
 import { TokenCW20Dto } from "../dtos/token-cw20.dto";
 import { SyncDataHelpers } from "../helpers/sync-data.helpers";
 import { NftRepository } from "../repositories/nft.repository";
@@ -13,7 +13,7 @@ import { InfluxDBClient } from "../utils/influxdb-client";
 import { RedisUtil } from "../utils/redis.util";
 import { SmartContractRepository } from "../repositories/smart-contract.repository";
 import { Cw20TokenOwnerRepository } from "../repositories/cw20-token-owner.repository";
-import { env } from "process";
+import { TokenContract } from "../entities/token-contract.entity";
 
 @Injectable()
 export class SyncTokenService {
@@ -64,6 +64,26 @@ export class SyncTokenService {
         }
         try {
             this.isSyncCw20Tokens = true;
+            //sync data aura
+            const tokenAura = new TokenContract();
+            tokenAura.type = CONTRACT_TYPE.CW20;
+            tokenAura.name = ENV_CONFIG.CHAIN_INFO.COIN_DENOM;
+            tokenAura.symbol = ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM
+            tokenAura.decimals = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
+            tokenAura.image = AURA_INFO.IMAGE;
+            tokenAura.contract_address = AURA_INFO.CONNTRACT_ADDRESS;
+            tokenAura.description = '';
+            tokenAura.num_tokens = 0;
+            //get price of aura token
+            const tokenAuraData = await this.redisUtil.getValue(AURA_INFO.COIN_ID);
+            if (tokenAuraData) {
+                const tokenAuraInfo = JSON.parse(tokenAuraData);
+                tokenAura.coin_id = tokenAuraInfo.coinId;
+                tokenAura.price = tokenAuraInfo.current_price;
+                tokenAura.price_change_percentage_24h = tokenAuraInfo.price_change_percentage_24h;
+            }
+            //insert/update table token_contracts
+            await this.tokenContractRepository.upsert([tokenAura], []);
             //get list tokens from indexer
             const tokensData = await this._commonUtil.getDataAPI(
                 `${this.indexerUrl}${util.format(
@@ -93,7 +113,6 @@ export class SyncTokenService {
                         });
                         let tokenInfo = null;
                         if (tokenContractData) {
-                            await this.redisUtil.connect();
                             const data = await this.redisUtil.getValue(tokenContractData.coin_id);
                             if (data) {
                                 tokenInfo = JSON.parse(data);
