@@ -301,6 +301,9 @@ export class InfluxDBClient {
         .intField('total_volume', token.total_volume)
         .intField('circulating_supply', token.circulating_supply)
         .intField('max_supply', token.max_supply)
+        .intField('previous_holder', token.previous_holder)
+        .intField('current_holder', token.current_holder)
+        .intField('percent_hold', token.percent_holder)
         .timestamp(this.convertDate(token.timestamp));
       points.push(point);
     });

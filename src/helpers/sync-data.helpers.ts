@@ -22,6 +22,7 @@ import {
 } from '../entities';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { Cw20TokenOwner } from '../entities/cw20-token-owner.entity';
+import { TokenCW20Dto } from '../dtos/token-cw20.dto';
 export class SyncDataHelpers {
   private static precision = ENV_CONFIG.CHAIN_INFO.PRECISION_DIV;
   private static toDecimal = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
@@ -551,5 +552,29 @@ export class SyncDataHelpers {
     }
 
     return [tokenContract, nft];
+  }
+
+  /**
+   * Create TokenCW20 Dto
+   * @param data 
+   * @returns 
+   */
+  static makeTokenCW20Data(data: any): TokenCW20Dto {
+    const tokenDto = new TokenCW20Dto();
+    tokenDto.coinId = data.id;
+    tokenDto.current_price = data.current_price;
+    tokenDto.market_cap_rank = data.market_cap_rank;
+    tokenDto.price_change_24h = data.price_change_24h;
+    tokenDto.price_change_percentage_24h = data.price_change_percentage_24h;
+    tokenDto.last_updated = data.last_updated;
+    tokenDto.total_volume = data.total_volume;
+    tokenDto.timestamp = data.last_updated;
+    tokenDto.type = CONTRACT_TYPE.CW20;
+    tokenDto.circulating_supply = data.circulating_supply;
+    tokenDto.max_supply = Number(data.max_supply) || 0;
+    tokenDto.current_holder = 0;
+    tokenDto.percent_holder = 0;
+    tokenDto.previous_holder = 0;
+    return tokenDto;
   }
 }
