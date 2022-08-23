@@ -11,3 +11,5 @@ export * from './proposal-deposit.entity';
 export * from './proposal-vote.entity';
 export * from './sync-status.entity';
 export * from './smart-contract.entity';
+export * from './token-contract.entity';
+export * from './smart-contract-code.entity';
