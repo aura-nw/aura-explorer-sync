@@ -3,17 +3,18 @@ import { Cron, Interval } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from "nest-schedule";
 import * as util from 'util';
 import { AURA_INFO, COINGECKO_API, CONTRACT_TYPE, INDEXER_API, NODE_API } from "../common/constants/app.constant";
+import { TokenHolderRequest } from "../dtos/requests/token-holder.request";
 import { TokenCW20Dto } from "../dtos/token-cw20.dto";
+import { TokenContract } from "../entities/token-contract.entity";
 import { SyncDataHelpers } from "../helpers/sync-data.helpers";
+import { Cw20TokenOwnerRepository } from "../repositories/cw20-token-owner.repository";
 import { NftRepository } from "../repositories/nft.repository";
+import { SmartContractRepository } from "../repositories/smart-contract.repository";
 import { TokenContractRepository } from "../repositories/token-contract.repository";
 import { ConfigService, ENV_CONFIG } from "../shared/services/config.service";
 import { CommonUtil } from "../utils/common.util";
 import { InfluxDBClient } from "../utils/influxdb-client";
 import { RedisUtil } from "../utils/redis.util";
-import { SmartContractRepository } from "../repositories/smart-contract.repository";
-import { Cw20TokenOwnerRepository } from "../repositories/cw20-token-owner.repository";
-import { TokenContract } from "../entities/token-contract.entity";
 
 @Injectable()
 export class SyncTokenService {
@@ -263,6 +264,7 @@ export class SyncTokenService {
             const limit = ENV_CONFIG.COINGECKO.MAX_REQUEST;
             const pages = Math.ceil(countData / limit);
             const sefl = this;
+            const tokenHolders: TokenHolderRequest[] = [];
             for (let i = 0; i < pages; i++) {
                 this._logger.log(`============== Create threads ==============`);
                 this.schedule.scheduleTimeoutJob(`CW20_Page${i}`, 10, async () => {
@@ -282,10 +284,11 @@ export class SyncTokenService {
                         dataPage.forEach(async (item) => {
                             const coinId = item.coin_id;
                             coinIds += (coinId) ? `, ${coinId}` : '';
+                            tokenHolders.push({ coinId: item.coin_id, address: item.contract_address });
                         });
 
                         this._logger.log(`============== Call syncPriceAndVolume method: ${coinIds} ==============`);
-                        await sefl.syncPriceAndVolume(coinIds)
+                        await sefl.syncPriceAndVolume(coinIds, tokenHolders);
                     } catch (err) {
                         this._logger.log(`${SyncTokenService.name} call createThread method has error: ${err.message}`, err.stack);
                     }
@@ -305,36 +308,55 @@ export class SyncTokenService {
      * Sync Price and Volume From Coingecko api
      * @param coinIds 
      */
-    async syncPriceAndVolume(coinIds: string) {
-        this._logger.log(`============== ${SyncTokenService.name}  call syncPriceAndVolume method ==============`);
+    async syncPriceAndVolume(coinIds: string, tokenHolders: TokenHolderRequest[]) {
+        this._logger.log(`============== ${SyncTokenService.name}  call ${this.syncPriceAndVolume.name} method ==============`);
         try {
             const cw20Dtos: TokenCW20Dto[] = [];
             const coingecko = ENV_CONFIG.COINGECKO;
             this._logger.log(`============== Call Coingecko Api ==============`);
             const para = `${util.format(COINGECKO_API.GET_COINS_MARKET, coinIds, coingecko.MAX_REQUEST)}`;
-            const [response] = await Promise.all([this._commonUtil.getDataAPI(coingecko.API, para)]);
+            const response = await this._commonUtil.getDataAPI(coingecko.API, para);
             if (response) {
 
                 response.forEach(async data => {
                     const timestamp = new Date(data.last_updated);
                     timestamp.setSeconds(0, 0);
 
-                    const tokenDto = new TokenCW20Dto();
-                    tokenDto.coinId = data.id;
-                    tokenDto.current_price = data.current_price;
-                    tokenDto.market_cap_rank = data.market_cap_rank;
-                    tokenDto.price_change_24h = data.price_change_24h;
-                    tokenDto.price_change_percentage_24h = data.price_change_percentage_24h;
-                    tokenDto.last_updated = data.last_updated;
-                    tokenDto.total_volume = data.total_volume;
-                    tokenDto.timestamp = data.last_updated;
-                    tokenDto.type = CONTRACT_TYPE.CW20;
-                    tokenDto.circulating_supply = data.circulating_supply;
-                    tokenDto.max_supply = Number(data.max_supply) || 0;
+                    const tokenDto = SyncDataHelpers.makeTokenCW20Data(data);
+
+                    // Find data to call indexer api
+                    const filter = tokenHolders.find(item => item.coinId === tokenDto.coinId);
+                    if (filter) {
+                        this._logger.log(`============== Call Idexer apis with parameter: {chainId: ${this.indexerChainId}, address:${filter.address}} ==============`);
+                        const para = `${util.format(INDEXER_API.GET_HOLDER_TOKEN, this.indexerChainId, filter.address)}`;
+                        const response = await this._commonUtil.getDataAPI(this.indexerUrl, para);
+                        if (response) {
+                            this._logger.log(`============== Get data from Redis with key: ${tokenDto.coinId} ==============`);
+                            const redisData = await this.redisUtil.getValue(tokenDto.coinId);
+                            if (redisData) {
+                                this._logger.log(`============== RedisData: ${redisData} ==============`);
+                                const tokenRedids = JSON.parse(redisData) as TokenCW20Dto;
+                                tokenDto.previous_holder = Number(tokenRedids.current_holder) || 0;
+                                tokenDto.current_holder = Number(response?.data.resultCount) || 0;
+                                const holder24h = (tokenDto.current_holder - tokenDto.previous_holder);
+                                if (tokenDto.previous_holder > 0 && holder24h > 0) {
+                                    tokenDto.percent_holder = Math.round((holder24h * 100) / tokenDto.previous_holder);
+                                }else{
+                                    tokenDto.percent_holder = 0;
+                                }
+
+                            } else {
+                                this._logger.log(`============== RedisData not values ==============`);
+                                tokenDto.previous_holder = 0;
+                                tokenDto.percent_holder = 100;
+                                tokenDto.current_holder = Number(response.resultCount);
+                            }
+                        }
+                    }
+
                     cw20Dtos.push(tokenDto);
 
                     this._logger.log(`============== Write data to Redis ==============`);
-                    // Write data to Redis
                     await this.redisUtil.setValue(tokenDto.coinId, tokenDto);
 
                 });
@@ -343,7 +365,7 @@ export class SyncTokenService {
             await this.influxDbClient.writeBlockTokenPriceAndVolume(cw20Dtos);
 
         } catch (err) {
-            this._logger.log(`${SyncTokenService.name} call syncPriceAndVolume method has error: ${err.message}`, err.stack);
+            this._logger.log(`${SyncTokenService.name} call ${this.syncPriceAndVolume.name} method has error: ${err.message}`, err.stack);
         }
     }
 }
