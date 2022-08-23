@@ -2,9 +2,10 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron, Interval } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from "nest-schedule";
 import * as util from 'util';
-import { COINGECKO_API, CONTRACT_TYPE, INDEXER_API, NODE_API } from "../common/constants/app.constant";
+import { AURA_INFO, COINGECKO_API, CONTRACT_TYPE, INDEXER_API, NODE_API } from "../common/constants/app.constant";
 import { TokenHolderRequest } from "../dtos/requests/token-holder.request";
 import { TokenCW20Dto } from "../dtos/token-cw20.dto";
+import { TokenContract } from "../entities/token-contract.entity";
 import { SyncDataHelpers } from "../helpers/sync-data.helpers";
 import { Cw20TokenOwnerRepository } from "../repositories/cw20-token-owner.repository";
 import { NftRepository } from "../repositories/nft.repository";
@@ -64,6 +65,26 @@ export class SyncTokenService {
         }
         try {
             this.isSyncCw20Tokens = true;
+            //sync data aura
+            const tokenAura = new TokenContract();
+            tokenAura.type = CONTRACT_TYPE.CW20;
+            tokenAura.name = ENV_CONFIG.CHAIN_INFO.COIN_DENOM;
+            tokenAura.symbol = ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM
+            tokenAura.decimals = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
+            tokenAura.image = AURA_INFO.IMAGE;
+            tokenAura.contract_address = AURA_INFO.CONNTRACT_ADDRESS;
+            tokenAura.description = '';
+            tokenAura.num_tokens = 0;
+            //get price of aura token
+            const tokenAuraData = await this.redisUtil.getValue(AURA_INFO.COIN_ID);
+            if (tokenAuraData) {
+                const tokenAuraInfo = JSON.parse(tokenAuraData);
+                tokenAura.coin_id = tokenAuraInfo.coinId;
+                tokenAura.price = tokenAuraInfo.current_price;
+                tokenAura.price_change_percentage_24h = tokenAuraInfo.price_change_percentage_24h;
+            }
+            //insert/update table token_contracts
+            await this.tokenContractRepository.upsert([tokenAura], []);
             //get list tokens from indexer
             const tokensData = await this._commonUtil.getDataAPI(
                 `${this.indexerUrl}${util.format(
@@ -87,9 +108,21 @@ export class SyncTokenService {
                             "marketing_info": {}
                         }`).toString('base64');
                         const marketingInfo = await this.getDataContractFromBase64Query(item.contract_address, base64Request);
+                        //get token info
+                        const tokenContractData = await this.tokenContractRepository.findOne({
+                            where: { contract_address: item.contract_address },
+                        });
+                        let tokenInfo = null;
+                        if (tokenContractData) {
+                            const data = await this.redisUtil.getValue(tokenContractData.coin_id);
+                            if (data) {
+                                tokenInfo = JSON.parse(data);
+                            }
+                        }
                         const [tokenContract, cw20TokenOwner] = SyncDataHelpers.makerCw20TokenData(
                             item,
                             marketingInfo,
+                            tokenInfo
                         );
 
                         //insert/update table token_contracts
