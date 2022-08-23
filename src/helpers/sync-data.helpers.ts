@@ -506,8 +506,8 @@ export class SyncDataHelpers {
       tokenContract.volume_24h = tokenInfo.total_volume;
       tokenContract.circulating_market_cap = tokenInfo.current_price * tokenInfo.circulating_supply;
       tokenContract.fully_diluted_market_cap = tokenInfo.current_price * tokenInfo.max_supply;
-      // tokenContract.holders = tokenInfo.holders;
-      // tokenContract.holders_change_percentage_24h = tokenInfo.holders_change_percentage_24h;
+      tokenContract.holders = tokenInfo.current_holder;
+      tokenContract.holders_change_percentage_24h = tokenInfo.percent_holder;
     }
     //sync data token owner
     const cw20TokenOwner = new Cw20TokenOwner();
