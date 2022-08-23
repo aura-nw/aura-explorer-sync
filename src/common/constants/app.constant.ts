@@ -123,3 +123,10 @@ export enum COINGECKO_API {
   GET_PRICE_VOLUME = 'simple/price?ids=%s&vs_currencies=usd&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true',
   GET_COINS_MARKET = 'coins/markets?vs_currency=usd&ids=%s&order=market_cap_desc&per_page=%s&page=1&sparkline=false&price_change_percentage=24h'
 }
+
+export enum AURA_INFO {
+  TYPE = 'AURA',
+  IMAGE = 'https://nft-ipfs.s3.amazonaws.com/assets/imgs/icons/color/aura.svg',
+  CONNTRACT_ADDRESS = 'aura',
+  COIN_ID = 'aura-network'
+}
