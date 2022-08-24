@@ -23,6 +23,7 @@ import {
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { Cw20TokenOwner } from '../entities/cw20-token-owner.entity';
 import { TokenCW20Dto } from '../dtos/token-cw20.dto';
+import { TokenTransaction } from '../entities/token-transaction.entity';
 export class SyncDataHelpers {
   private static precision = ENV_CONFIG.CHAIN_INFO.PRECISION_DIV;
   private static toDecimal = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
@@ -584,5 +585,16 @@ export class SyncDataHelpers {
     tokenDto.percent_holder = 0;
     tokenDto.previous_holder = 0;
     return tokenDto;
+  }
+
+  static makeTokenTransactionData(txData: any, _message: any) {
+    const tokenTransaction = new TokenTransaction();
+    tokenTransaction.tx_hash = txData.tx_response.txhash;
+    tokenTransaction.contract_address = _message.contract;
+    const transactionType = Object.keys(_message.msg)[0];
+    tokenTransaction.transaction_type = transactionType;
+    tokenTransaction.token_id = _message.msg[transactionType].token_id
+
+    return tokenTransaction;
   }
 }
