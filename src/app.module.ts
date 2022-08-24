@@ -6,6 +6,7 @@ import { ScheduleModule } from 'nest-schedule';
 import { Block, BlockSyncError, Delegation, DelegatorReward, HistoryProposal, MissedBlock, Proposal, ProposalDeposit, ProposalVote, SmartContract, SmartContractCode, SyncStatus, TokenContract, Transaction, Validator } from './entities';
 import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
 import { Nft } from './entities/nft.entity';
+import { TokenTransaction } from './entities/token-transaction.entity';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
 import { BlockRepository } from './repositories/block.repository';
 import { Cw20TokenOwnerRepository } from './repositories/cw20-token-owner.repository';
@@ -21,6 +22,7 @@ import { SmartContractCodeRepository } from './repositories/smart-contract-code.
 import { SmartContractRepository } from './repositories/smart-contract.repository';
 import { SyncStatusRepository } from './repositories/sync-status.repository';
 import { TokenContractRepository } from './repositories/token-contract.repository';
+import { TokenTransactionRepository } from './repositories/token-transaction.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
 import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
@@ -48,7 +50,8 @@ const entities = [
   TokenContract,
   SmartContractCode,
   Nft,
-  Cw20TokenOwner
+  Cw20TokenOwner,
+  TokenTransaction
 ];
 
 const repositories = [
@@ -68,7 +71,8 @@ const repositories = [
   TokenContractRepository,
   SmartContractCodeRepository,
   NftRepository,
-  Cw20TokenOwnerRepository
+  Cw20TokenOwnerRepository,
+  TokenTransactionRepository
 ];
 
 const services = [

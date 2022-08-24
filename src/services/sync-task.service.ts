@@ -3,6 +3,7 @@ import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
+import { TokenTransactionRepository } from '../repositories/token-transaction.repository';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
@@ -57,6 +58,7 @@ export class SyncTaskService {
     private delegationRepository: DelegationRepository,
     private delegatorRewardRepository: DelegatorRewardRepository,
     private smartContractRepository: SmartContractRepository,
+    private tokenTransactionRepository: TokenTransactionRepository,
     @InjectSchedule() private readonly schedule: Schedule,
   ) {
     this._logger.log(
@@ -595,6 +597,7 @@ export class SyncTaskService {
     const delegations = [];
     const delegatorRewards = [];
     let smartContracts = [];
+    const tokenTransactions = [];
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
       if (
@@ -663,10 +666,14 @@ export class SyncTaskService {
                 const smartContract = this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
                 smartContracts.push(smartContract);
               });
-              // if (_smartContracts.length > 0) {
-              //   smartContracts = smartContracts.concat(_smartContracts);
-              // }
-              // await this.smartContractRepository.create(contracts);
+              //sync token transaction
+              if (message?.msg) {
+                const transactionType = Object.keys(message.msg)[0];
+                if (message.msg[transactionType]?.token_id) {
+                  const tokenTransaction = SyncDataHelpers.makeTokenTransactionData(txData, message);
+                  tokenTransactions.push(tokenTransaction);
+                }
+              }
             } catch (error) {
               this._logger.error(
                 null,
@@ -763,6 +770,9 @@ export class SyncTaskService {
         }
       });
       await this.smartContractRepository.upsert(smartContracts, []);
+    }
+    if (tokenTransactions.length > 0) {
+      await this.tokenTransactionRepository.upsert(tokenTransactions, []);
     }
   }
 
