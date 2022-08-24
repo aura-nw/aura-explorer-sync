@@ -658,14 +658,6 @@ export class SyncTaskService {
             delegatorRewards.push(reward);
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
             try {
-              const _smartContracts = SyncDataHelpers.makeExecuteContractData(
-                txData,
-                message,
-              );
-              _smartContracts.map((item) => {
-                const smartContract = this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
-                smartContracts.push(smartContract);
-              });
               //sync token transaction
               if (message?.msg) {
                 const transactionType = Object.keys(message.msg)[0];
@@ -674,6 +666,14 @@ export class SyncTaskService {
                   tokenTransactions.push(tokenTransaction);
                 }
               }
+              const _smartContracts = SyncDataHelpers.makeExecuteContractData(
+                txData,
+                message,
+              );
+              _smartContracts.map((item) => {
+                const smartContract = this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
+                smartContracts.push(smartContract);
+              });
             } catch (error) {
               this._logger.error(
                 null,
