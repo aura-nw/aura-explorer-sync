@@ -65,6 +65,8 @@ export class SyncTokenService {
         }
         try {
             this.isSyncCw20Tokens = true;
+            //connect redis
+            await this.redisUtil.connect();
             //sync data aura
             const tokenAura = new TokenContract();
             tokenAura.type = CONTRACT_TYPE.CW20;
