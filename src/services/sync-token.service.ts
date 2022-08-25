@@ -23,6 +23,7 @@ export class SyncTokenService {
     private indexerChainId;
     private api;
     private isSyncCw20Tokens = false;
+    private isSyncAuraToken = false;
     private isSyncCw721Tokens = false;
     private influxDbClient: InfluxDBClient;
     private syncInprogress = false;
@@ -67,26 +68,6 @@ export class SyncTokenService {
             this.isSyncCw20Tokens = true;
             //connect redis
             await this.redisUtil.connect();
-            //sync data aura
-            const tokenAura = new TokenContract();
-            tokenAura.type = CONTRACT_TYPE.CW20;
-            tokenAura.name = ENV_CONFIG.CHAIN_INFO.COIN_DENOM;
-            tokenAura.symbol = ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM
-            tokenAura.decimals = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
-            tokenAura.image = AURA_INFO.IMAGE;
-            tokenAura.contract_address = AURA_INFO.CONNTRACT_ADDRESS;
-            tokenAura.description = '';
-            tokenAura.num_tokens = 0;
-            //get price of aura token
-            const tokenAuraData = await this.redisUtil.getValue(AURA_INFO.COIN_ID);
-            if (tokenAuraData) {
-                const tokenAuraInfo = JSON.parse(tokenAuraData);
-                tokenAura.coin_id = tokenAuraInfo.coinId;
-                tokenAura.price = tokenAuraInfo.current_price;
-                tokenAura.price_change_percentage_24h = tokenAuraInfo.price_change_percentage_24h;
-            }
-            //insert/update table token_contracts
-            await this.tokenContractRepository.upsert([tokenAura], []);
             //get list tokens from indexer
             const tokensData = await this._commonUtil.getDataAPI(
                 `${this.indexerUrl}${util.format(
@@ -142,6 +123,51 @@ export class SyncTokenService {
             );
             this._logger.error(`${error.stack}`);
             this.isSyncCw20Tokens = false;
+            throw error;
+        }
+    }
+
+    @Interval(3000)
+    async syncAuraToken() {
+        // check status
+        if (this.isSyncAuraToken) {
+            this._logger.log(null, 'already syncing aura token... wait');
+            return;
+        } else {
+            this._logger.log(null, 'fetching data aura token...');
+        }
+        try {
+            this.isSyncAuraToken = true;
+            //connect redis
+            await this.redisUtil.connect();
+            //sync data aura
+            const tokenAura = new TokenContract();
+            tokenAura.type = CONTRACT_TYPE.CW20;
+            tokenAura.name = ENV_CONFIG.CHAIN_INFO.COIN_DENOM;
+            tokenAura.symbol = ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM
+            tokenAura.decimals = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
+            tokenAura.image = AURA_INFO.IMAGE;
+            tokenAura.contract_address = AURA_INFO.CONNTRACT_ADDRESS;
+            tokenAura.description = '';
+            tokenAura.num_tokens = 0;
+            //get price of aura token
+            const tokenAuraData = await this.redisUtil.getValue(AURA_INFO.COIN_ID);
+            if (tokenAuraData) {
+                const tokenAuraInfo = JSON.parse(tokenAuraData);
+                tokenAura.coin_id = tokenAuraInfo.coinId;
+                tokenAura.price = tokenAuraInfo.current_price;
+                tokenAura.price_change_percentage_24h = tokenAuraInfo.price_change_percentage_24h;
+            }
+            //insert/update table token_contracts
+            await this.tokenContractRepository.upsert([tokenAura], []);
+
+            this.isSyncAuraToken = false;
+        } catch (error) {
+            this._logger.error(
+                `Sync aura token was error, ${error.name}: ${error.message}`,
+            );
+            this._logger.error(`${error.stack}`);
+            this.isSyncAuraToken = false;
             throw error;
         }
     }
