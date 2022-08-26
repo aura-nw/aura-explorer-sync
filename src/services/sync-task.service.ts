@@ -790,7 +790,7 @@ export class SyncTaskService {
       execute_msg_schema,
       s3_location;
 
-    if (this.nodeEnv === 'serenity') {
+    if (this.nodeEnv === 'mainnet') {
       const [request, existContracts] = await Promise.all([
         this.deploymentRequestsRepository.findByCondition({
           mainnet_code_id: code_id,
