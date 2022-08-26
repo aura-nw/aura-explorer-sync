@@ -75,6 +75,9 @@ export class DeploymentRequests extends BaseEntityIncrementId {
     @Column({ name: 'compiler_version' })
     compiler_version: string;
 
+    @Column({ name: 's3_location' })
+    s3_location: string;
+
     @Column({ name: 'status' })
     status: string;
 

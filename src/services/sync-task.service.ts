@@ -3,6 +3,7 @@ import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
+import { DeploymentRequestsRepository } from 'src/repositories/deployment-requests.repository';
 import { Between } from 'typeorm';
 import {
   CONST_CHAR,
@@ -43,6 +44,7 @@ export class SyncTaskService {
 
   isCompleteWrite = false;
   maxHeight = ENV_CONFIG.BLOCK_START;
+  private nodeEnv = ENV_CONFIG.NODE_ENV;
 
   constructor(
     private _commonUtil: CommonUtil,
@@ -58,6 +60,7 @@ export class SyncTaskService {
     private delegationRepository: DelegationRepository,
     private delegatorRewardRepository: DelegatorRewardRepository,
     private smartContractRepository: SmartContractRepository,
+    private deploymentRequestsRepository: DeploymentRequestsRepository,
     @InjectSchedule() private readonly schedule: Schedule,
   ) {
     this._logger.log(
@@ -669,11 +672,11 @@ export class SyncTaskService {
               // }
               // await this.smartContractRepository.create(contracts);
             } catch (error) {
-              this._logger.error(
+              this._logger.log(
                 null,
                 `Got error in execute contract transaction`,
               );
-              this._logger.error(null, `${error.stack}`);
+              this._logger.log(null, `${error.stack}`);
             }
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
             try {
@@ -768,20 +771,6 @@ export class SyncTaskService {
   }
 
   async makeInstantiateContractData(height: string, code_id: string, contract_name: string, contract_address: string, creator_address: string, tx_hash: string) {
-    const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
-    let smartContractResponse;
-    try {
-      smartContractResponse = await this._commonUtil.getDataAPI(
-        this.smartContractService,
-        paramGetHash,
-      );
-    } catch (error) {
-      this._logger.error(
-        'Can not connect to smart contract verify service or LCD service',
-        error,
-      );
-    }
-
     let contract_hash = '',
       contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED,
       contract_match,
@@ -791,26 +780,64 @@ export class SyncTaskService {
       query_msg_schema,
       execute_msg_schema,
       s3_location;
-    if (smartContractResponse) {
-      contract_hash =
-        smartContractResponse.Message.length === 64
-          ? smartContractResponse.Message
-          : '';
-    }
-    if (contract_hash !== '') {
-      const exactContract =
-        await this.smartContractRepository.findExactContractByHash(
-          contract_hash,
-        );
-      if (exactContract) {
+
+    if (this.nodeEnv === 'serenity') {
+      const [request, existContracts] = await Promise.all([
+        this.deploymentRequestsRepository.findByCondition({
+          mainnet_code_id: code_id,
+        }),
+        this.smartContractRepository.findByCondition({
+          code_id
+        }),
+      ])
+      if (existContracts.length > 0) {
         contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-        contract_match = exactContract.contract_address;
-        url = exactContract.url;
-        compiler_version = exactContract.compiler_version;
-        instantiate_msg_schema = exactContract.instantiate_msg_schema;
-        query_msg_schema = exactContract.query_msg_schema;
-        execute_msg_schema = exactContract.execute_msg_schema;
-        s3_location = exactContract.s3_location;
+        contract_match = existContracts[0].contract_address;
+      }
+      else contract_verification = SMART_CONTRACT_VERIFICATION.EXACT_MATCH;
+      contract_hash = request[0].contract_hash;
+      url = request[0].url;
+      compiler_version = request[0].compiler_version;
+      instantiate_msg_schema = request[0].instantiate_msg_schema;
+      query_msg_schema = request[0].query_msg_schema;
+      execute_msg_schema = request[0].execute_msg_schema;
+      s3_location = request[0].s3_location;
+    } else {
+      const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
+      let smartContractResponse;
+      try {
+        smartContractResponse = await this._commonUtil.getDataAPI(
+          this.smartContractService,
+          paramGetHash,
+        );
+      } catch (error) {
+        this._logger.error(
+          'Can not connect to smart contract verify service or LCD service',
+          error,
+        );
+      }
+
+      if (smartContractResponse) {
+        contract_hash =
+          smartContractResponse.Message.length === 64
+            ? smartContractResponse.Message
+            : '';
+      }
+      if (contract_hash !== '') {
+        const exactContract =
+          await this.smartContractRepository.findExactContractByHash(
+            contract_hash,
+          );
+        if (exactContract) {
+          contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
+          contract_match = exactContract.contract_address;
+          url = exactContract.url;
+          compiler_version = exactContract.compiler_version;
+          instantiate_msg_schema = exactContract.instantiate_msg_schema;
+          query_msg_schema = exactContract.query_msg_schema;
+          execute_msg_schema = exactContract.execute_msg_schema;
+          s3_location = exactContract.s3_location;
+        }
       }
     }
 

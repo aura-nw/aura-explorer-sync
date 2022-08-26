@@ -66,6 +66,7 @@ export class ConfigService {
         URL: process.env.INFLUXDB_URL,
         TOKEN: process.env.INFLUXDB_TOKEN,
       },
+      NODE_ENV: process.env.NODE_ENV,
     };
   }
 
