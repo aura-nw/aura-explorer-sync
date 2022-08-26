@@ -115,6 +115,18 @@ export enum CONTRACT_CODE_STATUS {
 
 export enum INDEXER_API {
   CHECK_STATUS_CODE_ID = 'api/v1/codeid/%s/%s/checkStatus',
-  GET_LIST_TOKENS_FIRST_TIME = 'api/v1/asset/getByContractType?contractType=%s&chainid=%s&pageLimit=100&pageOffset=0&countTotal=true',
-  GET_LIST_TOKENS_WITH_NEXT_KEY = 'api/v1/asset/getByContractType?contractType=%s&chainid=%s&pageLimit=100&nextKey=%s'
+  GET_LIST_TOKENS = 'api/v1/asset/getByContractType?contractType=%s&chainid=%s&pageLimit=100&pageOffset=0&countTotal=true',
+  GET_HOLDER_TOKEN = 'api/v1/asset/holder?chainid=%s&contractType=CW20&contractAddress=%s&countTotal=true'
+}
+
+export enum COINGECKO_API {
+  GET_PRICE_VOLUME = 'simple/price?ids=%s&vs_currencies=usd&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true',
+  GET_COINS_MARKET = 'coins/markets?vs_currency=usd&ids=%s&order=market_cap_desc&per_page=%s&page=1&sparkline=false&price_change_percentage=24h'
+}
+
+export enum AURA_INFO {
+  TYPE = 'AURA',
+  IMAGE = 'https://nft-ipfs.s3.amazonaws.com/assets/imgs/icons/color/aura.svg',
+  CONNTRACT_ADDRESS = 'aura',
+  COIN_ID = 'aura-network'
 }

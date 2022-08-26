@@ -3,6 +3,9 @@ import { BaseEntityIncrementId } from "./base/base.entity";
 
 @Entity('deployment_requests')
 export class DeploymentRequests extends BaseEntityIncrementId {
+    @Column({ name: 'request_id' })
+    request_id: number;
+    
     @Column({ name: 'name' })
     name: string;
 

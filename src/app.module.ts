@@ -1,4 +1,5 @@
 import { HttpModule } from '@nestjs/axios';
+import { BullModule } from '@nestjs/bull';
 import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
@@ -6,6 +7,7 @@ import { Block, BlockSyncError, Delegation, DelegatorReward, HistoryProposal, Mi
 import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
 import { DeploymentRequests } from './entities/deployment-requests.entity';
 import { Nft } from './entities/nft.entity';
+import { TokenTransaction } from './entities/token-transaction.entity';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
 import { BlockRepository } from './repositories/block.repository';
 import { Cw20TokenOwnerRepository } from './repositories/cw20-token-owner.repository';
@@ -22,13 +24,14 @@ import { SmartContractCodeRepository } from './repositories/smart-contract-code.
 import { SmartContractRepository } from './repositories/smart-contract.repository';
 import { SyncStatusRepository } from './repositories/sync-status.repository';
 import { TokenContractRepository } from './repositories/token-contract.repository';
+import { TokenTransactionRepository } from './repositories/token-transaction.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
 import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
 import { SyncProposalService } from './services/sync-proposal.service';
 import { SyncTaskService } from './services/sync-task.service';
 import { SyncTokenService } from './services/sync-token.service';
-import { ConfigService } from './shared/services/config.service';
+import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 
 const controllers = [];
@@ -50,7 +53,8 @@ const entities = [
   TokenContract,
   SmartContractCode,
   Nft,
-  Cw20TokenOwner
+  Cw20TokenOwner,
+  TokenTransaction
 ];
 
 const repositories = [
@@ -71,7 +75,8 @@ const repositories = [
   TokenContractRepository,
   SmartContractCodeRepository,
   NftRepository,
-  Cw20TokenOwnerRepository
+  Cw20TokenOwnerRepository,
+  TokenTransactionRepository
 ];
 
 const services = [
@@ -89,6 +94,13 @@ const services = [
         maxRedirects: 5,
       }),
     }),
+    // BullModule.forRoot({
+    //   redis: {
+    //     host: ENV_CONFIG.REDIS.HOST,
+    //     port: ENV_CONFIG.REDIS.PORT,
+    //     keyPrefix: 'EXPLORER_SYNC'
+    //   }
+    // }),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
     TypeOrmModule.forFeature([...entities]),
