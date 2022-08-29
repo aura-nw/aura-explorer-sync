@@ -1,8 +1,9 @@
 import { CONTRACT_TYPE } from '../common/constants/app.constant';
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, Unique } from 'typeorm';
 import { BaseEntityIncrementId } from './base/base.entity';
 
 @Entity('token_contracts')
+@Unique(['contract_address'])
 export class TokenContract extends BaseEntityIncrementId {
   @Column({
     name: 'type',

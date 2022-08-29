@@ -481,8 +481,7 @@ export class SyncDataHelpers {
     const tokenContract = new TokenContract();
     tokenContract.type = CONTRACT_TYPE.CW20;
     tokenContract.contract_address = item.contract_address;
-    tokenContract.created_at = item.createdAt;
-    tokenContract.updated_at = item.updatedAt;
+    tokenContract.created_at = new Date(item.createdAt);
     tokenContract.name = '';
     tokenContract.symbol = '';
     tokenContract.decimals = 0;
@@ -528,8 +527,7 @@ export class SyncDataHelpers {
     tokenContract.description = '';
     tokenContract.contract_address = item.contract_address;
     tokenContract.decimals = 0;
-    tokenContract.created_at = item.createdAt;
-    tokenContract.updated_at = item.updatedAt;
+    tokenContract.created_at = new Date(item.createdAt);
     tokenContract.name = '';
     tokenContract.symbol = '';
     if (tokenInfo?.data) {
@@ -545,8 +543,9 @@ export class SyncDataHelpers {
     const nft = new Nft();
     nft.contract_address = item.contract_address;
     nft.token_id = item.token_id;
-    nft.created_at = item.createdAt;
-    nft.updated_at = item.updatedAt;
+    nft.created_at = new Date(item.createdAt);
+    nft.updated_at = new Date(item.updatedAt);
+    nft.uri_s3 = item.media_link ? item.media_link : '';
     nft.owner = '';
     nft.uri = '';
     if (item?.asset_info && item.asset_info?.data) {

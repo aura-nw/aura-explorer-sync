@@ -120,7 +120,7 @@ export class SyncTaskService {
       }
       if (blockErrors.length > 0) {
         this._logger.log(`blockErrors:${blockErrors}`);
-        await this.blockSyncErrorRepository.upsert(blockErrors, ['height'])
+        await this.blockSyncErrorRepository.insertOnDuplicate(blockErrors, ['id'])
       }
     } catch (error) {
       this._logger.log(`error when generate base blocks:${blockErrors}`, error.stack);
@@ -542,7 +542,7 @@ export class SyncTaskService {
         }
       } else {
         //Insert or update Block
-        await this.blockRepository.upsert([newBlock], []);
+        await this.blockRepository.insertOnDuplicate([newBlock], ['id']);
       }
 
       // TODO: Write block to influxdb
@@ -747,19 +747,19 @@ export class SyncTaskService {
       await this.proposalVoteRepository.upsert(proposalVotes, []);
     }
     if (proposalDeposits.length > 0) {
-      await this.proposalDepositRepository.upsert(proposalDeposits, []);
+      await this.proposalDepositRepository.insertOnDuplicate(proposalDeposits, ['id']);
     }
     if (historyProposals.length > 0) {
-      await this.historyProposalRepository.upsert(historyProposals, []);
+      await this.historyProposalRepository.insertOnDuplicate(historyProposals, ['id']);
     }
     if (delegations.length > 0) {
       // TODO: Write delegation to influxdb
       this.influxDbClient.writeDelegations(delegations);
 
-      await this.delegationRepository.upsert(delegations, []);
+      await this.delegationRepository.insertOnDuplicate(delegations, ['id']);
     }
     if (delegatorRewards.length > 0) {
-      await this.delegatorRewardRepository.upsert(delegatorRewards, []);
+      await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, ['id']);
     }
     if (smartContracts.length > 0) {
       smartContracts.map(async (smartContract) => {
@@ -772,10 +772,10 @@ export class SyncTaskService {
           smartContract.contract_name = contractData.contract_info.label;
         }
       });
-      await this.smartContractRepository.upsert(smartContracts, []);
+      await this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
     }
     if (tokenTransactions.length > 0) {
-      await this.tokenTransactionRepository.upsert(tokenTransactions, []);
+      await this.tokenTransactionRepository.insertOnDuplicate(tokenTransactions, ['id']);
     }
   }
 
@@ -783,7 +783,7 @@ export class SyncTaskService {
     let contract_hash = '',
       contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED,
       contract_match,
-      url,
+      url = '',
       compiler_version,
       instantiate_msg_schema,
       query_msg_schema,

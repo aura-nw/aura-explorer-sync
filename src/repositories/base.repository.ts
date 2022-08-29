@@ -267,7 +267,7 @@ export class BaseRepository<T> {
       this.valueOfEnities(entityOrEntities).valuesSet.forEach(item => {
         let mark = '';
         properties.forEach(prop => {
-          if (item[prop]) {
+          if (item[prop] !== undefined) {
             mark += (mark.length == 0) ? '?' : ',?';
             paras.push(item[prop]);
           } else {

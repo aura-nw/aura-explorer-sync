@@ -109,9 +109,9 @@ export class SyncTokenService {
                         );
 
                         //insert/update table token_contracts
-                        await this.tokenContractRepository.upsert([tokenContract], []);
+                        await this.tokenContractRepository.insertOnDuplicate([tokenContract], ['id', 'created_at']);
                         //insert/update table cw20_token_owners
-                        await this.cw20TokenOwnerRepository.upsert([cw20TokenOwner], []);
+                        await this.cw20TokenOwnerRepository.insertOnDuplicate([cw20TokenOwner], ['id', 'created_at']);
                     }
                 }
             }
@@ -159,7 +159,7 @@ export class SyncTokenService {
                 tokenAura.price_change_percentage_24h = tokenAuraInfo.price_change_percentage_24h;
             }
             //insert/update table token_contracts
-            await this.tokenContractRepository.upsert([tokenAura], []);
+            await this.tokenContractRepository.insertOnDuplicate([tokenAura], ['id', 'created_at']);
 
             this.isSyncAuraToken = false;
         } catch (error) {
@@ -227,9 +227,9 @@ export class SyncTokenService {
                         );
 
                         //insert/update table token_contracts
-                        await this.tokenContractRepository.upsert([tokenContract], []);
+                        await this.tokenContractRepository.insertOnDuplicate([tokenContract], ['id', 'created_at']);
                         //insert/update table nfts
-                        await this.nftRepository.upsert([nft], []);
+                        await this.nftRepository.insertOnDuplicate([nft], ['id', 'created_at']);
                     }
                 }
             }
