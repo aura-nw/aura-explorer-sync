@@ -595,14 +595,16 @@ export class SyncDataHelpers {
     tokenTransaction.contract_address = _message.contract;
     const transactionType = Object.keys(_message.msg)[0];
     tokenTransaction.transaction_type = transactionType;
-    tokenTransaction.token_id = _message.msg[transactionType].token_id;
+    tokenTransaction.token_id = _message.msg[transactionType]?.token_id || '';
+    tokenTransaction.sender = _message?.sender || '';
+    tokenTransaction.amount = Number(_message.msg[transactionType]?.amount) || 0;
+    tokenTransaction.from_address = _message?.sender || '';
+    tokenTransaction.to_address = _message.msg[transactionType]?.owner || _message.msg[transactionType]?.recipient || '';
     if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.MINT) {
-      tokenTransaction.to_address = _message.msg[transactionType].owner;
-    } else if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.BURN) {
-      tokenTransaction.from_address = _message.sender;
-    } else {
-      tokenTransaction.from_address = _message.sender ? _message.sender : '';
-      tokenTransaction.to_address = _message.msg[transactionType]?.owner || _message.msg[transactionType]?.recipient;
+      tokenTransaction.from_address = '';
+    }
+    if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.BURN) {
+      tokenTransaction.to_address = '';
     }
 
     return tokenTransaction;

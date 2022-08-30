@@ -663,11 +663,8 @@ export class SyncTaskService {
             try {
               //sync token transaction
               if (message?.msg) {
-                const transactionType = Object.keys(message.msg)[0];
-                if (message.msg[transactionType]?.token_id) {
-                  const tokenTransaction = SyncDataHelpers.makeTokenTransactionData(txData, message);
-                  tokenTransactions.push(tokenTransaction);
-                }
+                const tokenTransaction = SyncDataHelpers.makeTokenTransactionData(txData, message);
+                tokenTransactions.push(tokenTransaction);
               }
               const _smartContracts = SyncDataHelpers.makeExecuteContractData(
                 txData,
