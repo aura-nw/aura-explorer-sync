@@ -130,3 +130,11 @@ export enum AURA_INFO {
   CONNTRACT_ADDRESS = 'aura',
   COIN_ID = 'aura-network'
 }
+
+export enum CONTRACT_TRANSACTION_EXECUTE_TYPE {
+  MINT = "mint",
+  BURN = "burn",
+  APPROVE = "approve",
+  REVOKE = "revoke",
+  TRANSFER_NFT = "transfer_nft"
+}
