@@ -4,6 +4,7 @@ import {
   CONST_DELEGATE_TYPE,
   CONST_MSG_TYPE,
   CONST_PROPOSAL_TYPE,
+  CONTRACT_TRANSACTION_EXECUTE_TYPE,
   CONTRACT_TYPE,
   SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
@@ -594,7 +595,15 @@ export class SyncDataHelpers {
     tokenTransaction.contract_address = _message.contract;
     const transactionType = Object.keys(_message.msg)[0];
     tokenTransaction.transaction_type = transactionType;
-    tokenTransaction.token_id = _message.msg[transactionType].token_id
+    tokenTransaction.token_id = _message.msg[transactionType].token_id;
+    if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.MINT) {
+      tokenTransaction.to_address = _message.msg[transactionType].owner;
+    } else if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.BURN) {
+      tokenTransaction.from_address = _message.sender;
+    } else {
+      tokenTransaction.from_address = _message.sender ? _message.sender : '';
+      tokenTransaction.to_address = _message.msg[transactionType]?.owner || _message.msg[transactionType]?.recipient;
+    }
 
     return tokenTransaction;
   }
