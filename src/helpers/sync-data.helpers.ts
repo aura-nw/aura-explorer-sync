@@ -4,6 +4,7 @@ import {
   CONST_DELEGATE_TYPE,
   CONST_MSG_TYPE,
   CONST_PROPOSAL_TYPE,
+  CONTRACT_TRANSACTION_EXECUTE_TYPE,
   CONTRACT_TYPE,
   SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
@@ -22,6 +23,9 @@ import {
 } from '../entities';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { Cw20TokenOwner } from '../entities/cw20-token-owner.entity';
+import { TokenCW20Dto } from '../dtos/token-cw20.dto';
+import { TokenTransaction } from '../entities/token-transaction.entity';
+import { find } from 'rxjs';
 export class SyncDataHelpers {
   private static precision = ENV_CONFIG.CHAIN_INFO.PRECISION_DIV;
   private static toDecimal = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
@@ -474,7 +478,7 @@ export class SyncDataHelpers {
     return proposal;
   }
 
-  static makerCw20TokenData(item: any, marketingInfo: any) {
+  static makerCw20TokenData(item: any, marketingInfo: any, tokenInfo: any) {
     //sync data token
     const tokenContract = new TokenContract();
     tokenContract.type = CONTRACT_TYPE.CW20;
@@ -484,12 +488,10 @@ export class SyncDataHelpers {
     tokenContract.name = '';
     tokenContract.symbol = '';
     tokenContract.decimals = 0;
-    tokenContract.total_supply = 0;
     if (item?.asset_info && item.asset_info?.data) {
       tokenContract.name = item.asset_info.data.name;
       tokenContract.symbol = item.asset_info.data.symbol;
       tokenContract.decimals = Number(item.asset_info.data.decimals);
-      tokenContract.total_supply = Number(item.asset_info.data.total_supply);
     }
     tokenContract.description = '';
     tokenContract.image = '';
@@ -499,6 +501,17 @@ export class SyncDataHelpers {
     }
     tokenContract.num_tokens = 0;
     tokenContract.coin_id = '';
+    if (tokenInfo) {
+      tokenContract.coin_id = tokenInfo.coinId;
+      tokenContract.max_total_supply = tokenInfo.max_supply;
+      tokenContract.price = tokenInfo.current_price;
+      tokenContract.price_change_percentage_24h = tokenInfo.price_change_percentage_24h;
+      tokenContract.volume_24h = tokenInfo.total_volume;
+      tokenContract.circulating_market_cap = tokenInfo.current_price * tokenInfo.circulating_supply;
+      tokenContract.fully_diluted_market_cap = tokenInfo.current_price * tokenInfo.max_supply;
+      tokenContract.holders = tokenInfo.current_holder;
+      tokenContract.holders_change_percentage_24h = tokenInfo.percent_holder;
+    }
     //sync data token owner
     const cw20TokenOwner = new Cw20TokenOwner();
     cw20TokenOwner.contract_address = item.contract_address;
@@ -509,7 +522,7 @@ export class SyncDataHelpers {
     return [tokenContract, cw20TokenOwner];
   }
 
-  static makerCw721TokenData(item: any, tokenInfo: any, nftInfo: any, numTokenInfo: any) {
+  static makerCw721TokenData(item: any, tokenInfo: any, numTokenInfo: any, tokens: any[]) {
     //sync data token
     const tokenContract = new TokenContract();
     tokenContract.type = CONTRACT_TYPE.CW721;
@@ -517,7 +530,6 @@ export class SyncDataHelpers {
     tokenContract.description = '';
     tokenContract.contract_address = item.contract_address;
     tokenContract.decimals = 0;
-    tokenContract.total_supply = 0;
     tokenContract.created_at = item.createdAt;
     tokenContract.updated_at = item.updatedAt;
     tokenContract.name = '';
@@ -537,19 +549,68 @@ export class SyncDataHelpers {
     nft.token_id = item.token_id;
     nft.created_at = item.createdAt;
     nft.updated_at = item.updatedAt;
-    nft.owner = '';
+    nft.uri_s3 = item.media_link ? item.media_link: '';
     nft.uri = '';
+    nft.owner = '';
     if (item?.asset_info && item.asset_info?.data) {
       nft.uri = item.asset_info.data?.info?.token_uri ? item.asset_info.data.info.token_uri : '';
+      nft.owner = item.asset_info.data?.access?.owner ? item.asset_info.data.access.owner : '';
     }
-    if (nftInfo?.data) {
-      nft.owner = nftInfo.data.owner;
-    }
+    //check is_burn
+    const findItem = tokens.find((i) => (i.contract_address === item.contract_address && i.token_id === item.token_id));
     nft.is_burn = false;
-    if (item.is_burned) {
-      nft.is_burn = true;
+    if (findItem) {
+      nft.is_burn = findItem.is_burned;
+    }
+    if (nft.is_burn) {
+      nft.owner = '';
     }
 
     return [tokenContract, nft];
+  }
+
+  /**
+   * Create TokenCW20 Dto
+   * @param data 
+   * @returns 
+   */
+  static makeTokenCW20Data(data: any): TokenCW20Dto {
+    const tokenDto = new TokenCW20Dto();
+    tokenDto.coinId = data.id;
+    tokenDto.current_price = data.current_price;
+    tokenDto.market_cap_rank = data.market_cap_rank;
+    tokenDto.price_change_24h = data.price_change_24h;
+    tokenDto.price_change_percentage_24h = data.price_change_percentage_24h;
+    tokenDto.last_updated = data.last_updated;
+    tokenDto.total_volume = data.total_volume;
+    tokenDto.timestamp = data.last_updated;
+    tokenDto.type = CONTRACT_TYPE.CW20;
+    tokenDto.circulating_supply = data.circulating_supply;
+    tokenDto.max_supply = Number(data.max_supply) || 0;
+    tokenDto.current_holder = 0;
+    tokenDto.percent_holder = 0;
+    tokenDto.previous_holder = 0;
+    return tokenDto;
+  }
+
+  static makeTokenTransactionData(txData: any, _message: any) {
+    const tokenTransaction = new TokenTransaction();
+    tokenTransaction.tx_hash = txData.tx_response.txhash;
+    tokenTransaction.contract_address = _message.contract;
+    const transactionType = Object.keys(_message.msg)[0];
+    tokenTransaction.transaction_type = transactionType;
+    tokenTransaction.token_id = _message.msg[transactionType]?.token_id || '';
+    tokenTransaction.sender = _message?.sender || '';
+    tokenTransaction.amount = Number(_message.msg[transactionType]?.amount) || 0;
+    tokenTransaction.from_address = _message?.sender || '';
+    tokenTransaction.to_address = _message.msg[transactionType]?.owner || _message.msg[transactionType]?.recipient || '';
+    if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.MINT) {
+      tokenTransaction.from_address = '';
+    }
+    if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.BURN) {
+      tokenTransaction.to_address = '';
+    }
+
+    return tokenTransaction;
   }
 }
