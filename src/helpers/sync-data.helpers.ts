@@ -560,7 +560,7 @@ export class SyncDataHelpers {
     const findItem = tokens.find((i) => (i.contract_address === item.contract_address && i.token_id === item.token_id));
     nft.is_burn = false;
     if (findItem) {
-      nft.is_burn = item.is_burned;
+      nft.is_burn = findItem.is_burned;
     }
     if (nft.is_burn) {
       nft.owner = '';
