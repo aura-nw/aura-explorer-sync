@@ -3,7 +3,7 @@ import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
-import { DeploymentRequestsRepository } from 'src/repositories/deployment-requests.repository';
+import { DeploymentRequestsRepository } from '../repositories/deployment-requests.repository';
 import { TokenTransactionRepository } from '../repositories/token-transaction.repository';
 import {
   CONST_CHAR,
