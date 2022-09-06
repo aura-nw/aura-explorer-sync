@@ -196,7 +196,6 @@ export class SyncTokenService {
                     this._logger.log(`============== Call syncCw721Tokens method ==============`);
                     await sefl.syncCw721Tokens(first100Tokens);
                 } catch (err) {
-                    this.syncInprogress = false;
                     this._logger.log(`${SyncTokenService.name} call createThreadsSyncCw721Tokens method has error: ${err.message}`, err.stack);
                 }
                 return true;
@@ -218,7 +217,6 @@ export class SyncTokenService {
                         this._logger.log(`============== Call syncCw721Tokens method ==============`);
                         await sefl.syncCw721Tokens(tokensData.data.assets);
                     } catch (err) {
-                        this.syncInprogress = false;
                         this._logger.log(`${SyncTokenService.name} call createThreadsSyncCw721Tokens method has error: ${err.message}`, err.stack);
                     }
 
