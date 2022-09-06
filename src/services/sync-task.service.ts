@@ -12,7 +12,7 @@ import {
   NODE_API,
   SMART_CONTRACT_VERIFICATION
 } from '../common/constants/app.constant';
-import { BlockSyncError, MissedBlock } from '../entities';
+import { BlockSyncError, MissedBlock, SmartContract } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { BlockSyncErrorRepository } from '../repositories/block-sync-error.repository';
 import { BlockRepository } from '../repositories/block.repository';
@@ -759,7 +759,7 @@ export class SyncTaskService {
       await this.delegatorRewardRepository.upsert(delegatorRewards, []);
     }
     if (smartContracts.length > 0) {
-      const mapSmartContracts  = await smartContracts.map(async(smartContract) => {
+      smartContracts.map(async (smartContract) => {
         if (smartContract.contract_name == '') {
           const param = `/cosmwasm/wasm/v1/contract/${smartContract.contract_address}`;
           const contractData = await this._commonUtil.getDataAPI(
@@ -768,9 +768,8 @@ export class SyncTaskService {
           );
           smartContract.contract_name = contractData.contract_info.label;
         }
-        return smartContract;
       });
-      await this.smartContractRepository.upsert([...mapSmartContracts], []);
+      await this.smartContractRepository.upsert(smartContracts, []);
     }
     if (tokenTransactions.length > 0) {
       await this.tokenTransactionRepository.upsert(tokenTransactions, []);
@@ -848,23 +847,23 @@ export class SyncTaskService {
       }
     }
 
-    const smartContract = {
-      height,
-      code_id,
-      contract_name,
-      contract_address,
-      creator_address,
-      contract_hash,
-      tx_hash,
-      url,
-      instantiate_msg_schema,
-      query_msg_schema,
-      execute_msg_schema,
-      contract_match,
-      contract_verification,
-      compiler_version,
-      s3_location,
-    };
+    const smartContract = new SmartContract();
+    smartContract.height = Number(height);
+    smartContract.code_id = Number(code_id);
+    smartContract.contract_name = contract_name;
+    smartContract.contract_address = contract_address;
+    smartContract.creator_address = creator_address;
+    smartContract.contract_hash = contract_hash;
+    smartContract.tx_hash = tx_hash;
+    smartContract.url = url;
+    smartContract.instantiate_msg_schema = instantiate_msg_schema;
+    smartContract.query_msg_schema = query_msg_schema;
+    smartContract.contract_match = contract_match;
+    smartContract.contract_verification = contract_verification;
+    smartContract.compiler_version = compiler_version;
+    smartContract.s3_location = s3_location;
+    smartContract.mainnet_code_id = '';
+    smartContract.mainnet_upload_status = '';
     return smartContract;
   }
 
