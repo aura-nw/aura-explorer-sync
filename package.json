@@ -46,7 +46,7 @@
     "rxjs": "^7.2.0",
     "swagger-ui-express": "^4.3.0",
     "tendermint": "^5.0.2",
-    "typeorm": "^0.2.41"
+    "typeorm": "^0.2.45"
   },
   "devDependencies": {
     "@cosmjs/proto-signing": "^0.27.1",
