@@ -26,4 +26,7 @@ export class TokenTransaction extends BaseEntityIncrementId {
 
     @Column({ name: 'amount' })
     amount: number;
+
+    @Column({ name: 'height' })
+    height: number;
 }
