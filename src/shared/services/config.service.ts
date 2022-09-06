@@ -85,7 +85,7 @@ export class ConfigService {
       migrationsRun: true,
       connectTimeout: 1000,
       synchronize: false,
-      // logging: true,
+      logging: true,
       namingStrategy: new PascalCaseStrategy(),
       multipleStatements: true,
     };
