@@ -27,6 +27,7 @@ export class SyncTokenService {
     private isSyncCw721Tokens = false;
     private influxDbClient: InfluxDBClient;
     private syncInprogress = false;
+    private pageLimit = 100;
 
     constructor(
         private configService: ConfigService,
@@ -51,6 +52,7 @@ export class SyncTokenService {
         // Call method when init app
         (async () => {
             await this.createThreads();
+            await this.createThreadsSyncCw721Tokens();
         })();
     }
 
@@ -172,67 +174,114 @@ export class SyncTokenService {
         }
     }
 
-    @Interval(2000)
-    async syncCw721Tokens() {
-        // check status
+    /**
+     * Create thread to sync cw721 tokens data
+     */
+    @Cron('0 */3 * * * *')
+    async createThreadsSyncCw721Tokens() {
         if (this.isSyncCw721Tokens) {
-            this._logger.log(null, 'already syncing cw721 tokens... wait');
+            this._logger.log(`============== Thread sync cw721 tokens data in-progress ==============`);
             return;
-        } else {
-            this._logger.log(null, 'fetching data cw721 tokens...');
         }
-        try {
-            this.isSyncCw721Tokens = true;
-            //get list tokens from indexer
-            const tokensData = await this._commonUtil.getDataAPI(
-                `${this.indexerUrl}${util.format(
-                    INDEXER_API.GET_LIST_TOKENS,
-                    CONTRACT_TYPE.CW721,
-                    this.indexerChainId
-                )}`,
-                '',
-            );
-            if (tokensData?.data && tokensData.data.count > 0) {
-                let tokens = tokensData.data.assets;
-                for (let i = 0; i < tokens.length; i++) {
-                    const item: any = tokens[i];
-                    //check exist contract in db
-                    const contract = await this.smartContractRepository.findOne({
-                        where: { contract_address: item.contract_address },
-                    });
-                    if (contract) {
-                        //get token info
-                        const base64RequestToken = Buffer.from(`{
-                            "contract_info": {}
-                        }`).toString('base64');
-                        const tokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestToken);
-                        //get num tokens
-                        const base64RequestNumToken = Buffer.from(`{
-                            "num_tokens": {}
-                        }`).toString('base64');
-                        const numTokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestNumToken);
-                        const [tokenContract, nft] = SyncDataHelpers.makerCw721TokenData(
-                            item,
-                            tokenInfo,
-                            numTokenInfo,
-                            tokens
-                        );
+        this.isSyncCw721Tokens = true;
+        //get first 100 tokens and count total from indexer
+        const first100TokensData = await this.getTokensFromIndexer(CONTRACT_TYPE.CW721, this.pageLimit, 0);
+        const count = first100TokensData.data.count;
+        const sefl = this;
+        if (count > 0) {
+            this.schedule.scheduleTimeoutJob(`CW721_Page${0}`, 10, async () => {
+                try {
+                    const first100Tokens = first100TokensData.data.assets;
 
-                        //insert/update table token_contracts
-                        await this.tokenContractRepository.upsert([tokenContract], []);
-                        //insert/update table nfts
-                        await this.nftRepository.upsert([nft], []);
+                    this._logger.log(`============== Call syncCw721Tokens method ==============`);
+                    await sefl.syncCw721Tokens(first100Tokens);
+                } catch (err) {
+                    this.syncInprogress = false;
+                    this._logger.log(`${SyncTokenService.name} call createThreadsSyncCw721Tokens method has error: ${err.message}`, err.stack);
+                }
+                return true;
+            },
+                {
+                    maxRetry: -1
+                });
+        }
+        if (count > 100) {
+            const countRemain = count - this.pageLimit;
+            const pages = Math.ceil(countRemain / this.pageLimit);
+            for (let i = 0; i < pages; i++) {
+                this._logger.log(`============== Create threads cw721 tokens ==============`);
+                this.schedule.scheduleTimeoutJob(`CW721_Page${i + 1}`, 10, async () => {
+                    try {
+                        //get cw721 tokens by paging
+                        const tokensData = await this.getTokensFromIndexer(CONTRACT_TYPE.CW721, this.pageLimit, this.pageLimit * (i + 1));
+
+                        this._logger.log(`============== Call syncCw721Tokens method ==============`);
+                        await sefl.syncCw721Tokens(tokensData.data.assets);
+                    } catch (err) {
+                        this.syncInprogress = false;
+                        this._logger.log(`${SyncTokenService.name} call createThreadsSyncCw721Tokens method has error: ${err.message}`, err.stack);
                     }
+
+                    return true;
+                },
+                    {
+                        maxRetry: -1
+                    });
+
+            }
+        }
+        this.isSyncCw721Tokens = false;
+    }
+
+    async getTokensFromIndexer(type: string, limit: number, offset: number) {
+        return await this._commonUtil.getDataAPI(
+            `${this.indexerUrl}${util.format(
+                INDEXER_API.GET_TOKENS_FROM_INDEXER,
+                type,
+                this.indexerChainId,
+                limit,
+                offset
+            )}`,
+            '',
+        );
+    }
+
+    async syncCw721Tokens(tokens: any) {
+        try {
+            for (let i = 0; i < tokens.length; i++) {
+                const item: any = tokens[i];
+                //check exist contract in db
+                const contract = await this.smartContractRepository.findOne({
+                    where: { contract_address: item.contract_address },
+                });
+                if (contract) {
+                    //get token info
+                    const base64RequestToken = Buffer.from(`{
+                        "contract_info": {}
+                    }`).toString('base64');
+                    const tokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestToken);
+                    //get num tokens
+                    const base64RequestNumToken = Buffer.from(`{
+                        "num_tokens": {}
+                    }`).toString('base64');
+                    const numTokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestNumToken);
+                    const [tokenContract, nft] = SyncDataHelpers.makerCw721TokenData(
+                        item,
+                        tokenInfo,
+                        numTokenInfo
+                    );
+
+                    //insert/update table token_contracts
+                    await this.tokenContractRepository.upsert([tokenContract], []);
+                    //insert/update table nfts
+                    await this.nftRepository.upsert([nft], []);
                 }
             }
-
-            this.isSyncCw721Tokens = false;
         } catch (error) {
             this._logger.error(
                 `Sync cw721 tokens was error, ${error.name}: ${error.message}`,
             );
             this._logger.error(`${error.stack}`);
-            this.isSyncCw721Tokens = false;
             throw error;
         }
     }
@@ -361,7 +410,7 @@ export class SyncTokenService {
                                 const holder24h = (tokenDto.current_holder - tokenDto.previous_holder);
                                 if (tokenDto.previous_holder > 0 && holder24h > 0) {
                                     tokenDto.percent_holder = Math.round((holder24h * 100) / tokenDto.previous_holder);
-                                }else{
+                                } else {
                                     tokenDto.percent_holder = 0;
                                 }
 

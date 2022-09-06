@@ -522,7 +522,7 @@ export class SyncDataHelpers {
     return [tokenContract, cw20TokenOwner];
   }
 
-  static makerCw721TokenData(item: any, tokenInfo: any, numTokenInfo: any, tokens: any[]) {
+  static makerCw721TokenData(item: any, tokenInfo: any, numTokenInfo: any) {
     //sync data token
     const tokenContract = new TokenContract();
     tokenContract.type = CONTRACT_TYPE.CW721;
@@ -550,20 +550,15 @@ export class SyncDataHelpers {
     nft.created_at = item.createdAt;
     nft.updated_at = item.updatedAt;
     nft.uri_s3 = item.media_link ? item.media_link: '';
+    nft.is_burn = item.is_burned;
     nft.uri = '';
-    nft.owner = '';
     if (item?.asset_info && item.asset_info?.data) {
       nft.uri = item.asset_info.data?.info?.token_uri ? item.asset_info.data.info.token_uri : '';
-      nft.owner = item.asset_info.data?.access?.owner ? item.asset_info.data.access.owner : '';
     }
-    //check is_burn
-    const findItem = tokens.find((i) => (i.contract_address === item.contract_address && i.token_id === item.token_id));
-    nft.is_burn = false;
-    if (findItem) {
-      nft.is_burn = findItem.is_burned;
-    }
-    if (nft.is_burn) {
+    if (item.is_burned) {
       nft.owner = '';
+    } else {
+      nft.owner = item.owner;
     }
 
     return [tokenContract, nft];
