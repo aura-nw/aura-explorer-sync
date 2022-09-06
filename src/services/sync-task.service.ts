@@ -863,6 +863,8 @@ export class SyncTaskService {
       contract_verification,
       compiler_version,
       s3_location,
+      mainnet_code_id: '',
+      mainnet_upload_status: ''
     };
     return smartContract;
   }
