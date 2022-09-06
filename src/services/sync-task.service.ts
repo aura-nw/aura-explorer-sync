@@ -759,7 +759,7 @@ export class SyncTaskService {
       await this.delegatorRewardRepository.upsert(delegatorRewards, []);
     }
     if (smartContracts.length > 0) {
-      smartContracts.map(async (smartContract) => {
+      const mapSmartContracts  = await smartContracts.map(async(smartContract) => {
         if (smartContract.contract_name == '') {
           const param = `/cosmwasm/wasm/v1/contract/${smartContract.contract_address}`;
           const contractData = await this._commonUtil.getDataAPI(
@@ -768,8 +768,9 @@ export class SyncTaskService {
           );
           smartContract.contract_name = contractData.contract_info.label;
         }
+        return smartContract;
       });
-      await this.smartContractRepository.upsert(smartContracts, []);
+      await this.smartContractRepository.upsert([...mapSmartContracts], []);
     }
     if (tokenTransactions.length > 0) {
       await this.tokenTransactionRepository.upsert(tokenTransactions, []);
