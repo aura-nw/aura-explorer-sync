@@ -3,7 +3,7 @@ import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
-import { DeploymentRequestsRepository } from 'src/repositories/deployment-requests.repository';
+import { DeploymentRequestsRepository } from '../repositories/deployment-requests.repository';
 import { TokenTransactionRepository } from '../repositories/token-transaction.repository';
 import {
   CONST_CHAR,
@@ -12,7 +12,7 @@ import {
   NODE_API,
   SMART_CONTRACT_VERIFICATION
 } from '../common/constants/app.constant';
-import { BlockSyncError, MissedBlock } from '../entities';
+import { BlockSyncError, MissedBlock, SmartContract } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { BlockSyncErrorRepository } from '../repositories/block-sync-error.repository';
 import { BlockRepository } from '../repositories/block.repository';
