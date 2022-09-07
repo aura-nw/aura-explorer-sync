@@ -9,6 +9,7 @@ import {
   CONST_CHAR,
   CONST_MSG_TYPE,
   CONST_PUBKEY_ADDR,
+  CONTRACT_TRANSACTION_EXECUTE_TYPE,
   NODE_API,
   SMART_CONTRACT_VERIFICATION
 } from '../common/constants/app.constant';
@@ -29,6 +30,7 @@ import { ValidatorRepository } from '../repositories/validator.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
+import * as util from 'util';
 
 @Injectable()
 export class SyncTaskService {
@@ -665,6 +667,36 @@ export class SyncTaskService {
               if (message?.msg) {
                 const tokenTransaction = SyncDataHelpers.makeTokenTransactionData(txData, message);
                 tokenTransactions.push(tokenTransaction);
+                //sync token contract
+                const transactionType = Object.keys(message.msg)[0];
+                const tokenId = message.msg[transactionType]?.token_id || '';
+                const contractAddress = message.contract;
+                if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.MINT && tokenId !== '') {
+                  const contract = await this.smartContractRepository.findOne({
+                    where: { contract_address: contractAddress },
+                  });
+                  if (contract && !contract.is_minted) {
+                    contract.is_minted = true;
+                    //get token info
+                    const base64RequestToken = Buffer.from(`{
+                      "contract_info": {}
+                    }`).toString('base64');
+                    const tokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestToken);
+                    if (tokenInfo?.data) {
+                      contract.token_name = tokenInfo.data.name;
+                      contract.token_symbol = tokenInfo.data.symbol;
+                    }
+                    //get num tokens
+                    const base64RequestNumToken = Buffer.from(`{
+                      "num_tokens": {}
+                    }`).toString('base64');
+                    const numTokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestNumToken);
+                    if (numTokenInfo?.data) {
+                      contract.num_tokens = Number(numTokenInfo.data.count);
+                    }
+                    smartContracts.push(contract);
+                  }
+                }
               }
               const _smartContracts = SyncDataHelpers.makeExecuteContractData(
                 txData,
@@ -977,5 +1009,16 @@ export class SyncTaskService {
         throw err;
       }
     }
+  }
+
+  private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
+    return await this._commonUtil.getDataAPI(
+      this.api,
+      `${util.format(
+        NODE_API.CONTRACT_INFO,
+        contract_address,
+        base64String
+      )}`
+    );
   }
 }
