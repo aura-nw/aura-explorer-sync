@@ -3,7 +3,7 @@ import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
-import { DeploymentRequestsRepository } from 'src/repositories/deployment-requests.repository';
+import { DeploymentRequestsRepository } from '../repositories/deployment-requests.repository';
 import { TokenTransactionRepository } from '../repositories/token-transaction.repository';
 import {
   CONST_CHAR,
@@ -12,7 +12,7 @@ import {
   NODE_API,
   SMART_CONTRACT_VERIFICATION
 } from '../common/constants/app.constant';
-import { BlockSyncError, MissedBlock } from '../entities';
+import { BlockSyncError, MissedBlock, SmartContract } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { BlockSyncErrorRepository } from '../repositories/block-sync-error.repository';
 import { BlockRepository } from '../repositories/block.repository';
@@ -663,20 +663,17 @@ export class SyncTaskService {
             try {
               //sync token transaction
               if (message?.msg) {
-                const transactionType = Object.keys(message.msg)[0];
-                if (message.msg[transactionType]?.token_id) {
-                  const tokenTransaction = SyncDataHelpers.makeTokenTransactionData(txData, message);
-                  tokenTransactions.push(tokenTransaction);
-                }
+                const tokenTransaction = SyncDataHelpers.makeTokenTransactionData(txData, message);
+                tokenTransactions.push(tokenTransaction);
               }
               const _smartContracts = SyncDataHelpers.makeExecuteContractData(
                 txData,
                 message,
               );
-              _smartContracts.map((item) => {
-                const smartContract = this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
+              for (let item of _smartContracts) {
+                const smartContract = await this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
                 smartContracts.push(smartContract);
-              });
+              };
             } catch (error) {
               this._logger.log(
                 null,
@@ -866,6 +863,8 @@ export class SyncTaskService {
       contract_verification,
       compiler_version,
       s3_location,
+      mainnet_code_id: '',
+      mainnet_upload_status: ''
     };
     return smartContract;
   }

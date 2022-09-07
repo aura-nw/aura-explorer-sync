@@ -15,4 +15,19 @@ export class TokenTransaction extends BaseEntityIncrementId {
 
     @Column({ name: 'transaction_type' })
     transaction_type: string;
+
+    @Column({ name: 'from_address' })
+    from_address: string;
+
+    @Column({ name: 'to_address' })
+    to_address: string;
+
+    @Column({ name: 'sender' })
+    sender: string;
+
+    @Column({ name: 'amount' })
+    amount: number;
+
+    @Column({ name: 'height' })
+    height: number;
 }

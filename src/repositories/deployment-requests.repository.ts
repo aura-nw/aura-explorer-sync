@@ -1,6 +1,6 @@
 import { Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DeploymentRequests } from "src/entities/deployment-requests.entity";
+import { DeploymentRequests } from "../entities/deployment-requests.entity";
 import { Repository } from "typeorm";
 import { BaseRepository } from "./base.repository";
 

@@ -193,7 +193,7 @@ export class SyncTokenService {
                 '',
             );
             if (tokensData?.data && tokensData.data.count > 0) {
-                const tokens = tokensData.data.assets;
+                let tokens = tokensData.data.assets;
                 for (let i = 0; i < tokens.length; i++) {
                     const item: any = tokens[i];
                     //check exist contract in db
@@ -206,14 +206,6 @@ export class SyncTokenService {
                             "contract_info": {}
                         }`).toString('base64');
                         const tokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestToken);
-                        //get nft info
-                        let nftInfo = {};
-                        if (!item.is_burned) {
-                            const base64RequestNft = Buffer.from(`{
-                                "owner_of": { "token_id": "${item.token_id}" }
-                            }`).toString('base64');
-                            nftInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestNft);
-                        }
                         //get num tokens
                         const base64RequestNumToken = Buffer.from(`{
                             "num_tokens": {}
@@ -222,8 +214,8 @@ export class SyncTokenService {
                         const [tokenContract, nft] = SyncDataHelpers.makerCw721TokenData(
                             item,
                             tokenInfo,
-                            nftInfo,
-                            numTokenInfo
+                            numTokenInfo,
+                            tokens
                         );
 
                         //insert/update table token_contracts
