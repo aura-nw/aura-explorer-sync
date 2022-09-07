@@ -670,10 +670,10 @@ export class SyncTaskService {
                 txData,
                 message,
               );
-              _smartContracts.map((item) => {
-                const smartContract = this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
+              for (let item of _smartContracts) {
+                const smartContract = await this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
                 smartContracts.push(smartContract);
-              });
+              };
             } catch (error) {
               this._logger.log(
                 null,
