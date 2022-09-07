@@ -596,6 +596,7 @@ export class SyncDataHelpers {
   static makeTokenTransactionData(txData: any, _message: any) {
     const tokenTransaction = new TokenTransaction();
     tokenTransaction.tx_hash = txData.tx_response.txhash;
+    tokenTransaction.height = txData.tx_response.height;
     tokenTransaction.contract_address = _message.contract;
     const transactionType = Object.keys(_message.msg)[0];
     tokenTransaction.transaction_type = transactionType;

@@ -670,10 +670,10 @@ export class SyncTaskService {
                 txData,
                 message,
               );
-              _smartContracts.map((item) => {
-                const smartContract = this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
+              for (let item of _smartContracts) {
+                const smartContract = await this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
                 smartContracts.push(smartContract);
-              });
+              };
             } catch (error) {
               this._logger.log(
                 null,
@@ -847,23 +847,25 @@ export class SyncTaskService {
       }
     }
 
-    const smartContract = new SmartContract();
-    smartContract.height = Number(height);
-    smartContract.code_id = Number(code_id);
-    smartContract.contract_name = contract_name;
-    smartContract.contract_address = contract_address;
-    smartContract.creator_address = creator_address;
-    smartContract.contract_hash = contract_hash;
-    smartContract.tx_hash = tx_hash;
-    smartContract.url = url;
-    smartContract.instantiate_msg_schema = instantiate_msg_schema;
-    smartContract.query_msg_schema = query_msg_schema;
-    smartContract.contract_match = contract_match;
-    smartContract.contract_verification = contract_verification;
-    smartContract.compiler_version = compiler_version;
-    smartContract.s3_location = s3_location;
-    smartContract.mainnet_code_id = '';
-    smartContract.mainnet_upload_status = '';
+    const smartContract = {
+      height,
+      code_id,
+      contract_name,
+      contract_address,
+      creator_address,
+      contract_hash,
+      tx_hash,
+      url,
+      instantiate_msg_schema,
+      query_msg_schema,
+      execute_msg_schema,
+      contract_match,
+      contract_verification,
+      compiler_version,
+      s3_location,
+      mainnet_code_id: '',
+      mainnet_upload_status: ''
+    };
     return smartContract;
   }
 
