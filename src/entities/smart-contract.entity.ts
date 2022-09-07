@@ -1,4 +1,4 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, Unique } from 'typeorm';
 import { BaseEntityIncrementId } from './base/base.entity';
 
 @Entity('smart_contracts')
@@ -13,6 +13,7 @@ export class SmartContract extends BaseEntityIncrementId {
   contract_name: string;
 
   @Column({ name: 'contract_address' })
+  @Unique(['contract_address'])
   contract_address: string;
 
   @Column({ name: 'creator_address' })
