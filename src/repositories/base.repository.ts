@@ -1,5 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { DeleteResult, FindManyOptions, OrderByCondition, Repository } from 'typeorm';
+import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
+import { UpsertOptions } from 'typeorm/repository/UpsertOptions';
 import { PaginatorResponse } from '../dtos/responses/paginator.response';
 
 export class BaseRepository<T> {
@@ -196,6 +198,16 @@ export class BaseRepository<T> {
     return query.getRawMany()
   }
 
+  /**
+   * Get data by pagination
+   * @param column 
+   * @param limit 
+   * @param pageIndex 
+   * @param conditions 
+   * @param groupBy 
+   * @param orderBy 
+   * @returns 
+   */
   queryPaging(column: string, limit: number, pageIndex: number, conditions?: any, groupBy?: string, orderBy?: OrderByCondition,) {
     let query = this._repos.createQueryBuilder()
       .select(`${column}`)
@@ -215,5 +227,73 @@ export class BaseRepository<T> {
     }
 
     return query.getRawMany();
+  }
+
+  /**
+    * Create when duplicate
+    * @param entityOrEntities 
+    * @param skipPropetties 
+    * @returns 
+  */
+  insertOnDuplicate(entityOrEntities: | QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[], skipPropetties?: string[]) {
+    try {
+      let updateColumns = '';
+      const columns = [];
+      const properties = [];
+      const metadata = this._repos.metadata;
+
+      // Get column name
+      metadata.columns.forEach(col => {
+        columns.push(col.databaseName);
+        properties.push(col.propertyName);
+      });
+
+      // Skip column not update value
+      let mapSkipColumns = [];
+      if (skipPropetties) {
+        mapSkipColumns = metadata.mapPropertyPathsToColumns(skipPropetties).map(m => m.databaseName)
+      }
+
+      // Update column
+      columns.forEach(item => {
+        if (mapSkipColumns.indexOf(item) < 0) {
+          updateColumns += (updateColumns.length === 0) ? `\`${item}\`= VALUES(\`${item}\`)` : `,\`${item}\`= VALUES(\`${item}\`)`;
+        }
+      });
+
+      // Add paramter
+      let values = '';
+      const paras = [];
+      this.valueOfEnities(entityOrEntities).valuesSet.forEach(item => {
+        let mark = '';
+        properties.forEach(prop => {
+          if (item[prop] !== undefined) {
+            mark += (mark.length == 0) ? '?' : ',?';
+            paras.push(item[prop]);
+          } else {
+            mark += (mark.length == 0) ? 'DEFAULT' : ',DEFAULT';
+          }
+        });
+        values += (values.length === 0) ? `(${mark})` : `, (${mark})`;
+      });
+
+      // Create and excecute properties
+      const sqlQuery = `INSERT INTO ${metadata.tableName}(${columns}) VALUES ${values} ON DUPLICATE KEY UPDATE ${updateColumns}`;
+      this._repos.query(sqlQuery, [...paras]);
+      return true;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  /**
+   * Get value of entities
+   * @param values 
+   * @returns 
+   */
+  valueOfEnities(values: | QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[]) {
+    const expressionMap = this._repos.manager.createQueryBuilder().expressionMap.clone()
+    expressionMap.valuesSet = values
+    return expressionMap;
   }
 }
