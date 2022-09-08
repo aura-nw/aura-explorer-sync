@@ -1,4 +1,3 @@
-import { Nft } from '../entities/nft.entity';
 import {
   CONST_CHAR,
   CONST_DELEGATE_TYPE,
@@ -519,52 +518,6 @@ export class SyncDataHelpers {
     cw20TokenOwner.percent_hold = item.percent_hold;
 
     return [tokenContract, cw20TokenOwner];
-  }
-
-  static makerCw721TokenData(item: any, tokenInfo: any, numTokenInfo: any, tokens: any[]) {
-    //sync data token
-    const tokenContract = new TokenContract();
-    tokenContract.type = CONTRACT_TYPE.CW721;
-    tokenContract.image = '';
-    tokenContract.description = '';
-    tokenContract.contract_address = item.contract_address;
-    tokenContract.decimals = 0;
-    tokenContract.created_at = new Date(item.createdAt);
-    tokenContract.name = '';
-    tokenContract.symbol = '';
-    if (tokenInfo?.data) {
-      tokenContract.name = tokenInfo.data.name;
-      tokenContract.symbol = tokenInfo.data.symbol;
-    }
-    tokenContract.num_tokens = 0;
-    if (numTokenInfo?.data) {
-      tokenContract.num_tokens = Number(numTokenInfo.data.count);
-    }
-    tokenContract.coin_id = '';
-    //sync data nft
-    const nft = new Nft();
-    nft.contract_address = item.contract_address;
-    nft.token_id = item.token_id;
-    nft.created_at = new Date(item.createdAt);
-    nft.updated_at = new Date(item.updatedAt);
-    nft.uri_s3 = item.media_link ? item.media_link : '';
-    nft.uri = '';
-    nft.owner = '';
-    if (item?.asset_info && item.asset_info?.data) {
-      nft.uri = item.asset_info.data?.info?.token_uri ? item.asset_info.data.info.token_uri : '';
-      nft.owner = item.asset_info.data?.access?.owner ? item.asset_info.data.access.owner : '';
-    }
-    //check is_burn
-    const findItem = tokens.find((i) => (i.contract_address === item.contract_address && i.token_id === item.token_id));
-    nft.is_burn = false;
-    if (findItem) {
-      nft.is_burn = findItem.is_burned;
-    }
-    if (nft.is_burn) {
-      nft.owner = '';
-    }
-
-    return [tokenContract, nft];
   }
 
   /**

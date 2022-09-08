@@ -8,7 +8,6 @@ import { TokenCW20Dto } from "../dtos/token-cw20.dto";
 import { TokenContract } from "../entities/token-contract.entity";
 import { SyncDataHelpers } from "../helpers/sync-data.helpers";
 import { Cw20TokenOwnerRepository } from "../repositories/cw20-token-owner.repository";
-import { NftRepository } from "../repositories/nft.repository";
 import { SmartContractRepository } from "../repositories/smart-contract.repository";
 import { TokenContractRepository } from "../repositories/token-contract.repository";
 import { ConfigService, ENV_CONFIG } from "../shared/services/config.service";
@@ -32,7 +31,6 @@ export class SyncTokenService {
         private configService: ConfigService,
         private _commonUtil: CommonUtil,
         private tokenContractRepository: TokenContractRepository,
-        private nftRepository: NftRepository,
         private redisUtil: RedisUtil,
         @InjectSchedule() private readonly schedule: Schedule,
         private smartContractRepository: SmartContractRepository,
