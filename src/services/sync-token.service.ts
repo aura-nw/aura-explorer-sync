@@ -51,8 +51,7 @@ export class SyncTokenService {
             await this.createThreads();
         })();
     }
-
-
+    
     // @Interval(2000)
     async syncCw20Tokens() {
         // check status
@@ -154,9 +153,10 @@ export class SyncTokenService {
                 const tokenAuraInfo = JSON.parse(tokenAuraData);
                 tokenAura.coin_id = tokenAuraInfo.coinId;
                 tokenAura.price = tokenAuraInfo.current_price;
-                tokenAura.price_change_percentage_24h = tokenAuraInfo.price_change_percentage_24h;
+                tokenAura.price_change_percentage_24h = tokenAuraInfo.price_change_percentage_24h || 0;
             }
             //insert/update table token_contracts
+            this._logger.log(`Update price aura coin: ${JSON.stringify(tokenAura)}`);
             await this.tokenContractRepository.insertOnDuplicate([tokenAura], ['id', 'created_at']);
 
             this.isSyncAuraToken = false;
