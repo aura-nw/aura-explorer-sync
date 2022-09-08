@@ -55,7 +55,7 @@ export class SyncTokenService {
     }
 
 
-    @Interval(2000)
+    // @Interval(2000)
     async syncCw20Tokens() {
         // check status
         if (this.isSyncCw20Tokens) {
@@ -173,7 +173,7 @@ export class SyncTokenService {
     }
 
     @Interval(2000)
-    async syncCw721Tokens() {
+    async syncOldCw721Tokens() {
         // check status
         if (this.isSyncCw721Tokens) {
             this._logger.log(null, 'already syncing cw721 tokens... wait');
@@ -183,47 +183,35 @@ export class SyncTokenService {
         }
         try {
             this.isSyncCw721Tokens = true;
-            //get list tokens from indexer
-            const tokensData = await this._commonUtil.getDataAPI(
-                `${this.indexerUrl}${util.format(
-                    INDEXER_API.GET_LIST_TOKENS,
-                    CONTRACT_TYPE.CW721,
-                    this.indexerChainId
-                )}`,
-                '',
-            );
-            if (tokensData?.data && tokensData.data.count > 0) {
-                let tokens = tokensData.data.assets;
-                for (let i = 0; i < tokens.length; i++) {
-                    const item: any = tokens[i];
-                    //check exist contract in db
+            const listTokens = await this.smartContractRepository.getOldCw721Tokens();
+            if (listTokens.length > 0) {
+                let smartContracts = [];
+                for (let i = 0; i < listTokens.length; i++) {
+                    const contractAddress = listTokens[i].contract_address;
                     const contract = await this.smartContractRepository.findOne({
-                        where: { contract_address: item.contract_address },
+                        where: { contract_address: contractAddress },
                     });
-                    if (contract) {
-                        //get token info
-                        const base64RequestToken = Buffer.from(`{
+                    contract.is_minted = true;
+                    //get token info
+                    const base64RequestToken = Buffer.from(`{
                             "contract_info": {}
                         }`).toString('base64');
-                        const tokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestToken);
-                        //get num tokens
-                        const base64RequestNumToken = Buffer.from(`{
-                            "num_tokens": {}
-                        }`).toString('base64');
-                        const numTokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestNumToken);
-                        const [tokenContract, nft] = SyncDataHelpers.makerCw721TokenData(
-                            item,
-                            tokenInfo,
-                            numTokenInfo,
-                            tokens
-                        );
-
-                        //insert/update table token_contracts
-                        await this.tokenContractRepository.insertOnDuplicate([tokenContract], ['id', 'created_at']);
-                        //insert/update table nfts
-                        await this.nftRepository.insertOnDuplicate([nft], ['id', 'created_at']);
+                    const tokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestToken);
+                    if (tokenInfo?.data) {
+                        contract.token_name = tokenInfo.data.name;
+                        contract.token_symbol = tokenInfo.data.symbol;
                     }
+                    //get num tokens
+                    const base64RequestNumToken = Buffer.from(`{
+                        "num_tokens": {}
+                    }`).toString('base64');
+                    const numTokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestNumToken);
+                    if (numTokenInfo?.data) {
+                        contract.num_tokens = Number(numTokenInfo.data.count);
+                    }
+                    smartContracts.push(contract);
                 }
+                await this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
             }
 
             this.isSyncCw721Tokens = false;
@@ -361,7 +349,7 @@ export class SyncTokenService {
                                 const holder24h = (tokenDto.current_holder - tokenDto.previous_holder);
                                 if (tokenDto.previous_holder > 0 && holder24h > 0) {
                                     tokenDto.percent_holder = Math.round((holder24h * 100) / tokenDto.previous_holder);
-                                }else{
+                                } else {
                                     tokenDto.percent_holder = 0;
                                 }
 

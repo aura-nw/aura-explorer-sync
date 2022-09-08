@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SMART_CONTRACT_VERIFICATION } from '../common/constants/app.constant';
+import { CONTRACT_CODE_RESULT, CONTRACT_TYPE, KEYWORD_SEARCH_TRANSACTION, MESSAGE_ACTION, SMART_CONTRACT_VERIFICATION } from '../common/constants/app.constant';
 import { SmartContract } from '../entities';
 import { BaseRepository } from './base.repository';
 
@@ -51,5 +51,21 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
       ]);
     const res = await query.getRawOne();
     return res;
+  }
+
+  async getOldCw721Tokens() {
+    const sql = `SELECT contract_address
+      FROM transactions
+      WHERE type = '${MESSAGE_ACTION.MSG_EXECUTE_CONTRACT}'
+        AND messages LIKE '${KEYWORD_SEARCH_TRANSACTION.MINT_CONTRACT}'
+          AND contract_address IN (
+            SELECT sc.contract_address
+            FROM smart_contracts sc
+              INNER JOIN smart_contract_codes scc ON sc.code_id = scc.code_id AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}' AND scc.type = '${CONTRACT_TYPE.CW721}'
+            WHERE sc.is_minted = 0
+          )
+      GROUP BY contract_address`;
+
+    return await this.repos.query(sql, []);
   }
 }

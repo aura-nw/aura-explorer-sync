@@ -138,3 +138,7 @@ export enum CONTRACT_TRANSACTION_EXECUTE_TYPE {
   REVOKE = "revoke",
   TRANSFER_NFT = "transfer_nft"
 }
+
+export enum KEYWORD_SEARCH_TRANSACTION {
+  MINT_CONTRACT = '%"mint"%"token_id"%'
+}
