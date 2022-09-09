@@ -675,17 +675,7 @@ export class SyncTaskService {
                   const contract = await this.smartContractRepository.findOne({
                     where: { contract_address: contractAddress },
                   });
-                  if (contract && !contract.is_minted) {
-                    contract.is_minted = true;
-                    //get token info
-                    const base64RequestToken = Buffer.from(`{
-                      "contract_info": {}
-                    }`).toString('base64');
-                    const tokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestToken);
-                    if (tokenInfo?.data) {
-                      contract.token_name = tokenInfo.data.name;
-                      contract.token_symbol = tokenInfo.data.symbol;
-                    }
+                  if (contract) {
                     //get num tokens
                     const base64RequestNumToken = Buffer.from(`{
                       "num_tokens": {}
@@ -693,6 +683,18 @@ export class SyncTaskService {
                     const numTokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestNumToken);
                     if (numTokenInfo?.data) {
                       contract.num_tokens = Number(numTokenInfo.data.count);
+                    }
+                    if (!contract.is_minted) {
+                      contract.is_minted = true;
+                      //get token info
+                      const base64RequestToken = Buffer.from(`{
+                        "contract_info": {}
+                      }`).toString('base64');
+                      const tokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestToken);
+                      if (tokenInfo?.data) {
+                        contract.token_name = tokenInfo.data.name;
+                        contract.token_symbol = tokenInfo.data.symbol;
+                      }
                     }
                     smartContracts.push(contract);
                   }
