@@ -27,6 +27,7 @@ export class SyncTokenService {
     private isSyncCw721Tokens = false;
     private influxDbClient: InfluxDBClient;
     private syncInprogress = false;
+    private isSynAuraAndBtcToken = false;
 
     constructor(
         private configService: ConfigService,
@@ -266,9 +267,10 @@ export class SyncTokenService {
     }
 
     /**
+     * @todo: use for sync cw20 tokens price
      * Create thread to sync data
      */
-    @Cron('0 */3 * * * *')
+    // @Cron('0 */3 * * * *')
     async createThreads() {
         if (this.syncInprogress) {
             this._logger.log(`============== Thread sync data In-progress ==============`);
@@ -361,7 +363,7 @@ export class SyncTokenService {
                                 const holder24h = (tokenDto.current_holder - tokenDto.previous_holder);
                                 if (tokenDto.previous_holder > 0 && holder24h > 0) {
                                     tokenDto.percent_holder = Math.round((holder24h * 100) / tokenDto.previous_holder);
-                                }else{
+                                } else {
                                     tokenDto.percent_holder = 0;
                                 }
 
@@ -386,6 +388,47 @@ export class SyncTokenService {
 
         } catch (err) {
             this._logger.log(`${SyncTokenService.name} call ${this.syncPriceAndVolume.name} method has error: ${err.message}`, err.stack);
+        }
+    }
+
+    @Interval(2000)
+    async syncAuraAndBtcTokens() {
+        // check status
+        if (this.isSynAuraAndBtcToken) {
+            this._logger.log(null, 'already syncing aura and btc tokens... wait');
+            return;
+        } else {
+            this._logger.log(null, 'fetching data aura and btc tokens...');
+        }
+        try {
+            this.isSynAuraAndBtcToken = true;
+
+            let coinIds = 'aura-network,bitcoin';
+            const cw20Dtos: TokenCW20Dto[] = [];
+            const coingecko = ENV_CONFIG.COINGECKO;
+            this._logger.log(`============== Call Coingecko Api ==============`);
+            const para = `${util.format(COINGECKO_API.GET_COINS_MARKET, coinIds, coingecko.MAX_REQUEST)}`;
+            const response = await this._commonUtil.getDataAPI(coingecko.API, para);
+            if (response) {
+                response.forEach(async data => {
+                    const tokenDto = SyncDataHelpers.makeTokenCW20Data(data);
+                    cw20Dtos.push(tokenDto);
+
+                    this._logger.log(`============== Write data to Redis ==============`);
+                    await this.redisUtil.setValue(tokenDto.coinId, tokenDto)
+                });
+            }
+            this._logger.log(`============== Write data to Influxdb ==============`);
+            await this.influxDbClient.writeBlockTokenPriceAndVolume(cw20Dtos);
+
+            this.isSynAuraAndBtcToken = false;
+        } catch (error) {
+            this._logger.error(
+                `Sync aura and btc tokens was error, ${error.name}: ${error.message}`,
+            );
+            this._logger.error(`${error.stack}`);
+            this.isSynAuraAndBtcToken = false;
+            throw error;
         }
     }
 }
