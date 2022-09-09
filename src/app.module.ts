@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bull';
 import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
+import { SmartContractsProcessor } from 'processor/smart-contracts.processor';
 import { Block, BlockSyncError, Delegation, DelegatorReward, HistoryProposal, MissedBlock, Proposal, ProposalDeposit, ProposalVote, SmartContract, SmartContractCode, SyncStatus, TokenContract, Transaction, Validator } from './entities';
 import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
 import { DeploymentRequests } from './entities/deployment-requests.entity';
@@ -80,7 +81,12 @@ const services = [
   SyncTaskService,
   SyncContractCodeService,
   SyncTokenService
-]
+];
+
+const processors = [
+  SmartContractsProcessor
+];
+
 @Module({
   imports: [
     ScheduleModule.register(),
@@ -90,13 +96,19 @@ const services = [
         maxRedirects: 5,
       }),
     }),
-    // BullModule.forRoot({
-    //   redis: {
-    //     host: ENV_CONFIG.REDIS.HOST,
-    //     port: ENV_CONFIG.REDIS.PORT,
-    //     keyPrefix: 'EXPLORER_SYNC'
-    //   }
-    // }),
+    BullModule.forRoot({
+      redis: {
+        host: ENV_CONFIG.REDIS.HOST,
+        port: ENV_CONFIG.REDIS.PORT
+      },
+      // prefix: 'EXPLORER_SYNC',
+      defaultJobOptions: {
+        removeOnComplete: true,
+      }
+    }),
+    BullModule.registerQueue({
+      name: 'smart-contracts',
+    }),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
     TypeOrmModule.forFeature([...entities]),
@@ -109,7 +121,8 @@ const services = [
   controllers: [...controllers],
   providers: [
     ...repositories,
-    ...services
+    ...services,
+    ...processors,
   ],
 })
 export class AppModule { }

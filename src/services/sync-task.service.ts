@@ -31,6 +31,8 @@ import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
 import * as util from 'util';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 @Injectable()
 export class SyncTaskService {
@@ -65,6 +67,7 @@ export class SyncTaskService {
     private tokenTransactionRepository: TokenTransactionRepository,
     private deploymentRequestsRepository: DeploymentRequestsRepository,
     @InjectSchedule() private readonly schedule: Schedule,
+    @InjectQueue('smart-contracts') private readonly contractQueue: Queue
   ) {
     this._logger.log(
       '============== Constructor Sync Task Service ==============',
@@ -82,6 +85,9 @@ export class SyncTaskService {
 
     this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
     this.threads = ENV_CONFIG.THREADS;
+    this.contractQueue.add('sync-instantiate-contracts', {
+      hello: 'world',
+    })
   }
 
   /**
