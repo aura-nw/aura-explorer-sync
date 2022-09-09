@@ -547,7 +547,7 @@ export class SyncDataHelpers {
     nft.token_id = item.token_id;
     nft.created_at = new Date(item.createdAt);
     nft.updated_at = new Date(item.updatedAt);
-    nft.uri_s3 = item.media_link ? item.media_link : '';
+    nft.uri_s3 = (item.media_info.length > 0 && item.media_info[0]?.media_link) ? item.media_info[0].media_link : '';
     nft.uri = '';
     nft.owner = '';
     if (item?.asset_info && item.asset_info?.data) {
