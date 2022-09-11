@@ -85,15 +85,20 @@ export class SyncTaskService {
 
     this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
     this.threads = ENV_CONFIG.THREADS;
-    this.contractQueue.add('sync-instantiate-contracts', {
+    this.testJob();
+  }
+
+  async testJob() {
+    await this.contractQueue.add('sync-instantiate-contracts', {
       hello: 'world',
-    })
+    });
+    this._logger.log('Done call job');
   }
 
   /**
    * Get latest block to insert Block Sync Error table
    */
-  @Interval(ENV_CONFIG.TIMES_SYNC)
+  // @Interval(ENV_CONFIG.TIMES_SYNC)
   async cronSync() {
     // Get the highest block and insert into SyncBlockError
     const blockErrors = [];
@@ -140,7 +145,7 @@ export class SyncTaskService {
   /**
    * Procces block insert data to db
   */
-  @Interval(3000)
+  // @Interval(3000)
   async processBlock() {
     // Get the highest block and insert into SyncBlockError
     try {
@@ -181,7 +186,7 @@ export class SyncTaskService {
 
   }
 
-  @Interval(3000)
+  // @Interval(3000)
   async syncValidator() {
     // check status
     if (this.isSyncValidator) {
@@ -355,7 +360,7 @@ export class SyncTaskService {
     }
   }
 
-  @Interval(3000)
+  // @Interval(3000)
   async syncMissedBlock() {
     // check status
     if (this.isSyncMissBlock) {
@@ -960,7 +965,7 @@ export class SyncTaskService {
    * Write block were to influxdb
    * @returns 
    */
-  @Interval(2000)
+  // @Interval(2000)
   async BlockMissToInfluxdb() {
     const numRow = 500;
     if (ENV_CONFIG.SYNC_DATA_INFLUXD) {

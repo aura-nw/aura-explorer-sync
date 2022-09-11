@@ -3,7 +3,7 @@ import { BullModule } from '@nestjs/bull';
 import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
-import { SmartContractsProcessor } from 'processor/smart-contracts.processor';
+import { SmartContractsProcessor } from 'src/processor/smart-contracts.processor';
 import { Block, BlockSyncError, Delegation, DelegatorReward, HistoryProposal, MissedBlock, Proposal, ProposalDeposit, ProposalVote, SmartContract, SmartContractCode, SyncStatus, TokenContract, Transaction, Validator } from './entities';
 import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
 import { DeploymentRequests } from './entities/deployment-requests.entity';
@@ -107,7 +107,7 @@ const processors = [
       }
     }),
     BullModule.registerQueue({
-      name: 'smart-contracts',
+      name: 'smart-contracts'
     }),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
@@ -117,6 +117,10 @@ const processors = [
       useFactory: (configService: ConfigService) => configService.typeOrmConfig,
       inject: [ConfigService],
     }),
+  ],
+  exports: [
+    BullModule,
+    ...processors,
   ],
   controllers: [...controllers],
   providers: [

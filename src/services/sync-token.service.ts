@@ -44,12 +44,12 @@ export class SyncTokenService {
         this.api = ENV_CONFIG.NODE.API;
 
         // Connect influxdb
-        this.connectInfluxdb();
+        // this.connectInfluxdb();
 
-        // Call method when init app
-        (async () => {
-            await this.createThreads();
-        })();
+        // // Call method when init app
+        // (async () => {
+        //     await this.createThreads();
+        // })();
     }
     
     // @Interval(2000)
@@ -124,7 +124,7 @@ export class SyncTokenService {
         }
     }
 
-    @Interval(3000)
+    // @Interval(3000)
     async syncAuraToken() {
         // check status
         if (this.isSyncAuraToken) {
@@ -170,7 +170,7 @@ export class SyncTokenService {
         }
     }
 
-    @Interval(2000)
+    // @Interval(2000)
     async syncOldCw721Tokens() {
         // check status
         if (this.isSyncCw721Tokens) {
