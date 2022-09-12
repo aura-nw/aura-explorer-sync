@@ -13,8 +13,7 @@ export class SmartContract extends BaseEntityIncrementId {
   @Column({ name: 'contract_name' })
   contract_name: string;
 
-  @Column({ name: 'contract_address' }) 
-  @Index({unique: true})
+  @Column({ name: 'contract_address' })
   contract_address: string;
 
   @Column({ name: 'creator_address' })
