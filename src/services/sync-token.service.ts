@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron, Interval } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from "nest-schedule";
 import * as util from 'util';
-import { AURA_INFO, COINGECKO_API, CONTRACT_TYPE, INDEXER_API, NODE_API } from "../common/constants/app.constant";
+import { AURA_INFO, COINGECKO_API, CONTRACT_TYPE, INDEXER_API, KEYWORD_SEARCH_TRANSACTION, NODE_API } from "../common/constants/app.constant";
 import { TokenHolderRequest } from "../dtos/requests/token-holder.request";
 import { TokenCW20Dto } from "../dtos/token-cw20.dto";
 import { TokenContract } from "../entities/token-contract.entity";
@@ -182,7 +182,7 @@ export class SyncTokenService {
         }
         try {
             this.isSyncCw721Tokens = true;
-            const listTokens = await this.smartContractRepository.getOldCw721Tokens();
+            const listTokens = await this.smartContractRepository.getOldCw721Tokens(CONTRACT_TYPE.CW721, KEYWORD_SEARCH_TRANSACTION.MINT_CONTRACT_CW721);
             if (listTokens.length > 0) {
                 let smartContracts = [];
                 for (let i = 0; i < listTokens.length; i++) {
