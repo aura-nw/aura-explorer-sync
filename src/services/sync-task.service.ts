@@ -30,10 +30,8 @@ import { ValidatorRepository } from '../repositories/validator.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
-import * as util from 'util';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -790,25 +788,26 @@ export class SyncTaskService {
       }
     }
 
-    const smartContract = {
-      height,
-      code_id,
-      contract_name,
-      contract_address,
-      creator_address,
-      contract_hash,
-      tx_hash,
-      url,
-      instantiate_msg_schema,
-      query_msg_schema,
-      execute_msg_schema,
-      contract_match,
-      contract_verification,
-      compiler_version,
-      s3_location,
-      mainnet_code_id: '',
-      mainnet_upload_status: ''
-    };
+    const smartContract = new SmartContract();
+    smartContract.id = 0;
+    smartContract.height = Number(height);
+    smartContract.code_id = Number(code_id);
+    smartContract.contract_name = contract_name;
+    smartContract.contract_address = contract_address;
+    smartContract.creator_address = creator_address;
+    smartContract.contract_hash = contract_hash;
+    smartContract.tx_hash = tx_hash;
+    smartContract.url = url;
+    smartContract.instantiate_msg_schema = instantiate_msg_schema;
+    smartContract.query_msg_schema = query_msg_schema;
+    smartContract.execute_msg_schema = execute_msg_schema;
+    smartContract.contract_match = contract_match;
+    smartContract.contract_verification = contract_verification;
+    smartContract.compiler_version = compiler_version;
+    smartContract.s3_location = s3_location;
+    smartContract.mainnet_code_id = '';
+    smartContract.mainnet_upload_status = '';
+
     return smartContract;
   }
 
@@ -920,16 +919,5 @@ export class SyncTaskService {
         throw err;
       }
     }
-  }
-
-  private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
-    return await this._commonUtil.getDataAPI(
-      this.api,
-      `${util.format(
-        NODE_API.CONTRACT_INFO,
-        contract_address,
-        base64String
-      )}`
-    );
   }
 }

@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron, Interval } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from "nest-schedule";
 import * as util from 'util';
-import { AURA_INFO, COINGECKO_API, CONTRACT_TYPE, INDEXER_API, NODE_API } from "../common/constants/app.constant";
+import { AURA_INFO, COINGECKO_API, CONTRACT_TYPE, INDEXER_API, KEYWORD_SEARCH_TRANSACTION } from "../common/constants/app.constant";
 import { TokenHolderRequest } from "../dtos/requests/token-holder.request";
 import { TokenCW20Dto } from "../dtos/token-cw20.dto";
 import { TokenContract } from "../entities/token-contract.entity";
@@ -26,6 +26,7 @@ export class SyncTokenService {
     private isSyncCw721Tokens = false;
     private influxDbClient: InfluxDBClient;
     private syncInprogress = false;
+    private isSynAuraAndBtcToken = false;
 
     constructor(
         private configService: ConfigService,
@@ -87,7 +88,7 @@ export class SyncTokenService {
                         const base64Request = Buffer.from(`{
                             "marketing_info": {}
                         }`).toString('base64');
-                        const marketingInfo = await this.getDataContractFromBase64Query(item.contract_address, base64Request);
+                        const marketingInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, item.contract_address, base64Request);
                         //get token info
                         const tokenContractData = await this.tokenContractRepository.findOne({
                             where: { contract_address: item.contract_address },
@@ -181,7 +182,7 @@ export class SyncTokenService {
         }
         try {
             this.isSyncCw721Tokens = true;
-            const listTokens = await this.smartContractRepository.getOldCw721Tokens();
+            const listTokens = await this.smartContractRepository.getOldTokens(CONTRACT_TYPE.CW721, KEYWORD_SEARCH_TRANSACTION.MINT_CONTRACT_CW721);
             if (listTokens.length > 0) {
                 let smartContracts = [];
                 for (let i = 0; i < listTokens.length; i++) {
@@ -194,7 +195,7 @@ export class SyncTokenService {
                     const base64RequestToken = Buffer.from(`{
                             "contract_info": {}
                         }`).toString('base64');
-                    const tokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestToken);
+                    const tokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestToken);
                     if (tokenInfo?.data) {
                         contract.token_name = tokenInfo.data.name;
                         contract.token_symbol = tokenInfo.data.symbol;
@@ -203,7 +204,7 @@ export class SyncTokenService {
                     const base64RequestNumToken = Buffer.from(`{
                         "num_tokens": {}
                     }`).toString('base64');
-                    const numTokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestNumToken);
+                    const numTokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestNumToken);
                     if (numTokenInfo?.data) {
                         contract.num_tokens = Number(numTokenInfo.data.count);
                     }
@@ -221,17 +222,6 @@ export class SyncTokenService {
             this.isSyncCw721Tokens = false;
             throw error;
         }
-    }
-
-    private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
-        return await this._commonUtil.getDataAPI(
-            this.api,
-            `${util.format(
-                NODE_API.CONTRACT_INFO,
-                contract_address,
-                base64String
-            )}`
-        );
     }
 
     connectInfluxdb() {
@@ -252,9 +242,10 @@ export class SyncTokenService {
     }
 
     /**
+     * @todo: use for sync cw20 tokens price
      * Create thread to sync data
      */
-    @Cron('0 */3 * * * *')
+    // @Cron('0 */3 * * * *')
     async createThreads() {
         if (this.syncInprogress) {
             this._logger.log(`============== Thread sync data In-progress ==============`);
@@ -372,6 +363,47 @@ export class SyncTokenService {
 
         } catch (err) {
             this._logger.log(`${SyncTokenService.name} call ${this.syncPriceAndVolume.name} method has error: ${err.message}`, err.stack);
+        }
+    }
+
+    @Interval(2000)
+    async syncAuraAndBtcTokens() {
+        // check status
+        if (this.isSynAuraAndBtcToken) {
+            this._logger.log(null, 'already syncing aura and btc tokens... wait');
+            return;
+        } else {
+            this._logger.log(null, 'fetching data aura and btc tokens...');
+        }
+        try {
+            this.isSynAuraAndBtcToken = true;
+
+            let coinIds = 'aura-network,bitcoin';
+            const cw20Dtos: TokenCW20Dto[] = [];
+            const coingecko = ENV_CONFIG.COINGECKO;
+            this._logger.log(`============== Call Coingecko Api ==============`);
+            const para = `${util.format(COINGECKO_API.GET_COINS_MARKET, coinIds, coingecko.MAX_REQUEST)}`;
+            const response = await this._commonUtil.getDataAPI(coingecko.API, para);
+            if (response) {
+                response.forEach(async data => {
+                    const tokenDto = SyncDataHelpers.makeTokenCW20Data(data);
+                    cw20Dtos.push(tokenDto);
+
+                    this._logger.log(`============== Write data to Redis ==============`);
+                    await this.redisUtil.setValue(tokenDto.coinId, tokenDto)
+                });
+            }
+            this._logger.log(`============== Write data to Influxdb ==============`);
+            await this.influxDbClient.writeBlockTokenPriceAndVolume(cw20Dtos);
+
+            this.isSynAuraAndBtcToken = false;
+        } catch (error) {
+            this._logger.error(
+                `Sync aura and btc tokens was error, ${error.name}: ${error.message}`,
+            );
+            this._logger.error(`${error.stack}`);
+            this.isSynAuraAndBtcToken = false;
+            throw error;
         }
     }
 }
