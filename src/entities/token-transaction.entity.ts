@@ -1,7 +1,8 @@
-import { Column, Entity } from "typeorm";
+import { Column, Entity, Unique } from "typeorm";
 import { BaseEntityIncrementId } from "./base/base.entity";
 
 @Entity('token_transactions')
+@Unique(['contract_address'])
 export class TokenTransaction extends BaseEntityIncrementId {
     @Column({ name: 'tx_hash' })
     tx_hash: string;
