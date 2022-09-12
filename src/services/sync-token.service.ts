@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron, Interval } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from "nest-schedule";
 import * as util from 'util';
-import { AURA_INFO, COINGECKO_API, CONTRACT_TYPE, INDEXER_API, KEYWORD_SEARCH_TRANSACTION, NODE_API } from "../common/constants/app.constant";
+import { AURA_INFO, COINGECKO_API, CONTRACT_TYPE, INDEXER_API, KEYWORD_SEARCH_TRANSACTION } from "../common/constants/app.constant";
 import { TokenHolderRequest } from "../dtos/requests/token-holder.request";
 import { TokenCW20Dto } from "../dtos/token-cw20.dto";
 import { TokenContract } from "../entities/token-contract.entity";
@@ -88,7 +88,7 @@ export class SyncTokenService {
                         const base64Request = Buffer.from(`{
                             "marketing_info": {}
                         }`).toString('base64');
-                        const marketingInfo = await this.getDataContractFromBase64Query(item.contract_address, base64Request);
+                        const marketingInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, item.contract_address, base64Request);
                         //get token info
                         const tokenContractData = await this.tokenContractRepository.findOne({
                             where: { contract_address: item.contract_address },
@@ -195,7 +195,7 @@ export class SyncTokenService {
                     const base64RequestToken = Buffer.from(`{
                             "contract_info": {}
                         }`).toString('base64');
-                    const tokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestToken);
+                    const tokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestToken);
                     if (tokenInfo?.data) {
                         contract.token_name = tokenInfo.data.name;
                         contract.token_symbol = tokenInfo.data.symbol;
@@ -204,7 +204,7 @@ export class SyncTokenService {
                     const base64RequestNumToken = Buffer.from(`{
                         "num_tokens": {}
                     }`).toString('base64');
-                    const numTokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestNumToken);
+                    const numTokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestNumToken);
                     if (numTokenInfo?.data) {
                         contract.num_tokens = Number(numTokenInfo.data.count);
                     }
@@ -222,17 +222,6 @@ export class SyncTokenService {
             this.isSyncCw721Tokens = false;
             throw error;
         }
-    }
-
-    private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
-        return await this._commonUtil.getDataAPI(
-            this.api,
-            `${util.format(
-                NODE_API.CONTRACT_INFO,
-                contract_address,
-                base64String
-            )}`
-        );
     }
 
     connectInfluxdb() {
