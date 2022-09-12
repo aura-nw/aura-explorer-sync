@@ -31,6 +31,8 @@ import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
 import * as util from 'util';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 @Injectable()
 export class SyncTaskService {
@@ -65,6 +67,7 @@ export class SyncTaskService {
     private tokenTransactionRepository: TokenTransactionRepository,
     private deploymentRequestsRepository: DeploymentRequestsRepository,
     @InjectSchedule() private readonly schedule: Schedule,
+    @InjectQueue('smart-contracts') private readonly contractQueue: Queue
   ) {
     this._logger.log(
       '============== Constructor Sync Task Service ==============',
@@ -529,16 +532,16 @@ export class SyncTaskService {
         // Insert data to Block table
         newBlock.gas_used = blockGasUsed;
         newBlock.gas_wanted = blockGasWanted;
-        const savedBlock = await this.blockRepository.upsert([newBlock], []);
-        if (savedBlock) {
-          transactions.map((item) => (item.blockId = savedBlock[0].id));
-          await this.txRepository.upsert(transactions, []);
-        }
+        // const savedBlock = await this.blockRepository.upsert([newBlock], []);
+        // if (savedBlock) {
+        //   transactions.map((item) => (item.blockId = savedBlock[0].id));
+        //   await this.txRepository.upsert(transactions, []);
+        // }
 
         //sync data with transactions
         if (listTransactions.length > 0) {
           // // TODO: Write tx to influxdb
-          // this.influxDbClient.writeTxs([...influxdbTrans]);
+          this.influxDbClient.writeTxs([...influxdbTrans]);
 
           await this.syncDataWithTransactions(listTransactions);
         }
@@ -562,7 +565,7 @@ export class SyncTaskService {
       /**
        * TODO: Flush pending writes and close writeApi.
        */
-      // this.influxDbClient.closeWriteApi();
+      this.influxDbClient.closeWriteApi();
 
       await this.updateStatus(syncBlock);
 
@@ -662,108 +665,14 @@ export class SyncTaskService {
             );
             delegatorRewards.push(reward);
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
-            try {
-              //sync token transaction
-              if (message?.msg) {
-                const tokenTransaction = SyncDataHelpers.makeTokenTransactionData(txData, message);
-                tokenTransactions.push(tokenTransaction);
-                //sync token contract
-                const transactionType = Object.keys(message.msg)[0];
-                const tokenId = message.msg[transactionType]?.token_id || '';
-                const contractAddress = message.contract;
-                if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.MINT && tokenId !== '') {
-                  const contract = await this.smartContractRepository.findOne({
-                    where: { contract_address: contractAddress },
-                  });
-                  if (contract) {
-                    //get num tokens
-                    const base64RequestNumToken = Buffer.from(`{
-                      "num_tokens": {}
-                    }`).toString('base64');
-                    const numTokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestNumToken);
-                    if (numTokenInfo?.data) {
-                      contract.num_tokens = Number(numTokenInfo.data.count);
-                    }
-                    if (!contract.is_minted) {
-                      contract.is_minted = true;
-                      //get token info
-                      const base64RequestToken = Buffer.from(`{
-                        "contract_info": {}
-                      }`).toString('base64');
-                      const tokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestToken);
-                      if (tokenInfo?.data) {
-                        contract.token_name = tokenInfo.data.name;
-                        contract.token_symbol = tokenInfo.data.symbol;
-                      }
-                    }
-                    smartContracts.push(contract);
-                  }
-                }
-              }
-              const _smartContracts = SyncDataHelpers.makeExecuteContractData(
-                txData,
-                message,
-              );
-              for (let item of _smartContracts) {
-                const smartContract = await this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
-                smartContracts.push(smartContract);
-              };
-            } catch (error) {
-              this._logger.log(
-                null,
-                `Got error in execute contract transaction`,
-              );
-              this._logger.log(null, `${error.stack}`);
-            }
+            this.contractQueue.add('sync-execute-contracts', {
+              txData,
+              message,
+            });
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
-            try {
-              const contract_name = txData.tx.body.messages[0].label;
-              const height = txData.tx_response.height;
-              const contract_address = txData.tx_response.logs[0].events
-                .find(({ type }) => type === CONST_CHAR.INSTANTIATE)
-                .attributes.find(
-                  ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
-                ).value;
-              const creator_address = txData.tx.body.messages[0].sender;
-              const code_id = txData.tx.body.messages[0].code_id;
-              const tx_hash = txData.tx_response.txhash;
-
-              let liquidityContractAddr;
-              try {
-                liquidityContractAddr = txData.tx_response.logs[0].events
-                  .find(({ type }) => type === CONST_CHAR.WASM)
-                  .attributes.find(
-                    ({ key }) => key === CONST_CHAR.LIQUIDITY_TOKEN_ADDR,
-                  ).value;
-              } catch (error) {
-                this._logger.log(
-                  null,
-                  `This transaction doesn't create a liquidity token`,
-                );
-              }
-              if (liquidityContractAddr !== undefined) {
-                const paramGetContract = `/cosmwasm/wasm/v1/contract/${liquidityContractAddr}`;
-                let contractResponse = await this._commonUtil.getDataAPI(
-                  this.api,
-                  paramGetContract,
-                );
-                const liquidityCodeId = contractResponse.contract_info.code_id;
-                const liquidityContractName = contractResponse.contract_info.label;
-                const liquidityContractCreator = contractResponse.contract_info.creator;
-
-                const liquidityContract = await this.makeInstantiateContractData(height, liquidityCodeId, liquidityContractName, liquidityContractAddr, liquidityContractCreator, tx_hash);
-                smartContracts.push(liquidityContract);
-              }
-
-              const smartContract = await this.makeInstantiateContractData(height, code_id, contract_name, contract_address, creator_address, tx_hash);
-              smartContracts.push(smartContract);
-            } catch (error) {
-              this._logger.error(
-                null,
-                `Got error in instantiate contract transaction`,
-              );
-              this._logger.error(null, `${error.stack}`);
-            }
+            this.contractQueue.add('sync-instantiate-contracts', {
+              txData,
+            });
           } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
             const delegation = SyncDataHelpers.makeCreateValidatorData(
               txData,

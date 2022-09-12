@@ -28,7 +28,7 @@ export class SyncProposalService {
     this.api = ENV_CONFIG.NODE.API;
   }
 
-  @Interval(3000)
+  // @Interval(3000)
   async handleInterval() {
     // check status
     if (this.isSync) {
