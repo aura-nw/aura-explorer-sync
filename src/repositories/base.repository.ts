@@ -235,7 +235,7 @@ export class BaseRepository<T> {
     * @param skipPropetties 
     * @returns 
   */
-  insertOnDuplicate(entityOrEntities: | QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[], skipPropetties?: string[]) {
+  async insertOnDuplicate(entityOrEntities: | QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[], skipPropetties?: string[]) {
     try {
       let updateColumns = '';
       const columns = [];
@@ -279,7 +279,7 @@ export class BaseRepository<T> {
 
       // Create and excecute properties
       const sqlQuery = `INSERT INTO ${metadata.tableName}(${columns}) VALUES ${values} ON DUPLICATE KEY UPDATE ${updateColumns}`;
-      this._repos.query(sqlQuery, [...paras]);
+      await this._repos.query(sqlQuery, [...paras]);
       return true;
     } catch (err) {
       throw err;
