@@ -99,7 +99,9 @@ const processors = [
     BullModule.forRoot({
       redis: {
         host: ENV_CONFIG.REDIS.HOST,
-        port: ENV_CONFIG.REDIS.PORT
+        port: ENV_CONFIG.REDIS.PORT,
+        username: ENV_CONFIG.REDIS.USERNAME,
+        db: parseInt(ENV_CONFIG.REDIS.DB, 10),
       },
       // prefix: 'EXPLORER_SYNC',
       defaultJobOptions: {
