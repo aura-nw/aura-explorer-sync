@@ -519,7 +519,7 @@ export class SyncDataHelpers {
 
     return [tokenContract, cw20TokenOwner];
   }
-
+  
   /**
    * Create TokenCW20 Dto
    * @param data 
