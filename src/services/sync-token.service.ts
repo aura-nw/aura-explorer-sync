@@ -182,7 +182,7 @@ export class SyncTokenService {
         }
         try {
             this.isSyncCw721Tokens = true;
-            const listTokens = await this.smartContractRepository.getOldCw721Tokens(CONTRACT_TYPE.CW721, KEYWORD_SEARCH_TRANSACTION.MINT_CONTRACT_CW721);
+            const listTokens = await this.smartContractRepository.getOldTokens(CONTRACT_TYPE.CW721, KEYWORD_SEARCH_TRANSACTION.MINT_CONTRACT_CW721);
             if (listTokens.length > 0) {
                 let smartContracts = [];
                 for (let i = 0; i < listTokens.length; i++) {

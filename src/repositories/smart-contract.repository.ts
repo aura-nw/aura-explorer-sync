@@ -53,7 +53,7 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
     return res;
   }
 
-  async getOldCw721Tokens(type: string, keywork: string) {
+  async getOldTokens(type: string, keywork: string) {
     const sql = `SELECT contract_address
       FROM transactions
       WHERE type = '${MESSAGE_ACTION.MSG_EXECUTE_CONTRACT}'
