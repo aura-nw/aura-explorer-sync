@@ -108,8 +108,8 @@ export class SmartContractsProcessor {
         this.logger.log(job.data);
         const txData = job.data.txData;
         const message = job.data.message;
-        // const tokenTransactions = [],
-        const smartContracts = [];
+        const tokenTransactions = [],
+            smartContracts = [];
         try {
             //sync token transaction
             if (message?.msg) {
@@ -178,6 +178,9 @@ export class SmartContractsProcessor {
             const result = this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
             this.logger.log(`Sync Instantiate Contract Result: ${result}`);
         }
+        // if (tokenTransactions.length > 0) {
+        //   await this.tokenTransactionRepository.insertOnDuplicate(tokenTransactions, ['id']);
+        // }
     }
 
     @OnQueueActive()

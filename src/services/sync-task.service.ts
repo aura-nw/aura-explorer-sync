@@ -528,16 +528,16 @@ export class SyncTaskService {
         // Insert data to Block table
         newBlock.gas_used = blockGasUsed;
         newBlock.gas_wanted = blockGasWanted;
-        // const savedBlock = await this.blockRepository.upsert([newBlock], []);
-        // if (savedBlock) {
-        //   transactions.map((item) => (item.blockId = savedBlock[0].id));
-        //   await this.txRepository.upsert(transactions, []);
-        // }
+        const savedBlock = await this.blockRepository.upsert([newBlock], []);
+        if (savedBlock) {
+          transactions.map((item) => (item.blockId = savedBlock[0].id));
+          await this.txRepository.upsert(transactions, []);
+        }
 
         //sync data with transactions
         if (listTransactions.length > 0) {
           // // TODO: Write tx to influxdb
-          this.influxDbClient.writeTxs([...influxdbTrans]);
+          // this.influxDbClient.writeTxs([...influxdbTrans]);
 
           await this.syncDataWithTransactions(listTransactions);
         }
@@ -601,7 +601,6 @@ export class SyncTaskService {
     const delegations = [];
     const delegatorRewards = [];
     let smartContracts = [];
-    // const tokenTransactions = [];
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
       if (
@@ -710,103 +709,6 @@ export class SyncTaskService {
       });
       await this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
     }
-    // if (tokenTransactions.length > 0) {
-    //   await this.tokenTransactionRepository.insertOnDuplicate(tokenTransactions, ['id']);
-    // }
-  }
-
-  async makeInstantiateContractData(height: string, code_id: string, contract_name: string, contract_address: string, creator_address: string, tx_hash: string) {
-    let contract_hash = '',
-      contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED,
-      contract_match,
-      url = '',
-      compiler_version,
-      instantiate_msg_schema,
-      query_msg_schema,
-      execute_msg_schema,
-      s3_location;
-
-    if (this.nodeEnv === 'mainnet') {
-      const [request, existContracts] = await Promise.all([
-        this.deploymentRequestsRepository.findByCondition({
-          mainnet_code_id: code_id,
-        }),
-        this.smartContractRepository.findByCondition({
-          code_id
-        }),
-      ])
-      if (existContracts.length > 0) {
-        contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-        contract_match = existContracts[0].contract_address;
-      }
-      else contract_verification = SMART_CONTRACT_VERIFICATION.EXACT_MATCH;
-      contract_hash = request[0].contract_hash;
-      url = request[0].url;
-      compiler_version = request[0].compiler_version;
-      instantiate_msg_schema = request[0].instantiate_msg_schema;
-      query_msg_schema = request[0].query_msg_schema;
-      execute_msg_schema = request[0].execute_msg_schema;
-      s3_location = request[0].s3_location;
-    } else {
-      const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
-      let smartContractResponse;
-      try {
-        smartContractResponse = await this._commonUtil.getDataAPI(
-          this.smartContractService,
-          paramGetHash,
-        );
-      } catch (error) {
-        this._logger.error(
-          'Can not connect to smart contract verify service or LCD service',
-          error,
-        );
-      }
-
-      if (smartContractResponse) {
-        contract_hash =
-          smartContractResponse.Message.length === 64
-            ? smartContractResponse.Message
-            : '';
-      }
-      if (contract_hash !== '') {
-        const exactContract =
-          await this.smartContractRepository.findExactContractByHash(
-            contract_hash,
-          );
-        if (exactContract) {
-          contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-          contract_match = exactContract.contract_address;
-          url = exactContract.url;
-          compiler_version = exactContract.compiler_version;
-          instantiate_msg_schema = exactContract.instantiate_msg_schema;
-          query_msg_schema = exactContract.query_msg_schema;
-          execute_msg_schema = exactContract.execute_msg_schema;
-          s3_location = exactContract.s3_location;
-        }
-      }
-    }
-
-    const smartContract = new SmartContract();
-    smartContract.id = 0;
-    smartContract.height = Number(height);
-    smartContract.code_id = Number(code_id);
-    smartContract.contract_name = contract_name;
-    smartContract.contract_address = contract_address;
-    smartContract.creator_address = creator_address;
-    smartContract.contract_hash = contract_hash;
-    smartContract.tx_hash = tx_hash;
-    smartContract.url = url;
-    smartContract.instantiate_msg_schema = instantiate_msg_schema;
-    smartContract.query_msg_schema = query_msg_schema;
-    smartContract.execute_msg_schema = execute_msg_schema;
-    smartContract.contract_match = contract_match;
-    smartContract.contract_verification = contract_verification;
-    smartContract.compiler_version = compiler_version;
-    smartContract.s3_location = s3_location;
-    smartContract.mainnet_code_id = '';
-    smartContract.mainnet_upload_status = '';
-
-    return smartContract;
   }
 
   /**
