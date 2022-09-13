@@ -216,7 +216,8 @@ export class SmartContractsProcessor {
             instantiate_msg_schema = '',
             query_msg_schema = '',
             execute_msg_schema = '',
-            s3_location = '';
+            s3_location = '',
+            reference_code_id = 0;
 
         if (this.nodeEnv === 'mainnet') {
             const [request, existContracts] = await Promise.all([
@@ -239,6 +240,7 @@ export class SmartContractsProcessor {
             query_msg_schema = request[0].query_msg_schema;
             execute_msg_schema = request[0].execute_msg_schema;
             s3_location = request[0].s3_location;
+            reference_code_id = request[0].euphoria_code_id;
         } else {
             const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
             let smartContractResponse;
@@ -295,7 +297,7 @@ export class SmartContractsProcessor {
         smartContract.contract_verification = contract_verification;
         smartContract.compiler_version = compiler_version;
         smartContract.s3_location = s3_location;
-        smartContract.mainnet_code_id = '';
+        smartContract.reference_code_id = reference_code_id.toString();
         smartContract.mainnet_upload_status = '';
 
         return smartContract;
