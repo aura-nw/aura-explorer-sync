@@ -561,7 +561,7 @@ export class SyncTaskService {
       /**
        * TODO: Flush pending writes and close writeApi.
        */
-      this.influxDbClient.closeWriteApi();
+      // this.influxDbClient.closeWriteApi();
 
       await this.updateStatus(syncBlock);
 

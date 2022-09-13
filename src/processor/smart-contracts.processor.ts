@@ -108,8 +108,8 @@ export class SmartContractsProcessor {
         this.logger.log(job.data);
         const txData = job.data.txData;
         const message = job.data.message;
-        const tokenTransactions = [],
-            smartContracts = [];
+        // const tokenTransactions = [],
+        const smartContracts = [];
         try {
             //sync token transaction
             if (message?.msg) {
