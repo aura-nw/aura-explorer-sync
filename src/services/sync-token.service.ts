@@ -45,7 +45,7 @@ export class SyncTokenService {
         this.api = ENV_CONFIG.NODE.API;
 
         // Connect influxdb
-        // this.connectInfluxdb();
+        this.connectInfluxdb();
 
         // // Call method when init app
         // (async () => {
@@ -171,7 +171,7 @@ export class SyncTokenService {
         }
     }
 
-    // @Interval(2000)
+    @Interval(2000)
     async syncOldCw721Tokens() {
         // check status
         if (this.isSyncCw721Tokens) {

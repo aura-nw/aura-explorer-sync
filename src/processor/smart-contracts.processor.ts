@@ -1,13 +1,13 @@
 import { OnQueueActive, OnQueueCompleted, OnQueueError, OnQueueFailed, Process, Processor } from "@nestjs/bull";
 import { Logger } from "@nestjs/common";
 import { Job } from "bull";
-import { CONST_CHAR, CONTRACT_TRANSACTION_EXECUTE_TYPE, NODE_API, SMART_CONTRACT_VERIFICATION } from "src/common/constants/app.constant";
-import { SmartContract } from "src/entities";
-import { SyncDataHelpers } from "src/helpers/sync-data.helpers";
-import { DeploymentRequestsRepository } from "src/repositories/deployment-requests.repository";
-import { SmartContractRepository } from "src/repositories/smart-contract.repository";
-import { ENV_CONFIG } from "src/shared/services/config.service";
-import { CommonUtil } from "src/utils/common.util";
+import { CONST_CHAR, CONTRACT_TRANSACTION_EXECUTE_TYPE, NODE_API, SMART_CONTRACT_VERIFICATION } from "../common/constants/app.constant";
+import { SmartContract } from "../entities";
+import { SyncDataHelpers } from "../helpers/sync-data.helpers";
+import { DeploymentRequestsRepository } from "../repositories/deployment-requests.repository";
+import { SmartContractRepository } from "../repositories/smart-contract.repository";
+import { ENV_CONFIG } from "../shared/services/config.service";
+import { CommonUtil } from "../utils/common.util";
 import * as util from 'util';
 
 @Processor('smart-contracts')
@@ -108,13 +108,13 @@ export class SmartContractsProcessor {
         this.logger.log(job.data);
         const txData = job.data.txData;
         const message = job.data.message;
-        const tokenTransactions = [],
-            smartContracts = [];
+        // const tokenTransactions = [],
+        const smartContracts = [];
         try {
             //sync token transaction
             if (message?.msg) {
-                const tokenTransaction = SyncDataHelpers.makeTokenTransactionData(txData, message);
-                tokenTransactions.push(tokenTransaction);
+                // const tokenTransaction = SyncDataHelpers.makeTokenTransactionData(txData, message);
+                // tokenTransactions.push(tokenTransaction);
                 //sync token contract
                 const transactionType = Object.keys(message.msg)[0];
                 const tokenId = message.msg[transactionType]?.token_id || '';

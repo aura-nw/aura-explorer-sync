@@ -4,7 +4,6 @@ import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
 import { DeploymentRequestsRepository } from '../repositories/deployment-requests.repository';
-import { TokenTransactionRepository } from '../repositories/token-transaction.repository';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
@@ -62,7 +61,6 @@ export class SyncTaskService {
     private delegationRepository: DelegationRepository,
     private delegatorRewardRepository: DelegatorRewardRepository,
     private smartContractRepository: SmartContractRepository,
-    private tokenTransactionRepository: TokenTransactionRepository,
     private deploymentRequestsRepository: DeploymentRequestsRepository,
     @InjectSchedule() private readonly schedule: Schedule,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue
@@ -603,7 +601,7 @@ export class SyncTaskService {
     const delegations = [];
     const delegatorRewards = [];
     let smartContracts = [];
-    const tokenTransactions = [];
+    // const tokenTransactions = [];
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
       if (
@@ -712,9 +710,9 @@ export class SyncTaskService {
       });
       await this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
     }
-    if (tokenTransactions.length > 0) {
-      await this.tokenTransactionRepository.insertOnDuplicate(tokenTransactions, ['id']);
-    }
+    // if (tokenTransactions.length > 0) {
+    //   await this.tokenTransactionRepository.insertOnDuplicate(tokenTransactions, ['id']);
+    // }
   }
 
   async makeInstantiateContractData(height: string, code_id: string, contract_name: string, contract_address: string, creator_address: string, tx_hash: string) {
