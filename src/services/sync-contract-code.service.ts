@@ -30,7 +30,7 @@ export class SyncContractCodeService {
     this.indexerChainId = this.configService.get('INDEXER_CHAIN_ID');
   }
 
-  // @Interval(2000)
+  @Interval(2000)
   async handleInterval() {
     // check status
     if (this.isSyncContractCode) {
