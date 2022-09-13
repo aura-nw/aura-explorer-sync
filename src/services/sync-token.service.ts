@@ -377,7 +377,8 @@ export class SyncTokenService {
         }
         try {
             this.isSynAuraAndBtcToken = true;
-
+            //connect redis
+            await this.redisUtil.connect();
             let coinIds = 'aura-network,bitcoin';
             const cw20Dtos: TokenCW20Dto[] = [];
             const coingecko = ENV_CONFIG.COINGECKO;
