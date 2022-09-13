@@ -9,7 +9,7 @@ export class RedisUtil {
     private redisClient;
 
     constructor() {
-        const redisURL = { url: `redis://default:hxQC4YzFcW@localhost:6379/5` }; // redis://${ENV_CONFIG.REDIS.USERNAME}:${ENV_CONFIG.REDIS.PASSWORD}@${ENV_CONFIG.REDIS.HOST}:${ENV_CONFIG.REDIS.PORT}
+        const redisURL = { url: `redis://${ENV_CONFIG.REDIS.USERNAME}:${ENV_CONFIG.REDIS.PASSWORD}@${ENV_CONFIG.REDIS.HOST}:${ENV_CONFIG.REDIS.PORT}` };
         this.redisClient = redis.createClient(redisURL);
 
     }
