@@ -63,4 +63,16 @@ export class SmartContract extends BaseEntityIncrementId {
 
   @Column({ name: 'mainnet_upload_status' })
   mainnet_upload_status: string;
+
+  @Column({ name: 'token_name' })
+  token_name: string;
+  
+  @Column({ name: 'token_symbol' })
+  token_symbol: string;
+
+  @Column({ name: 'num_tokens' })
+  num_tokens: number;
+
+  @Column({ name: 'is_minted' })
+  is_minted: boolean;
 }
