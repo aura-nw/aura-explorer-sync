@@ -128,7 +128,7 @@ export class SmartContractsProcessor {
                         const base64RequestNumToken = Buffer.from(`{
                         "num_tokens": {}
                       }`).toString('base64');
-                        const numTokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestNumToken);
+                        const numTokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestNumToken);
                         if (numTokenInfo?.data) {
                             contract.num_tokens = Number(numTokenInfo.data.count);
                         }
@@ -138,7 +138,7 @@ export class SmartContractsProcessor {
                             const base64RequestToken = Buffer.from(`{
                           "contract_info": {}
                         }`).toString('base64');
-                            const tokenInfo = await this.getDataContractFromBase64Query(contractAddress, base64RequestToken);
+                            const tokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestToken);
                             if (tokenInfo?.data) {
                                 contract.token_name = tokenInfo.data.name;
                                 contract.token_symbol = tokenInfo.data.symbol;
@@ -299,16 +299,5 @@ export class SmartContractsProcessor {
         smartContract.mainnet_upload_status = '';
 
         return smartContract;
-    }
-
-    private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
-        return await this._commonUtil.getDataAPI(
-            this.api,
-            `${util.format(
-                NODE_API.CONTRACT_INFO,
-                contract_address,
-                base64String
-            )}`
-        );
     }
 }
