@@ -187,27 +187,20 @@ export class SyncTokenService {
                 let smartContracts = [];
                 for (let i = 0; i < listTokens.length; i++) {
                     const contractAddress = listTokens[i].contract_address;
-                    const contract = await this.smartContractRepository.findOne({
+                    let contract = await this.smartContractRepository.findOne({
                         where: { contract_address: contractAddress },
                     });
-                    contract.is_minted = true;
                     //get token info
                     const base64RequestToken = Buffer.from(`{
                             "contract_info": {}
                         }`).toString('base64');
                     const tokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestToken);
-                    if (tokenInfo?.data) {
-                        contract.token_name = tokenInfo.data.name;
-                        contract.token_symbol = tokenInfo.data.symbol;
-                    }
                     //get num tokens
                     const base64RequestNumToken = Buffer.from(`{
                         "num_tokens": {}
                     }`).toString('base64');
                     const numTokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestNumToken);
-                    if (numTokenInfo?.data) {
-                        contract.num_tokens = Number(numTokenInfo.data.count);
-                    }
+                    contract = SyncDataHelpers.makeTokenCW721Data(contract, tokenInfo, numTokenInfo);
                     smartContracts.push(contract);
                 }
                 await this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
