@@ -68,7 +68,7 @@ export class SyncDataHelpers {
     newTx.tx_hash = txData.tx_response.txhash;
     newTx.type = txType;
     newTx.fee = txFee;
-    newTx.messages = txData.tx_response.tx.body.messages;
+    newTx.messages = JSON.stringify(txData.tx_response.tx.body.messages);
     newTx.contract_address = txContractAddress;
     return newTx;
   }

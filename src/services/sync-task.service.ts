@@ -531,7 +531,7 @@ export class SyncTaskService {
         const savedBlock = await this.blockRepository.upsert([newBlock], []);
         if (savedBlock) {
           transactions.map((item) => (item.blockId = savedBlock[0].id));
-          await this.txRepository.upsert(transactions, []);
+          await this.txRepository.insertOnDuplicate(transactions, ['id']);
         }
 
         //sync data with transactions
@@ -679,7 +679,7 @@ export class SyncTaskService {
       }
     }
     if (proposalVotes.length > 0) {
-      await this.proposalVoteRepository.upsert(proposalVotes, []);
+      await this.proposalVoteRepository.insertOnDuplicate(proposalVotes, ['id']);
     }
     if (proposalDeposits.length > 0) {
       await this.proposalDepositRepository.insertOnDuplicate(proposalDeposits, ['id']);
