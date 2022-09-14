@@ -276,9 +276,10 @@ export class BaseRepository<T> {
         });
         values += (values.length === 0) ? `(${mark})` : `, (${mark})`;
       });
+      const escapeColumns = columns.map(m => `\`${m}\``);
 
       // Create and excecute properties
-      const sqlQuery = `INSERT INTO ${metadata.tableName}(${columns}) VALUES ${values} ON DUPLICATE KEY UPDATE ${updateColumns}`;
+      const sqlQuery = `INSERT INTO ${metadata.tableName}(${escapeColumns}) VALUES ${values} ON DUPLICATE KEY UPDATE ${updateColumns}`;
       await this._repos.query(sqlQuery, [...paras]);
       return true;
     } catch (err) {

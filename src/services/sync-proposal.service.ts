@@ -120,7 +120,7 @@ export class SyncProposalService {
           } 
 
           // insert into table proposals
-          await this.proposalRepository.upsert([proposal], []);
+          await this.proposalRepository.insertOnDuplicate([proposal], ['pro_id']);
         }
       }
       //delete proposal failed
