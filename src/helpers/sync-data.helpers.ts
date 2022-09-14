@@ -518,6 +518,18 @@ export class SyncDataHelpers {
 
     return [tokenContract, cw20TokenOwner];
   }
+
+  static makeTokenCW721Data(contract: any, tokenInfo: any, numTokenInfo: any) {
+    contract.is_minted = true;
+    if (tokenInfo?.data) {
+      contract.token_name = tokenInfo.data.name;
+      contract.token_symbol = tokenInfo.data.symbol;
+    }
+    if (numTokenInfo?.data) {
+      contract.num_tokens = Number(numTokenInfo.data.count);
+    }
+    return contract;
+  }
   
   /**
    * Create TokenCW20 Dto
