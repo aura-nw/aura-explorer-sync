@@ -3,6 +3,8 @@ import {
   CONST_DELEGATE_TYPE,
   CONST_MSG_TYPE,
   CONST_PROPOSAL_TYPE,
+  CONTRACT_TRANSACTION_EXECUTE_TYPE,
+  CONTRACT_TYPE,
   SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
 import {
@@ -14,10 +16,14 @@ import {
   ProposalDeposit,
   ProposalVote,
   SmartContract,
+  TokenContract,
   Transaction,
   Validator,
 } from '../entities';
 import { ENV_CONFIG } from '../shared/services/config.service';
+import { Cw20TokenOwner } from '../entities/cw20-token-owner.entity';
+import { TokenCW20Dto } from '../dtos/token-cw20.dto';
+import { find } from 'rxjs';
 export class SyncDataHelpers {
   private static precision = ENV_CONFIG.CHAIN_INFO.PRECISION_DIV;
   private static toDecimal = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
@@ -62,7 +68,7 @@ export class SyncDataHelpers {
     newTx.tx_hash = txData.tx_response.txhash;
     newTx.type = txType;
     newTx.fee = txFee;
-    newTx.messages = txData.tx_response.tx.body.messages;
+    newTx.messages = JSON.stringify(txData.tx_response.tx.body.messages);
     newTx.contract_address = txContractAddress;
     return newTx;
   }
@@ -469,4 +475,105 @@ export class SyncDataHelpers {
 
     return proposal;
   }
+
+  static makerCw20TokenData(item: any, marketingInfo: any, tokenInfo: any) {
+    //sync data token
+    const tokenContract = new TokenContract();
+    tokenContract.type = CONTRACT_TYPE.CW20;
+    tokenContract.contract_address = item.contract_address;
+    tokenContract.created_at = new Date(item.createdAt);
+    tokenContract.name = '';
+    tokenContract.symbol = '';
+    tokenContract.decimals = 0;
+    if (item?.asset_info && item.asset_info?.data) {
+      tokenContract.name = item.asset_info.data.name;
+      tokenContract.symbol = item.asset_info.data.symbol;
+      tokenContract.decimals = Number(item.asset_info.data.decimals);
+    }
+    tokenContract.description = '';
+    tokenContract.image = '';
+    if (marketingInfo?.data) {
+      tokenContract.description = marketingInfo.data?.description ? marketingInfo.data.description : '';
+      tokenContract.image = marketingInfo.data?.logo?.url ? marketingInfo.data.logo.url : '';
+    }
+    tokenContract.num_tokens = 0;
+    tokenContract.coin_id = '';
+    if (tokenInfo) {
+      tokenContract.coin_id = tokenInfo.coinId;
+      tokenContract.max_total_supply = tokenInfo.max_supply;
+      tokenContract.price = tokenInfo.current_price;
+      tokenContract.price_change_percentage_24h = tokenInfo.price_change_percentage_24h;
+      tokenContract.volume_24h = tokenInfo.total_volume;
+      tokenContract.circulating_market_cap = tokenInfo.current_price * tokenInfo.circulating_supply;
+      tokenContract.fully_diluted_market_cap = tokenInfo.current_price * tokenInfo.max_supply;
+      tokenContract.holders = tokenInfo.current_holder;
+      tokenContract.holders_change_percentage_24h = tokenInfo.percent_holder;
+    }
+    //sync data token owner
+    const cw20TokenOwner = new Cw20TokenOwner();
+    cw20TokenOwner.contract_address = item.contract_address;
+    cw20TokenOwner.owner = item.owner;
+    cw20TokenOwner.balance = Number(item.balance);
+    cw20TokenOwner.percent_hold = item.percent_hold;
+
+    return [tokenContract, cw20TokenOwner];
+  }
+
+  static makeTokenCW721Data(contract: any, tokenInfo: any, numTokenInfo: any) {
+    contract.is_minted = true;
+    if (tokenInfo?.data) {
+      contract.token_name = tokenInfo.data.name;
+      contract.token_symbol = tokenInfo.data.symbol;
+    }
+    if (numTokenInfo?.data) {
+      contract.num_tokens = Number(numTokenInfo.data.count);
+    }
+    return contract;
+  }
+  
+  /**
+   * Create TokenCW20 Dto
+   * @param data 
+   * @returns 
+   */
+  static makeTokenCW20Data(data: any): TokenCW20Dto {
+    const tokenDto = new TokenCW20Dto();
+    tokenDto.coinId = data.id;
+    tokenDto.current_price = data.current_price;
+    tokenDto.market_cap_rank = data.market_cap_rank;
+    tokenDto.price_change_24h = data.price_change_24h;
+    tokenDto.price_change_percentage_24h = data.price_change_percentage_24h;
+    tokenDto.last_updated = data.last_updated;
+    tokenDto.total_volume = data.total_volume;
+    tokenDto.timestamp = data.last_updated;
+    tokenDto.type = CONTRACT_TYPE.CW20;
+    tokenDto.circulating_supply = data.circulating_supply;
+    tokenDto.max_supply = Number(data.max_supply) || 0;
+    tokenDto.current_holder = 0;
+    tokenDto.percent_holder = 0;
+    tokenDto.previous_holder = 0;
+    return tokenDto;
+  }
+
+  // static makeTokenTransactionData(txData: any, _message: any) {
+  //   const tokenTransaction = new TokenTransaction();
+  //   tokenTransaction.tx_hash = txData.tx_response.txhash;
+  //   tokenTransaction.height = txData.tx_response.height;
+  //   tokenTransaction.contract_address = _message.contract;
+  //   const transactionType = Object.keys(_message.msg)[0];
+  //   tokenTransaction.transaction_type = transactionType;
+  //   tokenTransaction.token_id = _message.msg[transactionType]?.token_id || '';
+  //   tokenTransaction.sender = _message?.sender || '';
+  //   tokenTransaction.amount = Number(_message.msg[transactionType]?.amount) || 0;
+  //   tokenTransaction.from_address = _message?.sender || '';
+  //   tokenTransaction.to_address = _message.msg[transactionType]?.owner || _message.msg[transactionType]?.recipient || '';
+  //   if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.MINT) {
+  //     tokenTransaction.from_address = '';
+  //   }
+  //   if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.BURN) {
+  //     tokenTransaction.to_address = '';
+  //   }
+
+  //   return tokenTransaction;
+  // }
 }

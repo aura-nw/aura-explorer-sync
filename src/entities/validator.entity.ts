@@ -2,8 +2,8 @@ import { Column, Entity, Unique } from 'typeorm';
 import { BaseEntityIncrementId } from './base/base.entity';
 
 @Entity('validators')
+@Unique('operator_address', ['operator_address'])
 export class Validator extends BaseEntityIncrementId {
-  @Unique('operator_address', ['operator_address'])
   @Column({ name: 'operator_address', update: false })
   operator_address: string;
 
@@ -98,8 +98,9 @@ export class Validator extends BaseEntityIncrementId {
   website: string;
 
   @Column({
-    default: '',
     name: 'details',
+    nullable: true,
+    type: 'text'
   })
   details: string;
 
