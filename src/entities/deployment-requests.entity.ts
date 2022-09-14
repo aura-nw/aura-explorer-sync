@@ -39,14 +39,32 @@ export class DeploymentRequests extends BaseEntityIncrementId {
     @Column({ name: 'telegram' })
     telegram: string;
 
+    @Column({ name: 'wechat' })
+    wechat: string;
+
+    @Column({ name: 'linkedin' })
+    linkedin: string;
+
     @Column({ name: 'discord' })
     discord: string;
+
+    @Column({ name: 'medium' })
+    medium: string;
+
+    @Column({ name: 'reddit' })
+    reddit: string;
+
+    @Column({ name: 'slack' })
+    slack: string;
 
     @Column({ name: 'facebook' })
     facebook: string;
 
     @Column({ name: 'twitter' })
     twitter: string;
+
+    @Column({ name: 'bitcointalk' })
+    bitcointalk: string;
 
     @Column({ name: 'euphoria_code_id' })
     euphoria_code_id: number;
