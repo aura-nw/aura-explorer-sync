@@ -2,13 +2,12 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron, Interval } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from "nest-schedule";
 import * as util from 'util';
-import { AURA_INFO, COINGECKO_API, CONTRACT_TYPE, INDEXER_API, NODE_API } from "../common/constants/app.constant";
+import { AURA_INFO, COINGECKO_API, CONTRACT_TYPE, INDEXER_API, KEYWORD_SEARCH_TRANSACTION } from "../common/constants/app.constant";
 import { TokenHolderRequest } from "../dtos/requests/token-holder.request";
 import { TokenCW20Dto } from "../dtos/token-cw20.dto";
 import { TokenContract } from "../entities/token-contract.entity";
 import { SyncDataHelpers } from "../helpers/sync-data.helpers";
 import { Cw20TokenOwnerRepository } from "../repositories/cw20-token-owner.repository";
-import { NftRepository } from "../repositories/nft.repository";
 import { SmartContractRepository } from "../repositories/smart-contract.repository";
 import { TokenContractRepository } from "../repositories/token-contract.repository";
 import { ConfigService, ENV_CONFIG } from "../shared/services/config.service";
@@ -33,7 +32,6 @@ export class SyncTokenService {
         private configService: ConfigService,
         private _commonUtil: CommonUtil,
         private tokenContractRepository: TokenContractRepository,
-        private nftRepository: NftRepository,
         private redisUtil: RedisUtil,
         @InjectSchedule() private readonly schedule: Schedule,
         private smartContractRepository: SmartContractRepository,
@@ -49,12 +47,12 @@ export class SyncTokenService {
         // Connect influxdb
         this.connectInfluxdb();
 
-        // Call method when init app
-        (async () => {
-            await this.createThreads();
-        })();
+        // // Call method when init app
+        // (async () => {
+        //     await this.createThreads();
+        // })();
     }
-
+    
     // @Interval(2000)
     async syncCw20Tokens() {
         // check status
@@ -90,7 +88,7 @@ export class SyncTokenService {
                         const base64Request = Buffer.from(`{
                             "marketing_info": {}
                         }`).toString('base64');
-                        const marketingInfo = await this.getDataContractFromBase64Query(item.contract_address, base64Request);
+                        const marketingInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, item.contract_address, base64Request);
                         //get token info
                         const tokenContractData = await this.tokenContractRepository.findOne({
                             where: { contract_address: item.contract_address },
@@ -127,7 +125,7 @@ export class SyncTokenService {
         }
     }
 
-    @Interval(3000)
+    // @Interval(3000)
     async syncAuraToken() {
         // check status
         if (this.isSyncAuraToken) {
@@ -174,7 +172,7 @@ export class SyncTokenService {
     }
 
     @Interval(2000)
-    async syncCw721Tokens() {
+    async syncOldCw721Tokens() {
         // check status
         if (this.isSyncCw721Tokens) {
             this._logger.log(null, 'already syncing cw721 tokens... wait');
@@ -184,47 +182,28 @@ export class SyncTokenService {
         }
         try {
             this.isSyncCw721Tokens = true;
-            //get list tokens from indexer
-            const tokensData = await this._commonUtil.getDataAPI(
-                `${this.indexerUrl}${util.format(
-                    INDEXER_API.GET_LIST_TOKENS,
-                    CONTRACT_TYPE.CW721,
-                    this.indexerChainId
-                )}`,
-                '',
-            );
-            if (tokensData?.data && tokensData.data.count > 0) {
-                let tokens = tokensData.data.assets;
-                for (let i = 0; i < tokens.length; i++) {
-                    const item: any = tokens[i];
-                    //check exist contract in db
-                    const contract = await this.smartContractRepository.findOne({
-                        where: { contract_address: item.contract_address },
+            const listTokens = await this.smartContractRepository.getOldTokens(CONTRACT_TYPE.CW721, KEYWORD_SEARCH_TRANSACTION.MINT_CONTRACT_CW721);
+            if (listTokens.length > 0) {
+                let smartContracts = [];
+                for (let i = 0; i < listTokens.length; i++) {
+                    const contractAddress = listTokens[i].contract_address;
+                    let contract = await this.smartContractRepository.findOne({
+                        where: { contract_address: contractAddress },
                     });
-                    if (contract) {
-                        //get token info
-                        const base64RequestToken = Buffer.from(`{
+                    //get token info
+                    const base64RequestToken = Buffer.from(`{
                             "contract_info": {}
                         }`).toString('base64');
-                        const tokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestToken);
-                        //get num tokens
-                        const base64RequestNumToken = Buffer.from(`{
-                            "num_tokens": {}
-                        }`).toString('base64');
-                        const numTokenInfo = await this.getDataContractFromBase64Query(item.contract_address, base64RequestNumToken);
-                        const [tokenContract, nft] = SyncDataHelpers.makerCw721TokenData(
-                            item,
-                            tokenInfo,
-                            numTokenInfo,
-                            tokens
-                        );
-
-                        //insert/update table token_contracts
-                        await this.tokenContractRepository.insertOnDuplicate([tokenContract], ['id', 'created_at']);
-                        //insert/update table nfts
-                        await this.nftRepository.insertOnDuplicate([nft], ['id', 'created_at']);
-                    }
+                    const tokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestToken);
+                    //get num tokens
+                    const base64RequestNumToken = Buffer.from(`{
+                        "num_tokens": {}
+                    }`).toString('base64');
+                    const numTokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestNumToken);
+                    contract = SyncDataHelpers.makeTokenCW721Data(contract, tokenInfo, numTokenInfo);
+                    smartContracts.push(contract);
                 }
+                await this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
             }
 
             this.isSyncCw721Tokens = false;
@@ -236,17 +215,6 @@ export class SyncTokenService {
             this.isSyncCw721Tokens = false;
             throw error;
         }
-    }
-
-    private async getDataContractFromBase64Query(contract_address: string, base64String: string): Promise<any> {
-        return await this._commonUtil.getDataAPI(
-            this.api,
-            `${util.format(
-                NODE_API.CONTRACT_INFO,
-                contract_address,
-                base64String
-            )}`
-        );
     }
 
     connectInfluxdb() {
@@ -402,7 +370,8 @@ export class SyncTokenService {
         }
         try {
             this.isSynAuraAndBtcToken = true;
-
+            //connect redis
+            await this.redisUtil.connect();
             let coinIds = 'aura-network,bitcoin';
             const cw20Dtos: TokenCW20Dto[] = [];
             const coingecko = ENV_CONFIG.COINGECKO;

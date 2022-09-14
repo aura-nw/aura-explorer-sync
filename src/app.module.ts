@@ -3,11 +3,10 @@ import { BullModule } from '@nestjs/bull';
 import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
+import { SmartContractsProcessor } from './processor/smart-contracts.processor';
 import { Block, BlockSyncError, Delegation, DelegatorReward, HistoryProposal, MissedBlock, Proposal, ProposalDeposit, ProposalVote, SmartContract, SmartContractCode, SyncStatus, TokenContract, Transaction, Validator } from './entities';
 import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
 import { DeploymentRequests } from './entities/deployment-requests.entity';
-import { Nft } from './entities/nft.entity';
-import { TokenTransaction } from './entities/token-transaction.entity';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
 import { BlockRepository } from './repositories/block.repository';
 import { Cw20TokenOwnerRepository } from './repositories/cw20-token-owner.repository';
@@ -16,7 +15,6 @@ import { DelegatorRewardRepository } from './repositories/delegator-reward.repos
 import { DeploymentRequestsRepository } from './repositories/deployment-requests.repository';
 import { HistoryProposalRepository } from './repositories/history-proposal.repository';
 import { MissedBlockRepository } from './repositories/missed-block.repository';
-import { NftRepository } from './repositories/nft.repository';
 import { ProposalDepositRepository } from './repositories/proposal-deposit.repository';
 import { ProposalVoteRepository } from './repositories/proposal-vote.repository';
 import { ProposalRepository } from './repositories/proposal.repository';
@@ -24,7 +22,6 @@ import { SmartContractCodeRepository } from './repositories/smart-contract-code.
 import { SmartContractRepository } from './repositories/smart-contract.repository';
 import { SyncStatusRepository } from './repositories/sync-status.repository';
 import { TokenContractRepository } from './repositories/token-contract.repository';
-import { TokenTransactionRepository } from './repositories/token-transaction.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
 import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
@@ -52,9 +49,7 @@ const entities = [
   SmartContract,
   TokenContract,
   SmartContractCode,
-  Nft,
-  Cw20TokenOwner,
-  TokenTransaction
+  Cw20TokenOwner
 ];
 
 const repositories = [
@@ -74,9 +69,7 @@ const repositories = [
   SmartContractRepository,
   TokenContractRepository,
   SmartContractCodeRepository,
-  NftRepository,
-  Cw20TokenOwnerRepository,
-  TokenTransactionRepository
+  Cw20TokenOwnerRepository
 ];
 
 const services = [
@@ -84,7 +77,12 @@ const services = [
   SyncTaskService,
   SyncContractCodeService,
   SyncTokenService
-]
+];
+
+const processors = [
+  SmartContractsProcessor
+];
+
 @Module({
   imports: [
     ScheduleModule.register(),
@@ -94,13 +92,21 @@ const services = [
         maxRedirects: 5,
       }),
     }),
-    // BullModule.forRoot({
-    //   redis: {
-    //     host: ENV_CONFIG.REDIS.HOST,
-    //     port: ENV_CONFIG.REDIS.PORT,
-    //     keyPrefix: 'EXPLORER_SYNC'
-    //   }
-    // }),
+    BullModule.forRoot({
+      redis: {
+        host: ENV_CONFIG.REDIS.HOST,
+        port: ENV_CONFIG.REDIS.PORT,
+        username: ENV_CONFIG.REDIS.USERNAME,
+        db: parseInt(ENV_CONFIG.REDIS.DB, 10),
+      },
+      // prefix: 'EXPLORER_SYNC',
+      defaultJobOptions: {
+        removeOnComplete: true,
+      }
+    }),
+    BullModule.registerQueue({
+      name: 'smart-contracts'
+    }),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
     TypeOrmModule.forFeature([...entities]),
@@ -110,10 +116,15 @@ const services = [
       inject: [ConfigService],
     }),
   ],
+  exports: [
+    BullModule,
+    ...processors,
+  ],
   controllers: [...controllers],
   providers: [
     ...repositories,
-    ...services
+    ...services,
+    ...processors,
   ],
 })
 export class AppModule { }
