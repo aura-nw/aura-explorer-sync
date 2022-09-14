@@ -4,11 +4,11 @@ import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
 import { DeploymentRequestsRepository } from '../repositories/deployment-requests.repository';
-import { TokenTransactionRepository } from '../repositories/token-transaction.repository';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
   CONST_PUBKEY_ADDR,
+  CONTRACT_TRANSACTION_EXECUTE_TYPE,
   NODE_API,
   SMART_CONTRACT_VERIFICATION
 } from '../common/constants/app.constant';
@@ -29,7 +29,8 @@ import { ValidatorRepository } from '../repositories/validator.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
-
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -60,9 +61,9 @@ export class SyncTaskService {
     private delegationRepository: DelegationRepository,
     private delegatorRewardRepository: DelegatorRewardRepository,
     private smartContractRepository: SmartContractRepository,
-    private tokenTransactionRepository: TokenTransactionRepository,
     private deploymentRequestsRepository: DeploymentRequestsRepository,
     @InjectSchedule() private readonly schedule: Schedule,
+    @InjectQueue('smart-contracts') private readonly contractQueue: Queue
   ) {
     this._logger.log(
       '============== Constructor Sync Task Service ==============',
@@ -600,7 +601,6 @@ export class SyncTaskService {
     const delegations = [];
     const delegatorRewards = [];
     let smartContracts = [];
-    const tokenTransactions = [];
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
       if (
@@ -660,76 +660,14 @@ export class SyncTaskService {
             );
             delegatorRewards.push(reward);
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
-            try {
-              //sync token transaction
-              if (message?.msg) {
-                const tokenTransaction = SyncDataHelpers.makeTokenTransactionData(txData, message);
-                tokenTransactions.push(tokenTransaction);
-              }
-              const _smartContracts = SyncDataHelpers.makeExecuteContractData(
-                txData,
-                message,
-              );
-              for (let item of _smartContracts) {
-                const smartContract = await this.makeInstantiateContractData(item.height, item.code_id, "", item.contract_address, item.creator_address, item.tx_hash);
-                smartContracts.push(smartContract);
-              };
-            } catch (error) {
-              this._logger.log(
-                null,
-                `Got error in execute contract transaction`,
-              );
-              this._logger.log(null, `${error.stack}`);
-            }
+            this.contractQueue.add('sync-execute-contracts', {
+              txData,
+              message,
+            });
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
-            try {
-              const contract_name = txData.tx.body.messages[0].label;
-              const height = txData.tx_response.height;
-              const contract_address = txData.tx_response.logs[0].events
-                .find(({ type }) => type === CONST_CHAR.INSTANTIATE)
-                .attributes.find(
-                  ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
-                ).value;
-              const creator_address = txData.tx.body.messages[0].sender;
-              const code_id = txData.tx.body.messages[0].code_id;
-              const tx_hash = txData.tx_response.txhash;
-
-              let liquidityContractAddr;
-              try {
-                liquidityContractAddr = txData.tx_response.logs[0].events
-                  .find(({ type }) => type === CONST_CHAR.WASM)
-                  .attributes.find(
-                    ({ key }) => key === CONST_CHAR.LIQUIDITY_TOKEN_ADDR,
-                  ).value;
-              } catch (error) {
-                this._logger.log(
-                  null,
-                  `This transaction doesn't create a liquidity token`,
-                );
-              }
-              if (liquidityContractAddr !== undefined) {
-                const paramGetContract = `/cosmwasm/wasm/v1/contract/${liquidityContractAddr}`;
-                let contractResponse = await this._commonUtil.getDataAPI(
-                  this.api,
-                  paramGetContract,
-                );
-                const liquidityCodeId = contractResponse.contract_info.code_id;
-                const liquidityContractName = contractResponse.contract_info.label;
-                const liquidityContractCreator = contractResponse.contract_info.creator;
-
-                const liquidityContract = await this.makeInstantiateContractData(height, liquidityCodeId, liquidityContractName, liquidityContractAddr, liquidityContractCreator, tx_hash);
-                smartContracts.push(liquidityContract);
-              }
-
-              const smartContract = await this.makeInstantiateContractData(height, code_id, contract_name, contract_address, creator_address, tx_hash);
-              smartContracts.push(smartContract);
-            } catch (error) {
-              this._logger.error(
-                null,
-                `Got error in instantiate contract transaction`,
-              );
-              this._logger.error(null, `${error.stack}`);
-            }
+            this.contractQueue.add('sync-instantiate-contracts', {
+              txData,
+            });
           } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
             const delegation = SyncDataHelpers.makeCreateValidatorData(
               txData,
@@ -771,103 +709,6 @@ export class SyncTaskService {
       });
       await this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
     }
-    if (tokenTransactions.length > 0) {
-      await this.tokenTransactionRepository.insertOnDuplicate(tokenTransactions, ['id']);
-    }
-  }
-
-  async makeInstantiateContractData(height: string, code_id: string, contract_name: string, contract_address: string, creator_address: string, tx_hash: string) {
-    let contract_hash = '',
-      contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED,
-      contract_match,
-      url = '',
-      compiler_version,
-      instantiate_msg_schema,
-      query_msg_schema,
-      execute_msg_schema,
-      s3_location;
-
-    if (this.nodeEnv === 'mainnet') {
-      const [request, existContracts] = await Promise.all([
-        this.deploymentRequestsRepository.findByCondition({
-          mainnet_code_id: code_id,
-        }),
-        this.smartContractRepository.findByCondition({
-          code_id
-        }),
-      ])
-      if (existContracts.length > 0) {
-        contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-        contract_match = existContracts[0].contract_address;
-      }
-      else contract_verification = SMART_CONTRACT_VERIFICATION.EXACT_MATCH;
-      contract_hash = request[0].contract_hash;
-      url = request[0].url;
-      compiler_version = request[0].compiler_version;
-      instantiate_msg_schema = request[0].instantiate_msg_schema;
-      query_msg_schema = request[0].query_msg_schema;
-      execute_msg_schema = request[0].execute_msg_schema;
-      s3_location = request[0].s3_location;
-    } else {
-      const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
-      let smartContractResponse;
-      try {
-        smartContractResponse = await this._commonUtil.getDataAPI(
-          this.smartContractService,
-          paramGetHash,
-        );
-      } catch (error) {
-        this._logger.error(
-          'Can not connect to smart contract verify service or LCD service',
-          error,
-        );
-      }
-
-      if (smartContractResponse) {
-        contract_hash =
-          smartContractResponse.Message.length === 64
-            ? smartContractResponse.Message
-            : '';
-      }
-      if (contract_hash !== '') {
-        const exactContract =
-          await this.smartContractRepository.findExactContractByHash(
-            contract_hash,
-          );
-        if (exactContract) {
-          contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-          contract_match = exactContract.contract_address;
-          url = exactContract.url;
-          compiler_version = exactContract.compiler_version;
-          instantiate_msg_schema = exactContract.instantiate_msg_schema;
-          query_msg_schema = exactContract.query_msg_schema;
-          execute_msg_schema = exactContract.execute_msg_schema;
-          s3_location = exactContract.s3_location;
-        }
-      }
-    }
-
-    const smartContract = new SmartContract();
-    smartContract.id = 0;
-    smartContract.height = Number(height);
-    smartContract.code_id = Number(code_id);
-    smartContract.contract_name = contract_name;
-    smartContract.contract_address = contract_address;
-    smartContract.creator_address = creator_address;
-    smartContract.contract_hash = contract_hash;
-    smartContract.tx_hash = tx_hash;
-    smartContract.url = url;
-    smartContract.instantiate_msg_schema = instantiate_msg_schema;
-    smartContract.query_msg_schema = query_msg_schema;
-    smartContract.execute_msg_schema = execute_msg_schema;
-    smartContract.contract_match = contract_match;
-    smartContract.contract_verification = contract_verification;
-    smartContract.compiler_version = compiler_version;
-    smartContract.s3_location = s3_location;
-    smartContract.mainnet_code_id = '';
-    smartContract.mainnet_upload_status = '';
-
-    return smartContract;
   }
 
   /**

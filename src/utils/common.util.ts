@@ -3,8 +3,9 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
 import { tmhash } from 'tendermint/lib/hash';
 import { bech32 } from 'bech32';
-import { CONST_CHAR } from '../common/constants/app.constant';
+import { CONST_CHAR, NODE_API } from '../common/constants/app.constant';
 import axios from 'axios';
+import * as util from 'util';
 
 @Injectable()
 export class CommonUtil {
@@ -74,5 +75,19 @@ export class CommonUtil {
     } else {
       return '';
     }
+  }
+
+  async getDataContractFromBase64Query(api: string, contract_address: string, base64String: string): Promise<any> {
+    return lastValueFrom(
+      this.httpService.get(api + `${util.format(
+        NODE_API.CONTRACT_INFO,
+        contract_address,
+        base64String
+      )}`, {
+        timeout: 30000
+      })
+    ).then(
+      (rs) => rs.data,
+    );
   }
 }
