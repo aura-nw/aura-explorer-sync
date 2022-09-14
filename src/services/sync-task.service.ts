@@ -680,7 +680,6 @@ export class SyncTaskService {
     }
     if (proposalVotes.length > 0) {
       await this.proposalVoteRepository.insertOnDuplicate(proposalVotes, ['id']);
-      console.log('aaaaaaaaaaa');
     }
     if (proposalDeposits.length > 0) {
       await this.proposalDepositRepository.insertOnDuplicate(proposalDeposits, ['id']);
