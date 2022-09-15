@@ -1,8 +1,15 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, Unique } from 'typeorm';
 import { BaseEntityIncrementId } from './base/base.entity';
 
 @Entity('smart_contracts')
+@Unique(['contract_address'])
 export class SmartContract extends BaseEntityIncrementId {
+  @Column({
+    type: 'timestamp',
+    name: 'verified_at',
+  })
+  verified_at: Date;
+
   @Column({ name: 'height' })
   height: number;
 
@@ -56,4 +63,22 @@ export class SmartContract extends BaseEntityIncrementId {
 
   @Column({ name: 's3_location' })
   s3_location: string;
+
+  @Column({ name: 'reference_code_id' })
+  reference_code_id: string;
+
+  @Column({ name: 'mainnet_upload_status' })
+  mainnet_upload_status: string;
+
+  @Column({ name: 'token_name' })
+  token_name: string;
+
+  @Column({ name: 'token_symbol' })
+  token_symbol: string;
+
+  @Column({ name: 'num_tokens' })
+  num_tokens: number;
+
+  @Column({ name: 'is_minted' })
+  is_minted: boolean;
 }

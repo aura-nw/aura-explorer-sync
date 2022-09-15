@@ -103,4 +103,7 @@ export class Proposal {
     name: 'is_delete',
   })
   is_delete: boolean;
+
+  @Column({ name: 'request_amount' })
+  request_amount: number;
 }
