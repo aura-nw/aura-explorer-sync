@@ -125,7 +125,7 @@ export class SyncTokenService {
         }
     }
 
-    // @Interval(3000)
+    @Interval(3000)
     async syncAuraToken() {
         // check status
         if (this.isSyncAuraToken) {
@@ -158,7 +158,7 @@ export class SyncTokenService {
             }
             //insert/update table token_contracts
             this._logger.log(`Update price aura coin: ${JSON.stringify(tokenAura)}`);
-            await this.tokenContractRepository.insertOnDuplicate([tokenAura], ['id', 'created_at']);
+            await this.tokenContractRepository.insertOnDuplicate([tokenAura], ['id']);
 
             this.isSyncAuraToken = false;
         } catch (error) {
