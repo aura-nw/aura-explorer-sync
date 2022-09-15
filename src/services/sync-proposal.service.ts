@@ -4,7 +4,7 @@ import {
   CONST_PROPOSAL_STATUS,
   CONST_PROPOSAL_TYPE,
   NODE_API
-} from '\../common/constants/app.constant';
+} from '../common/constants/app.constant';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { ProposalRepository } from '../repositories/proposal.repository';
 import { ValidatorRepository } from '../repositories/validator.repository';
