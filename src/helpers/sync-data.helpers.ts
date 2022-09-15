@@ -53,7 +53,6 @@ export class SyncDataHelpers {
     const txFee = fee
       ? (fee[CONST_CHAR.AMOUNT] / this.precision).toFixed(this.toDecimal)
       : Number('0').toFixed(this.toDecimal);
-    // newTx.blockId = savedBlock.id;
     newTx.code = txData.tx_response.code;
     newTx.codespace = txData.tx_response.codespace;
     newTx.data = txData.tx_response.code === 0 ? txData.tx_response.data : '';
@@ -346,7 +345,6 @@ export class SyncDataHelpers {
         proposalDeposit.depositor = message.proposer;
         proposalDeposit.amount = Number(message.initial_deposit[0].amount);
         proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
-        // proposalDeposits.push(proposalDeposit);
       }
     }
     historyProposal.tx_hash = txData.tx_response.txhash;
@@ -554,26 +552,4 @@ export class SyncDataHelpers {
     tokenDto.previous_holder = 0;
     return tokenDto;
   }
-
-  // static makeTokenTransactionData(txData: any, _message: any) {
-  //   const tokenTransaction = new TokenTransaction();
-  //   tokenTransaction.tx_hash = txData.tx_response.txhash;
-  //   tokenTransaction.height = txData.tx_response.height;
-  //   tokenTransaction.contract_address = _message.contract;
-  //   const transactionType = Object.keys(_message.msg)[0];
-  //   tokenTransaction.transaction_type = transactionType;
-  //   tokenTransaction.token_id = _message.msg[transactionType]?.token_id || '';
-  //   tokenTransaction.sender = _message?.sender || '';
-  //   tokenTransaction.amount = Number(_message.msg[transactionType]?.amount) || 0;
-  //   tokenTransaction.from_address = _message?.sender || '';
-  //   tokenTransaction.to_address = _message.msg[transactionType]?.owner || _message.msg[transactionType]?.recipient || '';
-  //   if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.MINT) {
-  //     tokenTransaction.from_address = '';
-  //   }
-  //   if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.BURN) {
-  //     tokenTransaction.to_address = '';
-  //   }
-
-  //   return tokenTransaction;
-  // }
 }
