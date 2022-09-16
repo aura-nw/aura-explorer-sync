@@ -1,15 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
+import { SmartContractRepository } from '../repositories/smart-contract.repository';
 import * as util from 'util';
 import {
   CONTRACT_CODE_RESULT,
   CONTRACT_CODE_STATUS,
+  CONTRACT_TYPE,
   INDEXER_API
 } from '../common/constants/app.constant';
-import { SmartContractCode } from '../entities/smart-contract-code.entity';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
-import { ConfigService } from '../shared/services/config.service';
+import { ConfigService, ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
+import { SmartContract, SmartContractCode } from '../entities';
+import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 
 @Injectable()
 export class SyncContractCodeService {
@@ -17,17 +20,20 @@ export class SyncContractCodeService {
   private indexerUrl;
   private indexerChainId;
   private isSyncContractCode = false;
+  private api;
 
   constructor(
     private configService: ConfigService,
     private _commonUtil: CommonUtil,
     private smartContractCodeRepository: SmartContractCodeRepository,
+    private smartContractRepository: SmartContractRepository
   ) {
     this._logger.log(
       '============== Constructor Sync Contract Code Service ==============',
     );
     this.indexerUrl = this.configService.get('INDEXER_URL');
     this.indexerChainId = this.configService.get('INDEXER_CHAIN_ID');
+    this.api = ENV_CONFIG.NODE.API;
   }
 
   @Interval(2000)
@@ -62,6 +68,32 @@ export class SyncContractCodeService {
           switch (contractCodeIndexer.data.status) {
             case CONTRACT_CODE_STATUS.COMPLETED:
               item.result = CONTRACT_CODE_RESULT.CORRECT;
+              //get contracts with code id
+              if (item.type === CONTRACT_TYPE.CW721) {
+                const contractDB =
+                  await this.smartContractRepository.findByCondition({
+                    code_id: item.code_id
+                  });
+                if (contractDB && contractDB.length > 0) {
+                  const contracts = [];
+                  for (let i = 0; i < contractDB.length; i++) {
+                    let contract: SmartContract = contractDB[i];
+                    //get token info
+                    const base64RequestToken = Buffer.from(`{
+                      "contract_info": {}
+                    }`).toString('base64');
+                    const tokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contract.contract_address, base64RequestToken);
+                    //get num tokens
+                    const base64RequestNumToken = Buffer.from(`{
+                      "num_tokens": {}
+                    }`).toString('base64');
+                    const numTokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contract.contract_address, base64RequestNumToken);
+                    contract = SyncDataHelpers.makeTokenCW721Data(contract, tokenInfo, numTokenInfo);
+                    contracts.push(contract);
+                  }
+                  await this.smartContractRepository.insertOnDuplicate(contracts, ['id']);
+                }
+              }
               break;
             case CONTRACT_CODE_STATUS.REJECTED:
               item.result = CONTRACT_CODE_RESULT.INCORRECT;

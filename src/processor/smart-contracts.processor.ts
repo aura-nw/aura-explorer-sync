@@ -1,7 +1,7 @@
 import { OnQueueActive, OnQueueCompleted, OnQueueError, OnQueueFailed, Process, Processor } from "@nestjs/bull";
 import { Logger } from "@nestjs/common";
 import { Job } from "bull";
-import { CONST_CHAR, CONTRACT_TRANSACTION_EXECUTE_TYPE, NODE_API, SMART_CONTRACT_VERIFICATION } from "../common/constants/app.constant";
+import { CONST_CHAR, CONTRACT_CODE_RESULT, CONTRACT_TRANSACTION_EXECUTE_TYPE, CONTRACT_TYPE, NODE_API, SMART_CONTRACT_VERIFICATION } from "../common/constants/app.constant";
 import { SmartContract } from "../entities";
 import { SyncDataHelpers } from "../helpers/sync-data.helpers";
 import { DeploymentRequestsRepository } from "../repositories/deployment-requests.repository";
@@ -9,6 +9,7 @@ import { SmartContractRepository } from "../repositories/smart-contract.reposito
 import { ENV_CONFIG } from "../shared/services/config.service";
 import { CommonUtil } from "../utils/common.util";
 import * as util from 'util';
+import { SmartContractCodeRepository } from "../repositories/smart-contract-code.repository";
 
 @Processor('smart-contracts')
 export class SmartContractsProcessor {
@@ -22,6 +23,7 @@ export class SmartContractsProcessor {
         private _commonUtil: CommonUtil,
         private smartContractRepository: SmartContractRepository,
         private deploymentRequestsRepository: DeploymentRequestsRepository,
+        private smartContractCodeRepository: SmartContractCodeRepository
     ) {
         this.logger.log(
             '============== Constructor Smart Contracts Processor Service ==============',
@@ -96,6 +98,8 @@ export class SmartContractsProcessor {
                         param,
                     );
                     smartContract.contract_name = contractData.contract_info.label;
+                    //update token info by code id
+                    smartContract = await this.updateTokenInfoByCodeId(smartContract);
                 }
             });
             const result = this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
@@ -108,46 +112,8 @@ export class SmartContractsProcessor {
         this.logger.log(job.data);
         const txData = job.data.txData;
         const message = job.data.message;
-        // const tokenTransactions = [],
         const smartContracts = [];
         try {
-            //sync token transaction
-            if (message?.msg) {
-                // const tokenTransaction = SyncDataHelpers.makeTokenTransactionData(txData, message);
-                // tokenTransactions.push(tokenTransaction);
-                //sync token contract
-                const transactionType = Object.keys(message.msg)[0];
-                const tokenId = message.msg[transactionType]?.token_id || '';
-                const contractAddress = message.contract;
-                if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.MINT && tokenId !== '') {
-                    const contract = await this.smartContractRepository.findOne({
-                        where: { contract_address: contractAddress },
-                    });
-                    if (contract) {
-                        //get num tokens
-                        const base64RequestNumToken = Buffer.from(`{
-                        "num_tokens": {}
-                      }`).toString('base64');
-                        const numTokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestNumToken);
-                        if (numTokenInfo?.data) {
-                            contract.num_tokens = Number(numTokenInfo.data.count);
-                        }
-                        if (!contract.is_minted) {
-                            contract.is_minted = true;
-                            //get token info
-                            const base64RequestToken = Buffer.from(`{
-                          "contract_info": {}
-                        }`).toString('base64');
-                            const tokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestToken);
-                            if (tokenInfo?.data) {
-                                contract.token_name = tokenInfo.data.name;
-                                contract.token_symbol = tokenInfo.data.symbol;
-                            }
-                        }
-                        smartContracts.push(contract);
-                    }
-                }
-            }
             const _smartContracts = SyncDataHelpers.makeExecuteContractData(
                 txData,
                 message,
@@ -173,14 +139,13 @@ export class SmartContractsProcessor {
                         param,
                     );
                     smartContract.contract_name = contractData.contract_info.label;
+                    //update token info by code id
+                    smartContract = await this.updateTokenInfoByCodeId(smartContract);
                 }
             });
             const result = this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
             this.logger.log(`Sync Instantiate Contract Result: ${result}`);
         }
-        // if (tokenTransactions.length > 0) {
-        //   await this.tokenTransactionRepository.insertOnDuplicate(tokenTransactions, ['id']);
-        // }
     }
 
     @OnQueueActive()
@@ -301,5 +266,26 @@ export class SmartContractsProcessor {
         smartContract.mainnet_upload_status = '';
 
         return smartContract;
+    }
+
+    async updateTokenInfoByCodeId(contract: any) {
+        const contractCode = await this.smartContractCodeRepository.findOne({
+            where: { code_id: contract.code_id }
+        });
+        if (contractCode && contractCode.type === CONTRACT_TYPE.CW721 && contractCode.result === CONTRACT_CODE_RESULT.CORRECT) {
+            //get token info
+            const base64RequestToken = Buffer.from(`{
+                "contract_info": {}
+            }`).toString('base64');
+            const tokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contract.contract_address, base64RequestToken);
+            //get num tokens
+            const base64RequestNumToken = Buffer.from(`{
+                "num_tokens": {}
+            }`).toString('base64');
+            const numTokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contract.contract_address, base64RequestNumToken);
+            contract = SyncDataHelpers.makeTokenCW721Data(contract, tokenInfo, numTokenInfo);
+        }
+
+        return contract;
     }
 }
