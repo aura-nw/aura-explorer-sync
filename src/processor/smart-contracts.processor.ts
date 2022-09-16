@@ -75,11 +75,15 @@ export class SmartContractsProcessor {
                 const liquidityContractName = contractResponse.contract_info.label;
                 const liquidityContractCreator = contractResponse.contract_info.creator;
 
-                const liquidityContract = await this.makeInstantiateContractData(height, liquidityCodeId, liquidityContractName, liquidityContractAddr, liquidityContractCreator, tx_hash);
+                let liquidityContract = await this.makeInstantiateContractData(height, liquidityCodeId, liquidityContractName, liquidityContractAddr, liquidityContractCreator, tx_hash);
+                //update token info by code id
+                liquidityContract = await this.updateTokenInfoByCodeId(liquidityContract);
                 smartContracts.push(liquidityContract);
             }
 
-            const smartContract = await this.makeInstantiateContractData(height, code_id, contract_name, contract_address, creator_address, tx_hash);
+            let smartContract = await this.makeInstantiateContractData(height, code_id, contract_name, contract_address, creator_address, tx_hash);
+            //update token info by code id
+            smartContract = await this.updateTokenInfoByCodeId(smartContract);
             smartContracts.push(smartContract);
         } catch (error) {
             this.logger.error(
@@ -98,8 +102,6 @@ export class SmartContractsProcessor {
                         param,
                     );
                     smartContract.contract_name = contractData.contract_info.label;
-                    //update token info by code id
-                    smartContract = await this.updateTokenInfoByCodeId(smartContract);
                 }
             });
             const result = this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
@@ -139,8 +141,6 @@ export class SmartContractsProcessor {
                         param,
                     );
                     smartContract.contract_name = contractData.contract_info.label;
-                    //update token info by code id
-                    smartContract = await this.updateTokenInfoByCodeId(smartContract);
                 }
             });
             const result = this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
