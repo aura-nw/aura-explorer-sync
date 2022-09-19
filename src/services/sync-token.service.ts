@@ -48,9 +48,10 @@ export class SyncTokenService {
         this.connectInfluxdb();
 
         // // Call method when init app
-        // (async () => {
-        //     await this.createThreads();
-        // })();
+        (async () => {
+            // await this.createThreads();
+            await this.syncAuraAndBtcTokens();
+        })();
     }
     
     // @Interval(2000)
@@ -359,7 +360,7 @@ export class SyncTokenService {
         }
     }
 
-    @Interval(2000)
+    @Cron('0 */3 * * * *')
     async syncAuraAndBtcTokens() {
         // check status
         if (this.isSynAuraAndBtcToken) {
