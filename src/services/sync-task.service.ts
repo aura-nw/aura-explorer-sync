@@ -600,7 +600,6 @@ export class SyncTaskService {
     const historyProposals = [];
     const delegations = [];
     const delegatorRewards = [];
-    let smartContracts = [];
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
       if (
@@ -695,19 +694,6 @@ export class SyncTaskService {
     }
     if (delegatorRewards.length > 0) {
       await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, ['id']);
-    }
-    if (smartContracts.length > 0) {
-      smartContracts.map(async (smartContract) => {
-        if (smartContract.contract_name == '') {
-          const param = `/cosmwasm/wasm/v1/contract/${smartContract.contract_address}`;
-          const contractData = await this._commonUtil.getDataAPI(
-            this.api,
-            param,
-          );
-          smartContract.contract_name = contractData.contract_info.label;
-        }
-      });
-      await this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
     }
   }
 

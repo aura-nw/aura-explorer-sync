@@ -172,7 +172,7 @@ export class SyncTokenService {
     }
 
     @Interval(2000)
-    async syncOldCw721Tokens() {
+    async syncCw721Tokens() {
         // check status
         if (this.isSyncCw721Tokens) {
             this._logger.log(null, 'already syncing cw721 tokens... wait');
@@ -182,7 +182,7 @@ export class SyncTokenService {
         }
         try {
             this.isSyncCw721Tokens = true;
-            const listTokens = await this.smartContractRepository.getOldTokens(CONTRACT_TYPE.CW721, KEYWORD_SEARCH_TRANSACTION.MINT_CONTRACT_CW721);
+            const listTokens = await this.smartContractRepository.getTokensRegisteredType();
             if (listTokens.length > 0) {
                 let smartContracts = [];
                 for (let i = 0; i < listTokens.length; i++) {
