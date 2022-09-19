@@ -520,12 +520,11 @@ export class SyncDataHelpers {
   }
 
   static makeTokenCW721Data(contract: any, tokenInfo: any, numTokenInfo: any) {
-    contract.is_minted = true;
-    if (tokenInfo?.data) {
+    if (tokenInfo && tokenInfo?.data) {
       contract.token_name = tokenInfo.data.name;
       contract.token_symbol = tokenInfo.data.symbol;
     }
-    if (numTokenInfo?.data) {
+    if (numTokenInfo && numTokenInfo?.data) {
       contract.num_tokens = Number(numTokenInfo.data.count);
     }
     return contract;
