@@ -267,7 +267,7 @@ export class SmartContractsProcessor {
         smartContract.contract_verification = contract_verification;
         smartContract.compiler_version = compiler_version;
         smartContract.s3_location = s3_location;
-        smartContract.reference_code_id = reference_code_id.toString();
+        smartContract.reference_code_id = reference_code_id;
         smartContract.mainnet_upload_status = mainnet_upload_status;
         smartContract.verified_at = verified_at;
 
