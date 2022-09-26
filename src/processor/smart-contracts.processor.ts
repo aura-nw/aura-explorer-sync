@@ -183,7 +183,8 @@ export class SmartContractsProcessor {
             execute_msg_schema = '',
             s3_location = '',
             reference_code_id = 0,
-            mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED;
+            mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED,
+            verified_at = null;
 
         if (this.nodeEnv === 'mainnet') {
             const [request, existContracts] = await Promise.all([
@@ -244,6 +245,7 @@ export class SmartContractsProcessor {
                     execute_msg_schema = exactContract.execute_msg_schema;
                     s3_location = exactContract.s3_location;
                     mainnet_upload_status = MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
+                    verified_at = exactContract.verified_at;
                 }
             }
         }
@@ -267,6 +269,7 @@ export class SmartContractsProcessor {
         smartContract.s3_location = s3_location;
         smartContract.reference_code_id = reference_code_id.toString();
         smartContract.mainnet_upload_status = mainnet_upload_status;
+        smartContract.verified_at = verified_at;
 
         return smartContract;
     }
