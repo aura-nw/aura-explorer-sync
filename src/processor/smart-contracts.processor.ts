@@ -1,7 +1,7 @@
 import { OnQueueActive, OnQueueCompleted, OnQueueError, OnQueueFailed, Process, Processor } from "@nestjs/bull";
 import { Logger } from "@nestjs/common";
 import { Job } from "bull";
-import { CONST_CHAR, CONTRACT_CODE_RESULT, CONTRACT_TRANSACTION_EXECUTE_TYPE, CONTRACT_TYPE, NODE_API, SMART_CONTRACT_VERIFICATION } from "../common/constants/app.constant";
+import { CONST_CHAR, CONTRACT_CODE_RESULT, CONTRACT_TRANSACTION_EXECUTE_TYPE, CONTRACT_TYPE, MAINNET_UPLOAD_STATUS, NODE_API, SMART_CONTRACT_VERIFICATION } from "../common/constants/app.constant";
 import { SmartContract } from "../entities";
 import { SyncDataHelpers } from "../helpers/sync-data.helpers";
 import { DeploymentRequestsRepository } from "../repositories/deployment-requests.repository";
@@ -182,7 +182,9 @@ export class SmartContractsProcessor {
             query_msg_schema = '',
             execute_msg_schema = '',
             s3_location = '',
-            reference_code_id = 0;
+            reference_code_id = 0,
+            mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED,
+            verified_at = null;
 
         if (this.nodeEnv === 'mainnet') {
             const [request, existContracts] = await Promise.all([
@@ -206,6 +208,7 @@ export class SmartContractsProcessor {
             execute_msg_schema = request[0].execute_msg_schema;
             s3_location = request[0].s3_location;
             reference_code_id = request[0].euphoria_code_id;
+            mainnet_upload_status = null;
         } else {
             const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
             let smartContractResponse;
@@ -241,6 +244,8 @@ export class SmartContractsProcessor {
                     query_msg_schema = exactContract.query_msg_schema;
                     execute_msg_schema = exactContract.execute_msg_schema;
                     s3_location = exactContract.s3_location;
+                    mainnet_upload_status = MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
+                    verified_at = new Date();
                 }
             }
         }
@@ -263,7 +268,8 @@ export class SmartContractsProcessor {
         smartContract.compiler_version = compiler_version;
         smartContract.s3_location = s3_location;
         smartContract.reference_code_id = reference_code_id.toString();
-        smartContract.mainnet_upload_status = '';
+        smartContract.mainnet_upload_status = mainnet_upload_status;
+        smartContract.verified_at = verified_at;
 
         return smartContract;
     }

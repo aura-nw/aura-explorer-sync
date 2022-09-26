@@ -54,6 +54,7 @@ export class SyncTokenService {
         })();
     }
     
+    // @todo: use for sync cw20 tokens list
     // @Interval(2000)
     async syncCw20Tokens() {
         // check status
@@ -126,6 +127,7 @@ export class SyncTokenService {
         }
     }
 
+    // @todo: use for sync aura token
     // @Interval(3000)
     async syncAuraToken() {
         // check status
