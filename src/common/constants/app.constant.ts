@@ -142,3 +142,11 @@ export enum CONTRACT_TRANSACTION_EXECUTE_TYPE {
 export enum KEYWORD_SEARCH_TRANSACTION {
   MINT_CONTRACT_CW721 = '%"mint"%"token_id"%'
 }
+
+export enum MAINNET_UPLOAD_STATUS {
+  UNVERIFIED = 'Unverified',
+  NOT_REGISTERED = 'Not registered',
+  TBD = 'TBD',
+  DEPLOYED = 'Deployed',
+  REJECTED = 'Rejected',
+}
