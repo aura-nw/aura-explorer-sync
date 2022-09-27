@@ -244,7 +244,8 @@ export class SmartContractsProcessor {
                     query_msg_schema = exactContract.query_msg_schema;
                     execute_msg_schema = exactContract.execute_msg_schema;
                     s3_location = exactContract.s3_location;
-                    mainnet_upload_status = MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
+                    reference_code_id = exactContract.reference_code_id;
+                    mainnet_upload_status = exactContract.mainnet_upload_status;
                     verified_at = new Date();
                 }
             }
