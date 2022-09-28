@@ -31,6 +31,7 @@ import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -62,6 +63,7 @@ export class SyncTaskService {
     private delegatorRewardRepository: DelegatorRewardRepository,
     private smartContractRepository: SmartContractRepository,
     private deploymentRequestsRepository: DeploymentRequestsRepository,
+    private smartContractCodeRepository: SmartContractCodeRepository,
     @InjectSchedule() private readonly schedule: Schedule,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue
   ) {
@@ -603,6 +605,7 @@ export class SyncTaskService {
     const historyProposals = [];
     const delegations = [];
     const delegatorRewards = [];
+    const smartContractCodes = [];
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
       if (
@@ -676,6 +679,12 @@ export class SyncTaskService {
               message,
             );
             delegations.push(delegation);
+          } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
+            const smartContractCode = SyncDataHelpers.makeStoreCodeData(
+              txData,
+              message,
+            );
+            smartContractCodes.push(smartContractCode);
           }
         }
       }
@@ -697,6 +706,9 @@ export class SyncTaskService {
     }
     if (delegatorRewards.length > 0) {
       await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, ['id']);
+    }
+    if (smartContractCodes.length > 0) {
+      await this.smartContractCodeRepository.insertOnDuplicate(smartContractCodes, ['id']);
     }
   }
 
