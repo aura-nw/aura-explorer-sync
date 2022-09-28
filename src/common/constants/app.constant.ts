@@ -52,6 +52,7 @@ export enum CONST_CHAR {
   EXECUTE = 'execute',
   WASM = 'wasm',
   LIQUIDITY_TOKEN_ADDR = 'liquidity_token_addr',
+  STORE_CODE = 'store_code'
 }
 
 export enum CONST_MSG_TYPE {
@@ -65,6 +66,7 @@ export enum CONST_MSG_TYPE {
   MSG_INSTANTIATE_CONTRACT = 'MsgInstantiateContract',
   MSG_EXECUTE_CONTRACT = 'MsgExecuteContract',
   MSG_CREATE_VALIDATOR = 'MsgCreateValidator',
+  MSG_STORE_CODE = 'MsgStoreCode'
 }
 
 export enum CONST_PROPOSAL_TYPE {
