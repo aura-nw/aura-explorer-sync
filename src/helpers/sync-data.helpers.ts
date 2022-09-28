@@ -16,6 +16,7 @@ import {
   ProposalDeposit,
   ProposalVote,
   SmartContract,
+  SmartContractCode,
   TokenContract,
   Transaction,
   Validator,
@@ -554,25 +555,14 @@ export class SyncDataHelpers {
     return tokenDto;
   }
 
-  // static makeTokenTransactionData(txData: any, _message: any) {
-  //   const tokenTransaction = new TokenTransaction();
-  //   tokenTransaction.tx_hash = txData.tx_response.txhash;
-  //   tokenTransaction.height = txData.tx_response.height;
-  //   tokenTransaction.contract_address = _message.contract;
-  //   const transactionType = Object.keys(_message.msg)[0];
-  //   tokenTransaction.transaction_type = transactionType;
-  //   tokenTransaction.token_id = _message.msg[transactionType]?.token_id || '';
-  //   tokenTransaction.sender = _message?.sender || '';
-  //   tokenTransaction.amount = Number(_message.msg[transactionType]?.amount) || 0;
-  //   tokenTransaction.from_address = _message?.sender || '';
-  //   tokenTransaction.to_address = _message.msg[transactionType]?.owner || _message.msg[transactionType]?.recipient || '';
-  //   if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.MINT) {
-  //     tokenTransaction.from_address = '';
-  //   }
-  //   if (transactionType === CONTRACT_TRANSACTION_EXECUTE_TYPE.BURN) {
-  //     tokenTransaction.to_address = '';
-  //   }
+  static makeStoreCodeData(txData: any, message: any) {
+    const smartContractCode = new SmartContractCode();
+    const codeIds = txData.tx_response.logs[0].events
+      .find((x) => x.type == CONST_CHAR.STORE_CODE)
+      .attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
+    smartContractCode.code_id = codeIds.length > 0 ? codeIds[0].value : 0;
+    smartContractCode.creator = message.sender;
 
-  //   return tokenTransaction;
-  // }
+    return smartContractCode;
+  }
 }
