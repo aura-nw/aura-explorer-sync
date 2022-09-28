@@ -244,7 +244,10 @@ export class SmartContractsProcessor {
                     query_msg_schema = exactContract.query_msg_schema;
                     execute_msg_schema = exactContract.execute_msg_schema;
                     s3_location = exactContract.s3_location;
-                    mainnet_upload_status = MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
+                    reference_code_id = exactContract.reference_code_id;
+                    mainnet_upload_status = creator_address == exactContract.creator_address 
+                        ? exactContract.mainnet_upload_status 
+                        : MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
                     verified_at = new Date();
                 }
             }
@@ -267,7 +270,7 @@ export class SmartContractsProcessor {
         smartContract.contract_verification = contract_verification;
         smartContract.compiler_version = compiler_version;
         smartContract.s3_location = s3_location;
-        smartContract.reference_code_id = reference_code_id.toString();
+        smartContract.reference_code_id = reference_code_id;
         smartContract.mainnet_upload_status = mainnet_upload_status;
         smartContract.verified_at = verified_at;
 
