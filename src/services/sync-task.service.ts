@@ -287,8 +287,10 @@ export class SyncTaskService {
             where: { operator_address: data.operator_address },
           });
           if (validatorFilter) {
+            this._logger.log(`Update validator: ${newValidator}`);
             this.syncUpdateValidator(newValidator, validatorFilter);
           } else {
+            this._logger.log(`Create validator: ${newValidator}`);
             await this.validatorRepository.create(newValidator);
           }
           // TODO: Write validator to influxdb
@@ -326,12 +328,13 @@ export class SyncTaskService {
       'unbonding_height',
       'up_time',
       'status',
+      'identity'
     ];
-    const numberKeys = ['power', 'self_bonded'];
+    const numberKeys = ['power', 'self_bonded', 'status'];
     Object.keys(validatorData).forEach((key) => {
       if (plainKeys.indexOf(key) !== -1) {
         if (numberKeys.indexOf(key) !== -1) {
-          if (validatorData[key] !== Number(newValidator[key])) {
+          if (Number(validatorData[key]) !== Number(newValidator[key])) {
             validatorData[key] = newValidator[key];
             isSave = true;
           }
