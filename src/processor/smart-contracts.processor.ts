@@ -186,6 +186,12 @@ export class SmartContractsProcessor {
             mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED,
             verified_at = null;
 
+        const paramCodeId = `/cosmwasm/wasm/v1/code/${code_id}`;
+        const codeIdData = await this._commonUtil.getDataAPI(
+            this.api,
+            paramCodeId,
+        );
+
         if (this.nodeEnv === 'mainnet') {
             const [request, existContracts] = await Promise.all([
                 this.deploymentRequestsRepository.findByCondition({
@@ -245,7 +251,7 @@ export class SmartContractsProcessor {
                     execute_msg_schema = exactContract.execute_msg_schema;
                     s3_location = exactContract.s3_location;
                     reference_code_id = exactContract.reference_code_id;
-                    mainnet_upload_status = creator_address == exactContract.creator_address 
+                    mainnet_upload_status = creator_address == codeIdData.code_info.creator 
                         ? exactContract.mainnet_upload_status 
                         : MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
                     verified_at = new Date();
