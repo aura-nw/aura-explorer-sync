@@ -66,7 +66,7 @@ export class SmartContractsProcessor {
                 );
             }
             if (liquidityContractAddr !== undefined) {
-                const paramGetContract = `cosmwasm/wasm/v1/contract/${liquidityContractAddr}`;
+                const paramGetContract = `/cosmwasm/wasm/v1/contract/${liquidityContractAddr}`;
                 let contractResponse = await this._commonUtil.getDataAPI(
                     this.api,
                     paramGetContract,
@@ -96,7 +96,7 @@ export class SmartContractsProcessor {
         if (smartContracts.length > 0) {
             smartContracts.map(async (smartContract) => {
                 if (smartContract.contract_name == '') {
-                    const param = `cosmwasm/wasm/v1/contract/${smartContract.contract_address}`;
+                    const param = `/cosmwasm/wasm/v1/contract/${smartContract.contract_address}`;
                     const contractData = await this._commonUtil.getDataAPI(
                         this.api,
                         param,
@@ -135,7 +135,7 @@ export class SmartContractsProcessor {
         if (smartContracts.length > 0) {
             smartContracts.map(async (smartContract) => {
                 if (smartContract.contract_name == '') {
-                    const param = `cosmwasm/wasm/v1/contract/${smartContract.contract_address}`;
+                    const param = `/cosmwasm/wasm/v1/contract/${smartContract.contract_address}`;
                     const contractData = await this._commonUtil.getDataAPI(
                         this.api,
                         param,
@@ -186,7 +186,7 @@ export class SmartContractsProcessor {
             mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED,
             verified_at = null;
 
-        const paramCodeId = `cosmwasm/wasm/v1/code/${code_id}`;
+        const paramCodeId = `/cosmwasm/wasm/v1/code/${code_id}`;
         const codeIdData = await this._commonUtil.getDataAPI(
             this.api,
             paramCodeId,
