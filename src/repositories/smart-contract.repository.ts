@@ -48,6 +48,8 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
         'smart_contracts.query_msg_schema as query_msg_schema',
         'smart_contracts.execute_msg_schema as execute_msg_schema',
         'smart_contracts.s3_location as s3_location',
+        'smart_contracts.reference_code_id as reference_code_id',
+        'smart_contracts.mainnet_upload_status as mainnet_upload_status',
       ]);
     const res = await query.getRawOne();
     return res;
