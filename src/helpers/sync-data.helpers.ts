@@ -431,8 +431,8 @@ export class SyncDataHelpers {
     newValidator.details = data.description.details;
     newValidator.identity = data.description.identity;
     newValidator.unbonding_height = data.unbonding_height;
-    newValidator.unbonding_time = data.unbonding_time;
-    newValidator.update_time = data.commission.update_time;
+    newValidator.unbonding_time = new Date(data.unbonding_time);
+    newValidator.update_time = new Date(data.commission.update_time);
     newValidator.status = status;
 
     return newValidator;

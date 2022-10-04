@@ -285,16 +285,17 @@ export class SyncTaskService {
           } catch (error) {
             this._logger.error(null, `Not exist delegations`);
           }
-          const validatorFilter = await this.validatorRepository.findOne({
-            where: { operator_address: data.operator_address },
-          });
-          if (validatorFilter) {
-            this._logger.log(`Update validator: ${newValidator}`);
-            this.syncUpdateValidator(newValidator, validatorFilter);
-          } else {
-            this._logger.log(`Create validator: ${newValidator}`);
-            await this.validatorRepository.create(newValidator);
-          }
+          await this.validatorRepository.insertOnDuplicate([newValidator], ['id']);
+          // const validatorFilter = await this.validatorRepository.findOne({
+          //   where: { operator_address: data.operator_address },
+          // });
+          // if (validatorFilter) {
+          //   this._logger.log(`Update validator: ${newValidator}`);
+          //   this.syncUpdateValidator(newValidator, validatorFilter);
+          // } else {
+          //   this._logger.log(`Create validator: ${newValidator}`);
+          //   await this.validatorRepository.create(newValidator);
+          // }
           // TODO: Write validator to influxdb
           this.influxDbClient.writeValidator(
             newValidator.operator_address,
@@ -314,44 +315,44 @@ export class SyncTaskService {
     }
   }
 
-  async syncUpdateValidator(newValidator, validatorData) {
-    let isSave = false;
-    const plainKeys = [
-      'title',
-      'jailed',
-      'commission',
-      'power',
-      'percent_power',
-      'self_bonded',
-      'percent_self_bonded',
-      'website',
-      'details',
-      'identity',
-      'unbonding_height',
-      'up_time',
-      'status',
-      'identity'
-    ];
-    const numberKeys = ['power', 'self_bonded', 'status'];
-    Object.keys(validatorData).forEach((key) => {
-      if (plainKeys.indexOf(key) !== -1) {
-        if (numberKeys.indexOf(key) !== -1) {
-          if (Number(validatorData[key]) !== Number(newValidator[key])) {
-            validatorData[key] = newValidator[key];
-            isSave = true;
-          }
-        } else {
-          if (validatorData[key] !== newValidator[key]) {
-            validatorData[key] = newValidator[key];
-            isSave = true;
-          }
-        }
-      }
-    });
-    if (isSave) {
-      this.validatorRepository.update(validatorData);
-    }
-  }
+  // async syncUpdateValidator(newValidator, validatorData) {
+  //   let isSave = false;
+  //   const plainKeys = [
+  //     'title',
+  //     'jailed',
+  //     'commission',
+  //     'power',
+  //     'percent_power',
+  //     'self_bonded',
+  //     'percent_self_bonded',
+  //     'website',
+  //     'details',
+  //     'identity',
+  //     'unbonding_height',
+  //     'up_time',
+  //     'status',
+  //     'identity'
+  //   ];
+  //   const numberKeys = ['power', 'self_bonded', 'status'];
+  //   Object.keys(validatorData).forEach((key) => {
+  //     if (plainKeys.indexOf(key) !== -1) {
+  //       if (numberKeys.indexOf(key) !== -1) {
+  //         if (Number(validatorData[key]) !== Number(newValidator[key])) {
+  //           validatorData[key] = newValidator[key];
+  //           isSave = true;
+  //         }
+  //       } else {
+  //         if (validatorData[key] !== newValidator[key]) {
+  //           validatorData[key] = newValidator[key];
+  //           isSave = true;
+  //         }
+  //       }
+  //     }
+  //   });
+  //   if (isSave) {
+  //     this.validatorRepository.update(validatorData);
+  //   }
+  // }
 
   @Interval(3000)
   async syncMissedBlock() {
