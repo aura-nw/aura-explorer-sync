@@ -244,7 +244,9 @@ export class SmartContractsProcessor {
                     query_msg_schema = exactContract.query_msg_schema;
                     execute_msg_schema = exactContract.execute_msg_schema;
                     s3_location = exactContract.s3_location;
-                    reference_code_id = exactContract.reference_code_id;
+                    reference_code_id = sameContractCodeId.length > 0
+                        ? sameContractCodeId[0].reference_code_id
+                        : 0;
                     mainnet_upload_status = sameContractCodeId.length > 0
                         ? sameContractCodeId[0].mainnet_upload_status as MAINNET_UPLOAD_STATUS
                         : MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
