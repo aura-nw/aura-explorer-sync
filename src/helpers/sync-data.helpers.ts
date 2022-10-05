@@ -62,8 +62,6 @@ export class SyncDataHelpers {
     newTx.gas_wanted = txData.tx_response.gas_wanted;
     newTx.height = fetchingBlockHeight;
     newTx.info = txData.tx_response.info;
-    newTx.raw_log = txData.tx_response.raw_log;
-    newTx.raw_log_data = txRawLogData ?? null;
     newTx.timestamp = time;
     newTx.tx = JSON.stringify(txData.tx_response);
     newTx.tx_hash = txData.tx_response.txhash;
