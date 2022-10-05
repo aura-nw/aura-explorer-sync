@@ -247,7 +247,7 @@ export class SmartContractsProcessor {
                     reference_code_id = exactContract.reference_code_id;
                     mainnet_upload_status = sameContractCodeId.length > 0
                         ? sameContractCodeId[0].mainnet_upload_status as MAINNET_UPLOAD_STATUS
-                        : MAINNET_UPLOAD_STATUS.UNVERIFIED;
+                        : MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
                     verified_at = new Date();
                 }
             }
