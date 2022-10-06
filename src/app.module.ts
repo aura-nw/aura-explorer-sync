@@ -25,7 +25,6 @@ import { TokenContractRepository } from './repositories/token-contract.repositor
 import { TransactionRepository } from './repositories/transaction.repository';
 import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
-import { SyncProposalService } from './services/sync-proposal.service';
 import { SyncTaskService } from './services/sync-task.service';
 import { SyncTokenService } from './services/sync-token.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
@@ -73,7 +72,6 @@ const repositories = [
 ];
 
 const services = [
-  SyncProposalService,
   SyncTaskService,
   SyncContractCodeService,
   SyncTokenService
