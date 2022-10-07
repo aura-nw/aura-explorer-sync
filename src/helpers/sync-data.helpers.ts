@@ -16,6 +16,7 @@ import {
   ProposalDeposit,
   ProposalVote,
   SmartContract,
+  SmartContractCode,
   TokenContract,
   Transaction,
   Validator,
@@ -60,8 +61,6 @@ export class SyncDataHelpers {
     newTx.gas_wanted = txData.tx_response.gas_wanted;
     newTx.height = fetchingBlockHeight;
     newTx.info = txData.tx_response.info;
-    newTx.raw_log = txData.tx_response.raw_log;
-    newTx.raw_log_data = txRawLogData ?? null;
     newTx.timestamp = time;
     newTx.tx = JSON.stringify(txData.tx_response);
     newTx.tx_hash = txData.tx_response.txhash;
@@ -428,50 +427,11 @@ export class SyncDataHelpers {
     newValidator.details = data.description.details;
     newValidator.identity = data.description.identity;
     newValidator.unbonding_height = data.unbonding_height;
-    newValidator.unbonding_time = data.unbonding_time;
-    newValidator.update_time = data.commission.update_time;
+    newValidator.unbonding_time = new Date(data.unbonding_time);
+    newValidator.update_time = new Date(data.commission.update_time);
     newValidator.status = status;
 
     return newValidator;
-  }
-
-  static makerProposalData(data: any, proposalTally: any) {
-    const proposal = new Proposal();
-    proposal.pro_id = Number(data.proposal_id);
-    proposal.pro_title = data.content['title'];
-    proposal.pro_description = data.content['description'];
-    proposal.pro_status = data.status;
-    proposal.pro_proposer_address = '';
-    proposal.pro_proposer = '';
-    proposal.pro_voting_start_time = new Date(data.voting_start_time);
-    proposal.pro_voting_end_time = new Date(data.voting_end_time);
-    proposal.pro_votes_yes = 0.0;
-    proposal.pro_votes_abstain = 0.0;
-    proposal.pro_votes_no = 0.0;
-    proposal.pro_votes_no_with_veto = 0.0;
-
-    proposal.pro_submit_time = new Date(data.submit_time);
-    proposal.pro_total_deposits = 0.0;
-
-    //set value for column not null
-    proposal.pro_tx_hash = '';
-    proposal.pro_type = data.content['@type'];
-    proposal.pro_deposit_end_time = new Date(data.deposit_end_time);
-    proposal.pro_activity = null;
-    proposal.is_delete = false;
-    if (proposalTally) {
-      proposal.pro_votes_yes = proposalTally.tally.yes;
-      proposal.pro_votes_abstain = proposalTally.tally.abstain;
-      proposal.pro_votes_no = proposalTally.tally.no;
-      proposal.pro_votes_no_with_veto = proposalTally.tally.no_with_veto;
-    } else {
-      proposal.pro_votes_yes = data.final_tally_result.yes;
-      proposal.pro_votes_abstain = data.final_tally_result.abstain;
-      proposal.pro_votes_no = data.final_tally_result.no;
-      proposal.pro_votes_no_with_veto = data.final_tally_result.no_with_veto;
-    }
-
-    return proposal;
   }
 
   static makerCw20TokenData(item: any, marketingInfo: any, tokenInfo: any) {
@@ -518,12 +478,11 @@ export class SyncDataHelpers {
   }
 
   static makeTokenCW721Data(contract: any, tokenInfo: any, numTokenInfo: any) {
-    contract.is_minted = true;
-    if (tokenInfo?.data) {
+    if (tokenInfo && tokenInfo?.data) {
       contract.token_name = tokenInfo.data.name;
       contract.token_symbol = tokenInfo.data.symbol;
     }
-    if (numTokenInfo?.data) {
+    if (numTokenInfo && numTokenInfo?.data) {
       contract.num_tokens = Number(numTokenInfo.data.count);
     }
     return contract;
@@ -551,5 +510,16 @@ export class SyncDataHelpers {
     tokenDto.percent_holder = 0;
     tokenDto.previous_holder = 0;
     return tokenDto;
+  }
+
+  static makeStoreCodeData(txData: any, message: any) {
+    const smartContractCode = new SmartContractCode();
+    const codeIds = txData.tx_response.logs[0].events
+      .find((x) => x.type == CONST_CHAR.STORE_CODE)
+      .attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
+    smartContractCode.code_id = codeIds.length > 0 ? codeIds[0].value : 0;
+    smartContractCode.creator = message.sender;
+
+    return smartContractCode;
   }
 }

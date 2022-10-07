@@ -52,6 +52,7 @@ export enum CONST_CHAR {
   EXECUTE = 'execute',
   WASM = 'wasm',
   LIQUIDITY_TOKEN_ADDR = 'liquidity_token_addr',
+  STORE_CODE = 'store_code'
 }
 
 export enum CONST_MSG_TYPE {
@@ -65,6 +66,7 @@ export enum CONST_MSG_TYPE {
   MSG_INSTANTIATE_CONTRACT = 'MsgInstantiateContract',
   MSG_EXECUTE_CONTRACT = 'MsgExecuteContract',
   MSG_CREATE_VALIDATOR = 'MsgCreateValidator',
+  MSG_STORE_CODE = 'MsgStoreCode'
 }
 
 export enum CONST_PROPOSAL_TYPE {
@@ -141,4 +143,12 @@ export enum CONTRACT_TRANSACTION_EXECUTE_TYPE {
 
 export enum KEYWORD_SEARCH_TRANSACTION {
   MINT_CONTRACT_CW721 = '%"mint"%"token_id"%'
+}
+
+export enum MAINNET_UPLOAD_STATUS {
+  UNVERIFIED = 'Unverified',
+  NOT_REGISTERED = 'Not registered',
+  TBD = 'TBD',
+  DEPLOYED = 'Deployed',
+  REJECTED = 'Rejected',
 }

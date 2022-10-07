@@ -48,11 +48,13 @@ export class SyncTokenService {
         this.connectInfluxdb();
 
         // // Call method when init app
-        // (async () => {
-        //     await this.createThreads();
-        // })();
+        (async () => {
+            // await this.createThreads();
+            await this.syncAuraAndBtcTokens();
+        })();
     }
     
+    // @todo: use for sync cw20 tokens list
     // @Interval(2000)
     async syncCw20Tokens() {
         // check status
@@ -125,7 +127,8 @@ export class SyncTokenService {
         }
     }
 
-    @Interval(3000)
+    // @todo: use for sync aura token
+    // @Interval(3000)
     async syncAuraToken() {
         // check status
         if (this.isSyncAuraToken) {
@@ -172,7 +175,7 @@ export class SyncTokenService {
     }
 
     @Interval(2000)
-    async syncOldCw721Tokens() {
+    async syncCw721Tokens() {
         // check status
         if (this.isSyncCw721Tokens) {
             this._logger.log(null, 'already syncing cw721 tokens... wait');
@@ -182,7 +185,7 @@ export class SyncTokenService {
         }
         try {
             this.isSyncCw721Tokens = true;
-            const listTokens = await this.smartContractRepository.getOldTokens(CONTRACT_TYPE.CW721, KEYWORD_SEARCH_TRANSACTION.MINT_CONTRACT_CW721);
+            const listTokens = await this.smartContractRepository.getTokensRegisteredType();
             if (listTokens.length > 0) {
                 let smartContracts = [];
                 for (let i = 0; i < listTokens.length; i++) {
@@ -359,7 +362,7 @@ export class SyncTokenService {
         }
     }
 
-    @Interval(2000)
+    @Cron('0 */3 * * * *')
     async syncAuraAndBtcTokens() {
         // check status
         if (this.isSynAuraAndBtcToken) {
