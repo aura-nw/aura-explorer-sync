@@ -63,19 +63,6 @@ export class Transaction extends BaseEntityIncrementId {
   })
   contract_address: string;
 
-  @Column({
-    type: 'text',
-    name: 'raw_log',
-  })
-  raw_log: string;
-
-  @Column({
-    type: 'text',
-    name: 'raw_log_data',
-    nullable: true
-  })
-  raw_log_data: string;
-
   @Column({ name: 'timestamp' })
   timestamp: Date;
 

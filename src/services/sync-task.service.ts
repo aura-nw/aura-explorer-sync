@@ -31,6 +31,7 @@ import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -62,6 +63,7 @@ export class SyncTaskService {
     private delegatorRewardRepository: DelegatorRewardRepository,
     private smartContractRepository: SmartContractRepository,
     private deploymentRequestsRepository: DeploymentRequestsRepository,
+    private smartContractCodeRepository: SmartContractCodeRepository,
     @InjectSchedule() private readonly schedule: Schedule,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue
   ) {
@@ -283,14 +285,8 @@ export class SyncTaskService {
           } catch (error) {
             this._logger.error(null, `Not exist delegations`);
           }
-          const validatorFilter = await this.validatorRepository.findOne({
-            where: { operator_address: data.operator_address },
-          });
-          if (validatorFilter) {
-            this.syncUpdateValidator(newValidator, validatorFilter);
-          } else {
-            await this.validatorRepository.create(newValidator);
-          }
+          await this.validatorRepository.insertOnDuplicate([newValidator], ['id']);
+
           // TODO: Write validator to influxdb
           this.influxDbClient.writeValidator(
             newValidator.operator_address,
@@ -307,44 +303,6 @@ export class SyncTaskService {
           this._logger.error(`${error.stack}`);
         }
       }
-    }
-  }
-
-  async syncUpdateValidator(newValidator, validatorData) {
-    let isSave = false;
-    const plainKeys = [
-      'title',
-      'jailed',
-      'commission',
-      'power',
-      'percent_power',
-      'self_bonded',
-      'percent_self_bonded',
-      'website',
-      'details',
-      'identity',
-      'unbonding_height',
-      'up_time',
-      'status',
-    ];
-    const numberKeys = ['power', 'self_bonded'];
-    Object.keys(validatorData).forEach((key) => {
-      if (plainKeys.indexOf(key) !== -1) {
-        if (numberKeys.indexOf(key) !== -1) {
-          if (validatorData[key] !== Number(newValidator[key])) {
-            validatorData[key] = newValidator[key];
-            isSave = true;
-          }
-        } else {
-          if (validatorData[key] !== newValidator[key]) {
-            validatorData[key] = newValidator[key];
-            isSave = true;
-          }
-        }
-      }
-    });
-    if (isSave) {
-      this.validatorRepository.update(validatorData);
     }
   }
 
@@ -600,7 +558,7 @@ export class SyncTaskService {
     const historyProposals = [];
     const delegations = [];
     const delegatorRewards = [];
-    let smartContracts = [];
+    const smartContractCodes = [];
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
       if (
@@ -674,6 +632,12 @@ export class SyncTaskService {
               message,
             );
             delegations.push(delegation);
+          } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
+            const smartContractCode = SyncDataHelpers.makeStoreCodeData(
+              txData,
+              message,
+            );
+            smartContractCodes.push(smartContractCode);
           }
         }
       }
@@ -696,18 +660,8 @@ export class SyncTaskService {
     if (delegatorRewards.length > 0) {
       await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, ['id']);
     }
-    if (smartContracts.length > 0) {
-      smartContracts.map(async (smartContract) => {
-        if (smartContract.contract_name == '') {
-          const param = `/cosmwasm/wasm/v1/contract/${smartContract.contract_address}`;
-          const contractData = await this._commonUtil.getDataAPI(
-            this.api,
-            param,
-          );
-          smartContract.contract_name = contractData.contract_info.label;
-        }
-      });
-      await this.smartContractRepository.insertOnDuplicate(smartContracts, ['id']);
+    if (smartContractCodes.length > 0) {
+      await this.smartContractCodeRepository.insertOnDuplicate(smartContractCodes, ['id']);
     }
   }
 
@@ -764,7 +718,7 @@ export class SyncTaskService {
    * Write block were to influxdb
    * @returns 
    */
-  @Interval(2000)
+  // @Interval(2000)
   async BlockMissToInfluxdb() {
     const numRow = 500;
     if (ENV_CONFIG.SYNC_DATA_INFLUXD) {

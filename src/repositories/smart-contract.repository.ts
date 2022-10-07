@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CONTRACT_CODE_RESULT, MESSAGE_ACTION, SMART_CONTRACT_VERIFICATION } from '../common/constants/app.constant';
+import { CONTRACT_CODE_RESULT, CONTRACT_TYPE, MESSAGE_ACTION, SMART_CONTRACT_VERIFICATION } from '../common/constants/app.constant';
 import { SmartContract } from '../entities';
 import { BaseRepository } from './base.repository';
 
@@ -48,23 +48,17 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
         'smart_contracts.query_msg_schema as query_msg_schema',
         'smart_contracts.execute_msg_schema as execute_msg_schema',
         'smart_contracts.s3_location as s3_location',
+        'smart_contracts.reference_code_id as reference_code_id',
+        'smart_contracts.mainnet_upload_status as mainnet_upload_status',
       ]);
     const res = await query.getRawOne();
     return res;
   }
 
-  async getOldTokens(type: string, keywork: string) {
-    const sql = `SELECT contract_address
-      FROM transactions
-      WHERE type = '${MESSAGE_ACTION.MSG_EXECUTE_CONTRACT}'
-        AND messages LIKE '${keywork}'
-          AND contract_address IN (
-            SELECT sc.contract_address
-            FROM smart_contracts sc
-              INNER JOIN smart_contract_codes scc ON sc.code_id = scc.code_id AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}' AND scc.type = '${type}'
-            WHERE sc.is_minted = 0
-          )
-      GROUP BY contract_address`;
+  async getTokensRegisteredType() {
+    const sql = `SELECT sc.contract_address
+      FROM smart_contracts sc
+        INNER JOIN smart_contract_codes scc ON sc.code_id = scc.code_id AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}' AND scc.type = '${CONTRACT_TYPE.CW721}'`;
 
     return await this.repos.query(sql, []);
   }
