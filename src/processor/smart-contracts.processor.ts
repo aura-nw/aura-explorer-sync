@@ -186,6 +186,7 @@ export class SmartContractsProcessor {
             mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED,
             verified_at = null,
             project_name = '',
+            project_description = '',
             official_project_website = '',
             official_project_email = '',
             whitepaper,
@@ -226,6 +227,7 @@ export class SmartContractsProcessor {
             mainnet_upload_status = null;
             verified_at = new Date();
             project_name = request[0].project_name;
+            project_description = request[0].contract_description;
             official_project_website = request[0].official_project_website;
             official_project_email = request[0].official_project_email;
             whitepaper = request[0].whitepaper;
@@ -281,6 +283,7 @@ export class SmartContractsProcessor {
                     reference_code_id = sameContractCodeId[0].reference_code_id;
                     mainnet_upload_status = sameContractCodeId[0].mainnet_upload_status as MAINNET_UPLOAD_STATUS;
                     project_name = sameContractCodeId[0].project_name;
+                    project_description = sameContractCodeId[0].project_description;
                     official_project_website = sameContractCodeId[0].official_project_website;
                     official_project_email = sameContractCodeId[0].official_project_email;
                     whitepaper = sameContractCodeId[0].whitepaper;
@@ -320,6 +323,7 @@ export class SmartContractsProcessor {
         smartContract.mainnet_upload_status = mainnet_upload_status;
         smartContract.verified_at = verified_at;
         smartContract.project_name = project_name;
+        smartContract.project_description = project_description;
         smartContract.official_project_website = official_project_website;
         smartContract.official_project_email = official_project_email;
         smartContract.whitepaper = whitepaper;
