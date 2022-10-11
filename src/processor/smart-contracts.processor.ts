@@ -184,7 +184,23 @@ export class SmartContractsProcessor {
             s3_location = '',
             reference_code_id = 0,
             mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED,
-            verified_at = null;
+            verified_at = null,
+            project_name = '',
+            project_description = '',
+            official_project_website = '',
+            official_project_email = '',
+            whitepaper,
+            github,
+            telegram,
+            wechat = '',
+            linkedin = '',
+            discord = '',
+            medium = '',
+            reddit = '',
+            slack = '',
+            facebook = '',
+            twitter = '',
+            bitcointalk = '';
 
         if (this.nodeEnv === 'mainnet') {
             const [request, existContracts] = await Promise.all([
@@ -209,6 +225,23 @@ export class SmartContractsProcessor {
             s3_location = request[0].s3_location;
             reference_code_id = request[0].euphoria_code_id;
             mainnet_upload_status = null;
+            verified_at = new Date();
+            project_name = request[0].project_name;
+            project_description = request[0].contract_description;
+            official_project_website = request[0].official_project_website;
+            official_project_email = request[0].official_project_email;
+            whitepaper = request[0].whitepaper;
+            github = request[0].github;
+            telegram = request[0].telegram;
+            wechat = request[0].wechat;
+            linkedin = request[0].linkedin;
+            discord = request[0].discord;
+            medium = request[0].medium;
+            reddit = request[0].reddit;
+            slack = request[0].slack;
+            facebook = request[0].facebook;
+            twitter = request[0].twitter;
+            bitcointalk = request[0].bitcointalk;
         } else {
             const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
             let smartContractResponse;
@@ -244,13 +277,27 @@ export class SmartContractsProcessor {
                     query_msg_schema = exactContract.query_msg_schema;
                     execute_msg_schema = exactContract.execute_msg_schema;
                     s3_location = exactContract.s3_location;
-                    reference_code_id = sameContractCodeId.length > 0
-                        ? sameContractCodeId[0].reference_code_id
-                        : 0;
-                    mainnet_upload_status = sameContractCodeId.length > 0
-                        ? sameContractCodeId[0].mainnet_upload_status as MAINNET_UPLOAD_STATUS
-                        : MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
                     verified_at = new Date();
+                }
+                if (sameContractCodeId.length > 0) {
+                    reference_code_id = sameContractCodeId[0].reference_code_id;
+                    mainnet_upload_status = sameContractCodeId[0].mainnet_upload_status as MAINNET_UPLOAD_STATUS;
+                    project_name = sameContractCodeId[0].project_name;
+                    project_description = sameContractCodeId[0].project_description;
+                    official_project_website = sameContractCodeId[0].official_project_website;
+                    official_project_email = sameContractCodeId[0].official_project_email;
+                    whitepaper = sameContractCodeId[0].whitepaper;
+                    github = sameContractCodeId[0].github;
+                    telegram = sameContractCodeId[0].telegram;
+                    wechat = sameContractCodeId[0].wechat;
+                    linkedin = sameContractCodeId[0].linkedin;
+                    discord = sameContractCodeId[0].discord;
+                    medium = sameContractCodeId[0].medium;
+                    reddit = sameContractCodeId[0].reddit;
+                    slack = sameContractCodeId[0].slack;
+                    facebook = sameContractCodeId[0].facebook;
+                    twitter = sameContractCodeId[0].twitter;
+                    bitcointalk = sameContractCodeId[0].bitcointalk;
                 }
             }
         }
@@ -275,6 +322,22 @@ export class SmartContractsProcessor {
         smartContract.reference_code_id = reference_code_id;
         smartContract.mainnet_upload_status = mainnet_upload_status;
         smartContract.verified_at = verified_at;
+        smartContract.project_name = project_name;
+        smartContract.project_description = project_description;
+        smartContract.official_project_website = official_project_website;
+        smartContract.official_project_email = official_project_email;
+        smartContract.whitepaper = whitepaper;
+        smartContract.github = github;
+        smartContract.telegram = telegram;
+        smartContract.wechat = wechat;
+        smartContract.linkedin = linkedin;
+        smartContract.discord = discord;
+        smartContract.medium = medium;
+        smartContract.reddit = reddit;
+        smartContract.slack = slack;
+        smartContract.facebook = facebook;
+        smartContract.twitter = twitter;
+        smartContract.bitcointalk = bitcointalk;
 
         return smartContract;
     }
