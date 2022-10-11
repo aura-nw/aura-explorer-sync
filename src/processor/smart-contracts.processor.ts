@@ -173,37 +173,45 @@ export class SmartContractsProcessor {
     }
 
     async makeInstantiateContractData(height: string, code_id: string, contract_name: string, contract_address: string, creator_address: string, tx_hash: string) {
-        let contract_hash = '',
-            contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED,
-            contract_match = '',
-            url = '',
-            compiler_version = '',
-            instantiate_msg_schema = '',
-            query_msg_schema = '',
-            execute_msg_schema = '',
-            s3_location = '',
-            reference_code_id = 0,
-            mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED,
-            verified_at = null,
-            project_name = '',
-            project_description = '',
-            official_project_website = '',
-            official_project_email = '',
-            whitepaper,
-            github,
-            telegram,
-            wechat = '',
-            linkedin = '',
-            discord = '',
-            medium = '',
-            reddit = '',
-            slack = '',
-            facebook = '',
-            twitter = '',
-            bitcointalk = '';
+        const smartContract = new SmartContract();
+        smartContract.id = 0;
+        smartContract.height = Number(height);
+        smartContract.code_id = Number(code_id);
+        smartContract.contract_name = contract_name;
+        smartContract.contract_address = contract_address;
+        smartContract.creator_address = creator_address;
+        smartContract.contract_hash = '';
+        smartContract.tx_hash = tx_hash;
+        smartContract.url = '';
+        smartContract.instantiate_msg_schema = '';
+        smartContract.query_msg_schema = '';
+        smartContract.execute_msg_schema = '';
+        smartContract.contract_match = '';
+        smartContract.contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED;
+        smartContract.compiler_version = '';
+        smartContract.s3_location = '';
+        smartContract.reference_code_id = 0;
+        smartContract.mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED;
+        smartContract.verified_at = null;
+        smartContract.project_name = '';
+        smartContract.project_description = '';
+        smartContract.official_project_website = '';
+        smartContract.official_project_email = '';
+        smartContract.whitepaper = '';
+        smartContract.github = '';
+        smartContract.telegram = '';
+        smartContract.wechat = '';
+        smartContract.linkedin = '';
+        smartContract.discord = '';
+        smartContract.medium = '';
+        smartContract.reddit = '';
+        smartContract.slack = '';
+        smartContract.facebook = '';
+        smartContract.twitter = '';
+        smartContract.bitcointalk = '';
 
         if (this.nodeEnv === 'mainnet') {
-            const [request, existContracts] = await Promise.all([
+            const [requests, existContracts] = await Promise.all([
                 this.deploymentRequestsRepository.findByCondition({
                     mainnet_code_id: code_id,
                 }),
@@ -212,36 +220,37 @@ export class SmartContractsProcessor {
                 }),
             ])
             if (existContracts.length > 0) {
-                contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-                contract_match = existContracts[0].contract_address;
+                smartContract.contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
+                smartContract.contract_match = existContracts[0].contract_address;
             }
-            else contract_verification = SMART_CONTRACT_VERIFICATION.EXACT_MATCH;
-            contract_hash = request[0].contract_hash;
-            url = request[0].url;
-            compiler_version = request[0].compiler_version;
-            instantiate_msg_schema = request[0].instantiate_msg_schema;
-            query_msg_schema = request[0].query_msg_schema;
-            execute_msg_schema = request[0].execute_msg_schema;
-            s3_location = request[0].s3_location;
-            reference_code_id = request[0].euphoria_code_id;
-            mainnet_upload_status = null;
-            verified_at = new Date();
-            project_name = request[0].project_name;
-            project_description = request[0].contract_description;
-            official_project_website = request[0].official_project_website;
-            official_project_email = request[0].official_project_email;
-            whitepaper = request[0].whitepaper;
-            github = request[0].github;
-            telegram = request[0].telegram;
-            wechat = request[0].wechat;
-            linkedin = request[0].linkedin;
-            discord = request[0].discord;
-            medium = request[0].medium;
-            reddit = request[0].reddit;
-            slack = request[0].slack;
-            facebook = request[0].facebook;
-            twitter = request[0].twitter;
-            bitcointalk = request[0].bitcointalk;
+            else smartContract.contract_verification = SMART_CONTRACT_VERIFICATION.EXACT_MATCH;
+            let request = requests[0];
+            smartContract.contract_hash = request.contract_hash;
+            smartContract.url = request.url;
+            smartContract.compiler_version = request.compiler_version;
+            smartContract.instantiate_msg_schema = request.instantiate_msg_schema;
+            smartContract.query_msg_schema = request.query_msg_schema;
+            smartContract.execute_msg_schema = request.execute_msg_schema;
+            smartContract.s3_location = request.s3_location;
+            smartContract.reference_code_id = request.euphoria_code_id;
+            smartContract.mainnet_upload_status = null;
+            smartContract.verified_at = new Date();
+            smartContract.project_name = request.project_name;
+            smartContract.project_description = request.contract_description;
+            smartContract.official_project_website = request.official_project_website;
+            smartContract.official_project_email = request.official_project_email;
+            smartContract.whitepaper = request.whitepaper;
+            smartContract.github = request.github;
+            smartContract.telegram = request.telegram;
+            smartContract.wechat = request.wechat;
+            smartContract.linkedin = request.linkedin;
+            smartContract.discord = request.discord;
+            smartContract.medium = request.medium;
+            smartContract.reddit = request.reddit;
+            smartContract.slack = request.slack;
+            smartContract.facebook = request.facebook;
+            smartContract.twitter = request.twitter;
+            smartContract.bitcointalk = request.bitcointalk;
         } else {
             const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
             let smartContractResponse;
@@ -258,86 +267,50 @@ export class SmartContractsProcessor {
             }
 
             if (smartContractResponse) {
-                contract_hash =
+                smartContract.contract_hash =
                     smartContractResponse.Message.length === 64
                         ? smartContractResponse.Message
                         : '';
             }
-            if (contract_hash !== '') {
+            if (smartContract.contract_hash !== '') {
                 const [exactContract, sameContractCodeId] = await Promise.all([
-                    this.smartContractRepository.findExactContractByHash(contract_hash),
+                    this.smartContractRepository.findExactContractByHash(smartContract.contract_hash),
                     this.smartContractRepository.findByCondition({ code_id }),
                 ]);
                 if (exactContract) {
-                    contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-                    contract_match = exactContract.contract_address;
-                    url = exactContract.url;
-                    compiler_version = exactContract.compiler_version;
-                    instantiate_msg_schema = exactContract.instantiate_msg_schema;
-                    query_msg_schema = exactContract.query_msg_schema;
-                    execute_msg_schema = exactContract.execute_msg_schema;
-                    s3_location = exactContract.s3_location;
-                    verified_at = new Date();
+                    smartContract.contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
+                    smartContract.contract_match = exactContract.contract_address;
+                    smartContract.url = exactContract.url;
+                    smartContract.compiler_version = exactContract.compiler_version;
+                    smartContract.instantiate_msg_schema = exactContract.instantiate_msg_schema;
+                    smartContract.query_msg_schema = exactContract.query_msg_schema;
+                    smartContract.execute_msg_schema = exactContract.execute_msg_schema;
+                    smartContract.s3_location = exactContract.s3_location;
+                    smartContract.verified_at = new Date();
                 }
                 if (sameContractCodeId.length > 0) {
-                    reference_code_id = sameContractCodeId[0].reference_code_id;
-                    mainnet_upload_status = sameContractCodeId[0].mainnet_upload_status as MAINNET_UPLOAD_STATUS;
-                    project_name = sameContractCodeId[0].project_name;
-                    project_description = sameContractCodeId[0].project_description;
-                    official_project_website = sameContractCodeId[0].official_project_website;
-                    official_project_email = sameContractCodeId[0].official_project_email;
-                    whitepaper = sameContractCodeId[0].whitepaper;
-                    github = sameContractCodeId[0].github;
-                    telegram = sameContractCodeId[0].telegram;
-                    wechat = sameContractCodeId[0].wechat;
-                    linkedin = sameContractCodeId[0].linkedin;
-                    discord = sameContractCodeId[0].discord;
-                    medium = sameContractCodeId[0].medium;
-                    reddit = sameContractCodeId[0].reddit;
-                    slack = sameContractCodeId[0].slack;
-                    facebook = sameContractCodeId[0].facebook;
-                    twitter = sameContractCodeId[0].twitter;
-                    bitcointalk = sameContractCodeId[0].bitcointalk;
+                    let sameContract = sameContractCodeId[0];
+                    smartContract.reference_code_id = sameContract.reference_code_id;
+                    smartContract.mainnet_upload_status = sameContract.mainnet_upload_status as MAINNET_UPLOAD_STATUS;
+                    smartContract.project_name = sameContract.project_name;
+                    smartContract.project_description = sameContract.project_description;
+                    smartContract.official_project_website = sameContract.official_project_website;
+                    smartContract.official_project_email = sameContract.official_project_email;
+                    smartContract.whitepaper = sameContract.whitepaper;
+                    smartContract.github = sameContract.github;
+                    smartContract.telegram = sameContract.telegram;
+                    smartContract.wechat = sameContract.wechat;
+                    smartContract.linkedin = sameContract.linkedin;
+                    smartContract.discord = sameContract.discord;
+                    smartContract.medium = sameContract.medium;
+                    smartContract.reddit = sameContract.reddit;
+                    smartContract.slack = sameContract.slack;
+                    smartContract.facebook = sameContract.facebook;
+                    smartContract.twitter = sameContract.twitter;
+                    smartContract.bitcointalk = sameContract.bitcointalk;
                 }
             }
         }
-
-        const smartContract = new SmartContract();
-        smartContract.id = 0;
-        smartContract.height = Number(height);
-        smartContract.code_id = Number(code_id);
-        smartContract.contract_name = contract_name;
-        smartContract.contract_address = contract_address;
-        smartContract.creator_address = creator_address;
-        smartContract.contract_hash = contract_hash;
-        smartContract.tx_hash = tx_hash;
-        smartContract.url = url;
-        smartContract.instantiate_msg_schema = instantiate_msg_schema;
-        smartContract.query_msg_schema = query_msg_schema;
-        smartContract.execute_msg_schema = execute_msg_schema;
-        smartContract.contract_match = contract_match;
-        smartContract.contract_verification = contract_verification;
-        smartContract.compiler_version = compiler_version;
-        smartContract.s3_location = s3_location;
-        smartContract.reference_code_id = reference_code_id;
-        smartContract.mainnet_upload_status = mainnet_upload_status;
-        smartContract.verified_at = verified_at;
-        smartContract.project_name = project_name;
-        smartContract.project_description = project_description;
-        smartContract.official_project_website = official_project_website;
-        smartContract.official_project_email = official_project_email;
-        smartContract.whitepaper = whitepaper;
-        smartContract.github = github;
-        smartContract.telegram = telegram;
-        smartContract.wechat = wechat;
-        smartContract.linkedin = linkedin;
-        smartContract.discord = discord;
-        smartContract.medium = medium;
-        smartContract.reddit = reddit;
-        smartContract.slack = slack;
-        smartContract.facebook = facebook;
-        smartContract.twitter = twitter;
-        smartContract.bitcointalk = bitcointalk;
 
         return smartContract;
     }
