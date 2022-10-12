@@ -194,21 +194,7 @@ export class SmartContractsProcessor {
         smartContract.mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED;
         smartContract.verified_at = null;
         smartContract.project_name = '';
-        smartContract.project_description = '';
-        smartContract.official_project_website = '';
-        smartContract.official_project_email = '';
-        smartContract.whitepaper = '';
-        smartContract.github = '';
-        smartContract.telegram = '';
-        smartContract.wechat = '';
-        smartContract.linkedin = '';
-        smartContract.discord = '';
-        smartContract.medium = '';
-        smartContract.reddit = '';
-        smartContract.slack = '';
-        smartContract.facebook = '';
-        smartContract.twitter = '';
-        smartContract.bitcointalk = '';
+        smartContract.request_id = null;
 
         if (this.nodeEnv === 'mainnet') {
             const [requests, existContracts] = await Promise.all([
@@ -236,21 +222,7 @@ export class SmartContractsProcessor {
             smartContract.mainnet_upload_status = null;
             smartContract.verified_at = new Date();
             smartContract.project_name = request.project_name;
-            smartContract.project_description = request.contract_description;
-            smartContract.official_project_website = request.official_project_website;
-            smartContract.official_project_email = request.official_project_email;
-            smartContract.whitepaper = request.whitepaper;
-            smartContract.github = request.github;
-            smartContract.telegram = request.telegram;
-            smartContract.wechat = request.wechat;
-            smartContract.linkedin = request.linkedin;
-            smartContract.discord = request.discord;
-            smartContract.medium = request.medium;
-            smartContract.reddit = request.reddit;
-            smartContract.slack = request.slack;
-            smartContract.facebook = request.facebook;
-            smartContract.twitter = request.twitter;
-            smartContract.bitcointalk = request.bitcointalk;
+            smartContract.request_id = request.request_id;
         } else {
             const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
             let smartContractResponse;
@@ -293,21 +265,7 @@ export class SmartContractsProcessor {
                     smartContract.reference_code_id = sameContract.reference_code_id;
                     smartContract.mainnet_upload_status = sameContract.mainnet_upload_status as MAINNET_UPLOAD_STATUS;
                     smartContract.project_name = sameContract.project_name;
-                    smartContract.project_description = sameContract.project_description;
-                    smartContract.official_project_website = sameContract.official_project_website;
-                    smartContract.official_project_email = sameContract.official_project_email;
-                    smartContract.whitepaper = sameContract.whitepaper;
-                    smartContract.github = sameContract.github;
-                    smartContract.telegram = sameContract.telegram;
-                    smartContract.wechat = sameContract.wechat;
-                    smartContract.linkedin = sameContract.linkedin;
-                    smartContract.discord = sameContract.discord;
-                    smartContract.medium = sameContract.medium;
-                    smartContract.reddit = sameContract.reddit;
-                    smartContract.slack = sameContract.slack;
-                    smartContract.facebook = sameContract.facebook;
-                    smartContract.twitter = sameContract.twitter;
-                    smartContract.bitcointalk = sameContract.bitcointalk;
+                    smartContract.request_id = sameContract.request_id;
                 }
             }
         }
