@@ -78,4 +78,16 @@ export class SmartContract extends BaseEntityIncrementId {
 
   @Column({ name: 'num_tokens' })
   num_tokens: number;
+
+  @Column({
+    name: 'project_name',
+    nullable: true
+  })
+  project_name: string;
+
+  @Column({
+    name: 'request_id',
+    nullable: true
+  })
+  request_id: number;
 }

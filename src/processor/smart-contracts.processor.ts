@@ -173,21 +173,31 @@ export class SmartContractsProcessor {
     }
 
     async makeInstantiateContractData(height: string, code_id: string, contract_name: string, contract_address: string, creator_address: string, tx_hash: string) {
-        let contract_hash = '',
-            contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED,
-            contract_match = '',
-            url = '',
-            compiler_version = '',
-            instantiate_msg_schema = '',
-            query_msg_schema = '',
-            execute_msg_schema = '',
-            s3_location = '',
-            reference_code_id = 0,
-            mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED,
-            verified_at = null;
+        const smartContract = new SmartContract();
+        smartContract.id = 0;
+        smartContract.height = Number(height);
+        smartContract.code_id = Number(code_id);
+        smartContract.contract_name = contract_name;
+        smartContract.contract_address = contract_address;
+        smartContract.creator_address = creator_address;
+        smartContract.contract_hash = '';
+        smartContract.tx_hash = tx_hash;
+        smartContract.url = '';
+        smartContract.instantiate_msg_schema = '';
+        smartContract.query_msg_schema = '';
+        smartContract.execute_msg_schema = '';
+        smartContract.contract_match = '';
+        smartContract.contract_verification = SMART_CONTRACT_VERIFICATION.UNVERIFIED;
+        smartContract.compiler_version = '';
+        smartContract.s3_location = '';
+        smartContract.reference_code_id = 0;
+        smartContract.mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED;
+        smartContract.verified_at = null;
+        smartContract.project_name = '';
+        smartContract.request_id = null;
 
         if (this.nodeEnv === 'mainnet') {
-            const [request, existContracts] = await Promise.all([
+            const [requests, existContracts] = await Promise.all([
                 this.deploymentRequestsRepository.findByCondition({
                     mainnet_code_id: code_id,
                 }),
@@ -196,19 +206,23 @@ export class SmartContractsProcessor {
                 }),
             ])
             if (existContracts.length > 0) {
-                contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-                contract_match = existContracts[0].contract_address;
+                smartContract.contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
+                smartContract.contract_match = existContracts[0].contract_address;
             }
-            else contract_verification = SMART_CONTRACT_VERIFICATION.EXACT_MATCH;
-            contract_hash = request[0].contract_hash;
-            url = request[0].url;
-            compiler_version = request[0].compiler_version;
-            instantiate_msg_schema = request[0].instantiate_msg_schema;
-            query_msg_schema = request[0].query_msg_schema;
-            execute_msg_schema = request[0].execute_msg_schema;
-            s3_location = request[0].s3_location;
-            reference_code_id = request[0].euphoria_code_id;
-            mainnet_upload_status = null;
+            else smartContract.contract_verification = SMART_CONTRACT_VERIFICATION.EXACT_MATCH;
+            let request = requests[0];
+            smartContract.contract_hash = request.contract_hash;
+            smartContract.url = request.url;
+            smartContract.compiler_version = request.compiler_version;
+            smartContract.instantiate_msg_schema = request.instantiate_msg_schema;
+            smartContract.query_msg_schema = request.query_msg_schema;
+            smartContract.execute_msg_schema = request.execute_msg_schema;
+            smartContract.s3_location = request.s3_location;
+            smartContract.reference_code_id = request.euphoria_code_id;
+            smartContract.mainnet_upload_status = null;
+            smartContract.verified_at = new Date();
+            smartContract.project_name = request.project_name;
+            smartContract.request_id = request.request_id;
         } else {
             const paramGetHash = `/api/v1/smart-contract/get-hash/${code_id}`;
             let smartContractResponse;
@@ -225,56 +239,36 @@ export class SmartContractsProcessor {
             }
 
             if (smartContractResponse) {
-                contract_hash =
+                smartContract.contract_hash =
                     smartContractResponse.Message.length === 64
                         ? smartContractResponse.Message
                         : '';
             }
-            if (contract_hash !== '') {
+            if (smartContract.contract_hash !== '') {
                 const [exactContract, sameContractCodeId] = await Promise.all([
-                    this.smartContractRepository.findExactContractByHash(contract_hash),
+                    this.smartContractRepository.findExactContractByHash(smartContract.contract_hash),
                     this.smartContractRepository.findByCondition({ code_id }),
                 ]);
                 if (exactContract) {
-                    contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
-                    contract_match = exactContract.contract_address;
-                    url = exactContract.url;
-                    compiler_version = exactContract.compiler_version;
-                    instantiate_msg_schema = exactContract.instantiate_msg_schema;
-                    query_msg_schema = exactContract.query_msg_schema;
-                    execute_msg_schema = exactContract.execute_msg_schema;
-                    s3_location = exactContract.s3_location;
-                    reference_code_id = sameContractCodeId.length > 0
-                        ? sameContractCodeId[0].reference_code_id
-                        : 0;
-                    mainnet_upload_status = sameContractCodeId.length > 0
-                        ? sameContractCodeId[0].mainnet_upload_status as MAINNET_UPLOAD_STATUS
-                        : MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
-                    verified_at = new Date();
+                    smartContract.contract_verification = SMART_CONTRACT_VERIFICATION.SIMILAR_MATCH;
+                    smartContract.contract_match = exactContract.contract_address;
+                    smartContract.url = exactContract.url;
+                    smartContract.compiler_version = exactContract.compiler_version;
+                    smartContract.instantiate_msg_schema = exactContract.instantiate_msg_schema;
+                    smartContract.query_msg_schema = exactContract.query_msg_schema;
+                    smartContract.execute_msg_schema = exactContract.execute_msg_schema;
+                    smartContract.s3_location = exactContract.s3_location;
+                    smartContract.verified_at = new Date();
+                }
+                if (sameContractCodeId.length > 0) {
+                    let sameContract = sameContractCodeId[0];
+                    smartContract.reference_code_id = sameContract.reference_code_id;
+                    smartContract.mainnet_upload_status = sameContract.mainnet_upload_status as MAINNET_UPLOAD_STATUS;
+                    smartContract.project_name = sameContract.project_name;
+                    smartContract.request_id = sameContract.request_id;
                 }
             }
         }
-
-        const smartContract = new SmartContract();
-        smartContract.id = 0;
-        smartContract.height = Number(height);
-        smartContract.code_id = Number(code_id);
-        smartContract.contract_name = contract_name;
-        smartContract.contract_address = contract_address;
-        smartContract.creator_address = creator_address;
-        smartContract.contract_hash = contract_hash;
-        smartContract.tx_hash = tx_hash;
-        smartContract.url = url;
-        smartContract.instantiate_msg_schema = instantiate_msg_schema;
-        smartContract.query_msg_schema = query_msg_schema;
-        smartContract.execute_msg_schema = execute_msg_schema;
-        smartContract.contract_match = contract_match;
-        smartContract.contract_verification = contract_verification;
-        smartContract.compiler_version = compiler_version;
-        smartContract.s3_location = s3_location;
-        smartContract.reference_code_id = reference_code_id;
-        smartContract.mainnet_upload_status = mainnet_upload_status;
-        smartContract.verified_at = verified_at;
 
         return smartContract;
     }
