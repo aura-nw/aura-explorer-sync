@@ -205,10 +205,10 @@ export class SyncDataHelpers {
       const events = txData.tx_response.logs[index].events;
       const rewardEvent = events.find((i) => i.type === 'withdraw_rewards');
       const attributes = rewardEvent.attributes;
-      const amount = Number(
-        attributes[0].value.replace(ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM, ''),
+      const amount = attributes[0].value;
+      reward.amount = Number(
+        amount.replace(ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM, ''),
       );
-      reward.amount = amount ? amount : 0;
     }
     reward.tx_hash = txData.tx_response.txhash;
     reward.created_at = new Date(txData.tx_response.timestamp);
