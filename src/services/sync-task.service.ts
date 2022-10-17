@@ -616,7 +616,7 @@ export class SyncTaskService {
               message,
               i,
             );
-            if (reward.amount > 0) {
+            if (reward.amount) {
               delegatorRewards.push(reward);
             }
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
