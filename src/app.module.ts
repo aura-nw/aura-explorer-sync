@@ -4,7 +4,7 @@ import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
 import { SmartContractsProcessor } from './processor/smart-contracts.processor';
-import { Block, BlockSyncError, Delegation, DelegatorReward, HistoryProposal, MissedBlock, Proposal, ProposalDeposit, ProposalVote, SmartContract, SmartContractCode, SyncStatus, TokenContract, Transaction, Validator } from './entities';
+import { Block, BlockSyncError, Delegation, DelegatorReward, MissedBlock, ProposalVote, SmartContract, SmartContractCode, SyncStatus, TokenContract, Transaction, Validator } from './entities';
 import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
 import { DeploymentRequests } from './entities/deployment-requests.entity';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
@@ -13,11 +13,8 @@ import { Cw20TokenOwnerRepository } from './repositories/cw20-token-owner.reposi
 import { DelegationRepository } from './repositories/delegation.repository';
 import { DelegatorRewardRepository } from './repositories/delegator-reward.repository';
 import { DeploymentRequestsRepository } from './repositories/deployment-requests.repository';
-import { HistoryProposalRepository } from './repositories/history-proposal.repository';
 import { MissedBlockRepository } from './repositories/missed-block.repository';
-import { ProposalDepositRepository } from './repositories/proposal-deposit.repository';
 import { ProposalVoteRepository } from './repositories/proposal-vote.repository';
-import { ProposalRepository } from './repositories/proposal.repository';
 import { SmartContractCodeRepository } from './repositories/smart-contract-code.repository';
 import { SmartContractRepository } from './repositories/smart-contract.repository';
 import { SyncStatusRepository } from './repositories/sync-status.repository';
@@ -34,14 +31,11 @@ const controllers = [];
 const entities = [
   BlockSyncError,
   MissedBlock,
-  Proposal,
   Validator,
   Block,
   DeploymentRequests,
   Delegation,
   DelegatorReward,
-  HistoryProposal,
-  ProposalDeposit,
   ProposalVote,
   SyncStatus,
   Transaction,
@@ -54,14 +48,11 @@ const entities = [
 const repositories = [
   BlockSyncErrorRepository,
   MissedBlockRepository,
-  ProposalRepository,
   ValidatorRepository,
   BlockRepository,
   DeploymentRequestsRepository,
   DelegationRepository,
   DelegatorRewardRepository,
-  HistoryProposalRepository,
-  ProposalDepositRepository,
   ProposalVoteRepository,
   SyncStatusRepository,
   TransactionRepository,

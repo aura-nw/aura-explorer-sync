@@ -11,9 +11,6 @@ import {
   Block,
   Delegation,
   DelegatorReward,
-  HistoryProposal,
-  Proposal,
-  ProposalDeposit,
   ProposalVote,
   SmartContract,
   SmartContractCode,
@@ -24,7 +21,6 @@ import {
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { Cw20TokenOwner } from '../entities/cw20-token-owner.entity';
 import { TokenCW20Dto } from '../dtos/token-cw20.dto';
-import { find } from 'rxjs';
 export class SyncDataHelpers {
   private static precision = ENV_CONFIG.CHAIN_INFO.PRECISION_DIV;
   private static toDecimal = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
@@ -302,68 +298,6 @@ export class SyncDataHelpers {
     proposalVote.created_at = new Date(txData.tx_response.timestamp);
     proposalVote.updated_at = new Date(txData.tx_response.timestamp);
     return proposalVote;
-  }
-
-  static makeSubmitProposalData(txData: any, message: any, index: number) {
-    const historyProposal = new HistoryProposal();
-    let proposalDeposit = undefined;
-    const proposalTypeReturn = message.content['@type'];
-    const proposalType = proposalTypeReturn.substring(
-      proposalTypeReturn.lastIndexOf('.') + 1,
-    );
-    historyProposal.proposal_id = 0;
-    if (
-      txData.tx_response.logs &&
-      txData.tx_response.logs.length > 0 &&
-      txData.tx_response.logs[index].events &&
-      txData.tx_response.logs[index].events.length > 0
-    ) {
-      const events = txData.tx_response.logs[index].events;
-      const submitEvent = events.find((i) => i.type === 'submit_proposal');
-      const attributes = submitEvent.attributes;
-      const findId = attributes.find((i) => i.key === 'proposal_id');
-      historyProposal.proposal_id = Number(findId.value);
-    }
-    historyProposal.recipient = '';
-    historyProposal.amount = 0;
-    historyProposal.initial_deposit = 0;
-    if (proposalType === CONST_PROPOSAL_TYPE.COMMUNITY_POOL_SPEND_PROPOSAL) {
-      historyProposal.recipient = message.content.recipient;
-      historyProposal.amount =
-        message.content.amount.length > 0
-          ? Number(message.content.amount[0].amount)
-          : 0;
-    } else {
-      if (message.initial_deposit.length > 0) {
-        historyProposal.initial_deposit = Number(
-          message.initial_deposit[0].amount,
-        );
-        //save data to proposal deposit
-        proposalDeposit = new ProposalDeposit();
-        proposalDeposit.proposal_id = historyProposal.proposal_id;
-        proposalDeposit.tx_hash = txData.tx_response.txhash;
-        proposalDeposit.depositor = message.proposer;
-        proposalDeposit.amount = Number(message.initial_deposit[0].amount);
-        proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
-        // proposalDeposits.push(proposalDeposit);
-      }
-    }
-    historyProposal.tx_hash = txData.tx_response.txhash;
-    historyProposal.title = message.content.title;
-    historyProposal.description = message.content.description;
-    historyProposal.proposer = message.proposer;
-    historyProposal.created_at = new Date(txData.tx_response.timestamp);
-    return [historyProposal, proposalDeposit];
-  }
-
-  static makeDepositData(txData: any, message: any) {
-    const proposalDeposit = new ProposalDeposit();
-    proposalDeposit.proposal_id = Number(message.proposal_id);
-    proposalDeposit.tx_hash = txData.tx_response.txhash;
-    proposalDeposit.depositor = message.depositor;
-    proposalDeposit.amount = Number(message.amount[0].amount);
-    proposalDeposit.created_at = new Date(txData.tx_response.timestamp);
-    return proposalDeposit;
   }
 
   static makeCreateValidatorData(txData: any, message: any) {
