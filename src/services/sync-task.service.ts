@@ -616,7 +616,9 @@ export class SyncTaskService {
               message,
               i,
             );
-            delegatorRewards.push(reward);
+            if (reward.amount) {
+              delegatorRewards.push(reward);
+            }
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
             this.contractQueue.add('sync-execute-contracts', {
               txData,
