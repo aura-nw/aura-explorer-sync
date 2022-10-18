@@ -18,9 +18,7 @@ import { BlockSyncErrorRepository } from '../repositories/block-sync-error.repos
 import { BlockRepository } from '../repositories/block.repository';
 import { DelegationRepository } from '../repositories/delegation.repository';
 import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
-import { HistoryProposalRepository } from '../repositories/history-proposal.repository';
 import { MissedBlockRepository } from '../repositories/missed-block.repository';
-import { ProposalDepositRepository } from '../repositories/proposal-deposit.repository';
 import { ProposalVoteRepository } from '../repositories/proposal-vote.repository';
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
 import { SyncStatusRepository } from '../repositories/sync-status.repository';
@@ -56,9 +54,7 @@ export class SyncTaskService {
     private blockRepository: BlockRepository,
     private txRepository: TransactionRepository,
     private statusRepository: SyncStatusRepository,
-    private proposalDepositRepository: ProposalDepositRepository,
     private proposalVoteRepository: ProposalVoteRepository,
-    private historyProposalRepository: HistoryProposalRepository,
     private delegationRepository: DelegationRepository,
     private delegatorRewardRepository: DelegatorRewardRepository,
     private smartContractRepository: SmartContractRepository,
@@ -554,8 +550,6 @@ export class SyncTaskService {
    */
   async syncDataWithTransactions(listTransactions) {
     const proposalVotes = [];
-    const proposalDeposits = [];
-    const historyProposals = [];
     const delegations = [];
     const delegatorRewards = [];
     const smartContractCodes = [];
@@ -576,17 +570,6 @@ export class SyncTaskService {
           if (txType === CONST_MSG_TYPE.MSG_VOTE) {
             const proposalVote = SyncDataHelpers.makeVoteData(txData, message);
             proposalVotes.push(proposalVote);
-          } else if (txType === CONST_MSG_TYPE.MSG_SUBMIT_PROPOSAL) {
-            const [historyProposal, proposalDeposit] =
-              SyncDataHelpers.makeSubmitProposalData(txData, message, i);
-            historyProposals.push(historyProposal);
-            if (proposalDeposit) proposalDeposits.push(proposalDeposit);
-          } else if (txType === CONST_MSG_TYPE.MSG_DEPOSIT) {
-            const proposalDeposit = SyncDataHelpers.makeDepositData(
-              txData,
-              message,
-            );
-            proposalDeposits.push(proposalDeposit);
           } else if (txType === CONST_MSG_TYPE.MSG_DELEGATE) {
             const [delegation, reward] = SyncDataHelpers.makeDelegateData(
               txData,
@@ -646,12 +629,6 @@ export class SyncTaskService {
     }
     if (proposalVotes.length > 0) {
       await this.proposalVoteRepository.insertOnDuplicate(proposalVotes, ['id']);
-    }
-    if (proposalDeposits.length > 0) {
-      await this.proposalDepositRepository.insertOnDuplicate(proposalDeposits, ['id']);
-    }
-    if (historyProposals.length > 0) {
-      await this.historyProposalRepository.insertOnDuplicate(historyProposals, ['id']);
     }
     if (delegations.length > 0) {
       // TODO: Write delegation to influxdb
