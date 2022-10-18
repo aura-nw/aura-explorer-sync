@@ -43,14 +43,22 @@ export class SmartContractsProcessor {
         try {
             const contract_name = txData.tx.body.messages[0].label;
             const height = txData.tx_response.height;
-            const contract_address = txData.tx_response.logs[0].events
-                .find(({ type }) => type === CONST_CHAR.INSTANTIATE)
-                .attributes.find(
-                    ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
-                ).value;
             const creator_address = txData.tx.body.messages[0].sender;
-            const code_id = txData.tx.body.messages[0].code_id;
             const tx_hash = txData.tx_response.txhash;
+            const contract_addresses = txData.tx_response.logs[0].events
+                .find((x) => x.type == CONST_CHAR.INSTANTIATE)
+                .attributes.filter((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS);
+            const code_ids = txData.tx_response.logs[0].events
+                .find((x) => x.type == CONST_CHAR.INSTANTIATE)
+                .attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
+            for (let i = 0; i < contract_addresses.length; i++) {
+                const code_id = code_ids[i].value;
+                const contract_address = contract_addresses[i].value;
+                let smartContract = await this.makeInstantiateContractData(height, code_id, contract_name, contract_address, creator_address, tx_hash);
+                //update token info by code id
+                smartContract = await this.updateTokenInfoByCodeId(smartContract);
+                smartContracts.push(smartContract);
+            };
 
             let liquidityContractAddr;
             try {
@@ -80,11 +88,6 @@ export class SmartContractsProcessor {
                 liquidityContract = await this.updateTokenInfoByCodeId(liquidityContract);
                 smartContracts.push(liquidityContract);
             }
-
-            let smartContract = await this.makeInstantiateContractData(height, code_id, contract_name, contract_address, creator_address, tx_hash);
-            //update token info by code id
-            smartContract = await this.updateTokenInfoByCodeId(smartContract);
-            smartContracts.push(smartContract);
         } catch (error) {
             this.logger.error(
                 null,
@@ -259,6 +262,7 @@ export class SmartContractsProcessor {
                     smartContract.execute_msg_schema = exactContract.execute_msg_schema;
                     smartContract.s3_location = exactContract.s3_location;
                     smartContract.verified_at = new Date();
+                    smartContract.mainnet_upload_status = MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
                 }
                 if (sameContractCodeId.length > 0) {
                     let sameContract = sameContractCodeId[0];
