@@ -1,4 +1,3 @@
-export * from './proposal.entity';
 export * from './validator.entity';
 export * from './missed-block.entity';
 export * from './block-sync-error.entity';
@@ -6,8 +5,6 @@ export * from './transaction.entity';
 export * from './block.entity';
 export * from './delegation.entity';
 export * from './delegator-reward.entity';
-export * from './history-proposal.entity';
-export * from './proposal-deposit.entity';
 export * from './proposal-vote.entity';
 export * from './sync-status.entity';
 export * from './smart-contract.entity';
