@@ -17,7 +17,7 @@ export class InfluxDBClient {
     public url: string,
     public token: string,
   ) {
-    this.client = new InfluxDB({ url, token });
+    this.client = new InfluxDB({ url, token, timeout: 30000 });
   }
 
   initQueryApi(): void {
