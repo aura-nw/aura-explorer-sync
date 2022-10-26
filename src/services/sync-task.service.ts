@@ -70,15 +70,20 @@ export class SyncTaskService {
     this.rpc = ENV_CONFIG.NODE.RPC;
     this.api = ENV_CONFIG.NODE.API;
 
+    // Connect influxdb
+    this.connectInfluxDB();
+
+    this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
+    this.threads = ENV_CONFIG.THREADS;
+  }
+
+  connectInfluxDB(){
     this.influxDbClient = new InfluxDBClient(
       ENV_CONFIG.INFLUX_DB.BUCKET,
       ENV_CONFIG.INFLUX_DB.ORGANIZTION,
       ENV_CONFIG.INFLUX_DB.URL,
       ENV_CONFIG.INFLUX_DB.TOKEN,
     );
-
-    this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
-    this.threads = ENV_CONFIG.THREADS;
   }
 
   /**
@@ -295,6 +300,9 @@ export class SyncTaskService {
           this.isSyncValidator = false;
         } catch (error) {
           this.isSyncValidator = false;
+          this._logger.error(`Reconnect InfluxDb: ${error.name} -- ${error.message}`);
+          this.connectInfluxDB();
+
           this._logger.error(`${error.name}: ${error.message}`);
           this._logger.error(`${error.stack}`);
         }
