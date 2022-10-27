@@ -1,5 +1,10 @@
 import { Logger } from '@nestjs/common';
-import { DeleteResult, FindManyOptions, OrderByCondition, Repository } from 'typeorm';
+import {
+  DeleteResult,
+  FindManyOptions,
+  OrderByCondition,
+  Repository,
+} from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { UpsertOptions } from 'typeorm/repository/UpsertOptions';
 import { PaginatorResponse } from '../dtos/responses/paginator.response';
@@ -14,8 +19,8 @@ export class BaseRepository<T> {
 
   /**
    * Find data
-   * @param options 
-   * @returns 
+   * @param options
+   * @returns
    */
   public find(options: any): Promise<T[]> {
     return this._repos.find(options);
@@ -163,28 +168,34 @@ export class BaseRepository<T> {
   }
 
   /**
-  * Get max by column of table
-  * @param column 
-  */
+   * Get max by column of table
+   * @param column
+   */
   max(column: string): Promise<any> {
-    return this._repos.createQueryBuilder()
+    return this._repos
+      .createQueryBuilder()
       .select(`max(${column}) as ${column}`)
       .getRawOne();
   }
 
   /**
    * Query Data
-   * @param column 
-   * @param conditions 
-   * @param groupBy 
-   * @param orderBy 
-   * @returns 
+   * @param column
+   * @param conditions
+   * @param groupBy
+   * @param orderBy
+   * @returns
    */
-  queryData(column: string, conditions?: any, groupBy?: string, orderBy?: OrderByCondition) {
+  queryData(
+    column: string,
+    conditions?: any,
+    groupBy?: string,
+    orderBy?: OrderByCondition,
+  ) {
     let query = this._repos.createQueryBuilder().select(`${column}`);
 
     if (conditions) {
-      query = query.where(conditions)
+      query = query.where(conditions);
     }
 
     if (groupBy) {
@@ -192,50 +203,61 @@ export class BaseRepository<T> {
     }
 
     if (orderBy) {
-      query = query.orderBy(orderBy)
-    }
-
-    return query.getRawMany()
-  }
-
-  /**
-   * Get data by pagination
-   * @param column 
-   * @param limit 
-   * @param pageIndex 
-   * @param conditions 
-   * @param groupBy 
-   * @param orderBy 
-   * @returns 
-   */
-  queryPaging(column: string, limit: number, pageIndex: number, conditions?: any, groupBy?: string, orderBy?: OrderByCondition,) {
-    let query = this._repos.createQueryBuilder()
-      .select(`${column}`)
-      .take(limit)
-      .offset(pageIndex * limit);
-
-    if (conditions) {
-      query = query.where(conditions)
-    }
-
-    if (groupBy) {
-      query = query.groupBy(groupBy);
-    }
-
-    if (orderBy) {
-      query = query.orderBy(orderBy)
+      query = query.orderBy(orderBy);
     }
 
     return query.getRawMany();
   }
 
   /**
-    * Create when duplicate
-    * @param entityOrEntities 
-    * @param skipPropetties 
-    * @returns 
-  */
-  async insertOnDuplicate(entityOrEntities: | QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[], skipPropetties?: string[]) {
+   * Get data by pagination
+   * @param column
+   * @param limit
+   * @param pageIndex
+   * @param conditions
+   * @param groupBy
+   * @param orderBy
+   * @returns
+   */
+  queryPaging(
+    column: string,
+    limit: number,
+    pageIndex: number,
+    conditions?: any,
+    groupBy?: string,
+    orderBy?: OrderByCondition,
+  ) {
+    let query = this._repos
+      .createQueryBuilder()
+      .select(`${column}`)
+      .take(limit)
+      .skip(pageIndex * limit);
+
+    if (conditions) {
+      query = query.where(conditions);
+    }
+
+    if (groupBy) {
+      query = query.groupBy(groupBy);
+    }
+
+    if (orderBy) {
+      query = query.orderBy(orderBy);
+    }
+
+    return query.getRawMany();
+  }
+
+  /**
+   * Create when duplicate
+   * @param entityOrEntities
+   * @param skipPropetties
+   * @returns
+   */
+  async insertOnDuplicate(
+    entityOrEntities: QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[],
+    skipPropetties?: string[],
+  ) {
     try {
       let updateColumns = '';
       const columns = [];
@@ -243,7 +265,7 @@ export class BaseRepository<T> {
       const metadata = this._repos.metadata;
 
       // Get column name
-      metadata.columns.forEach(col => {
+      metadata.columns.forEach((col) => {
         columns.push(col.databaseName);
         properties.push(col.propertyName);
       });
@@ -251,32 +273,37 @@ export class BaseRepository<T> {
       // Skip column not update value
       let mapSkipColumns = [];
       if (skipPropetties) {
-        mapSkipColumns = metadata.mapPropertyPathsToColumns(skipPropetties).map(m => m.databaseName)
+        mapSkipColumns = metadata
+          .mapPropertyPathsToColumns(skipPropetties)
+          .map((m) => m.databaseName);
       }
 
       // Update column
-      columns.forEach(item => {
+      columns.forEach((item) => {
         if (mapSkipColumns.indexOf(item) < 0) {
-          updateColumns += (updateColumns.length === 0) ? `\`${item}\`= VALUES(\`${item}\`)` : `,\`${item}\`= VALUES(\`${item}\`)`;
+          updateColumns +=
+            updateColumns.length === 0
+              ? `\`${item}\`= VALUES(\`${item}\`)`
+              : `,\`${item}\`= VALUES(\`${item}\`)`;
         }
       });
 
       // Add paramter
       let values = '';
       const paras = [];
-      this.valueOfEnities(entityOrEntities).valuesSet.forEach(item => {
+      this.valueOfEnities(entityOrEntities).valuesSet.forEach((item) => {
         let mark = '';
-        properties.forEach(prop => {
+        properties.forEach((prop) => {
           if (item[prop] !== undefined) {
-            mark += (mark.length == 0) ? '?' : ',?';
+            mark += mark.length == 0 ? '?' : ',?';
             paras.push(item[prop]);
           } else {
-            mark += (mark.length == 0) ? 'DEFAULT' : ',DEFAULT';
+            mark += mark.length == 0 ? 'DEFAULT' : ',DEFAULT';
           }
         });
-        values += (values.length === 0) ? `(${mark})` : `, (${mark})`;
+        values += values.length === 0 ? `(${mark})` : `, (${mark})`;
       });
-      const escapeColumns = columns.map(m => `\`${m}\``);
+      const escapeColumns = columns.map((m) => `\`${m}\``);
 
       // Create and excecute properties
       const sqlQuery = `INSERT INTO ${metadata.tableName}(${escapeColumns}) VALUES ${values} ON DUPLICATE KEY UPDATE ${updateColumns}`;
@@ -289,12 +316,16 @@ export class BaseRepository<T> {
 
   /**
    * Get value of entities
-   * @param values 
-   * @returns 
+   * @param values
+   * @returns
    */
-  valueOfEnities(values: | QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[]) {
-    const expressionMap = this._repos.manager.createQueryBuilder().expressionMap.clone()
-    expressionMap.valuesSet = values
+  valueOfEnities(
+    values: QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[],
+  ) {
+    const expressionMap = this._repos.manager
+      .createQueryBuilder()
+      .expressionMap.clone();
+    expressionMap.valuesSet = values;
     return expressionMap;
   }
 }
