@@ -68,22 +68,12 @@ export class SyncTaskService {
     );
 
     this.rpc = ENV_CONFIG.NODE.RPC;
-    this.api = ENV_CONFIG.NODE.API;
-
-    // Connect influxdb
-    this.connectInfluxDB();
+    this.api = ENV_CONFIG.NODE.API;   
 
     this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
     this.threads = ENV_CONFIG.THREADS;
-  }
 
-  connectInfluxDB(){
-    this.influxDbClient = new InfluxDBClient(
-      ENV_CONFIG.INFLUX_DB.BUCKET,
-      ENV_CONFIG.INFLUX_DB.ORGANIZTION,
-      ENV_CONFIG.INFLUX_DB.URL,
-      ENV_CONFIG.INFLUX_DB.TOKEN,
-    );
+    this.connectInfluxDB();
   }
 
   /**
@@ -510,7 +500,7 @@ export class SyncTaskService {
 
       // TODO: Write block to influxdb
       this.influxDbClient.writeBlock(
-        newBlock.height,
+         newBlock.height,
         newBlock.block_hash,
         newBlock.num_txs,
         newBlock.chainid,
@@ -543,6 +533,12 @@ export class SyncTaskService {
         `Sync Blocked & Transaction were error height: ${syncBlock}, ${error.name}: ${error.message}`,
       );
       this._logger.error(null, `${error.stack}`);
+
+      // Reconnect influxDb
+      const errorCode = error?.code || '';
+      if(errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT'){
+        this.connectInfluxDB();
+      }
 
       const idxSync = this.schedulesSync.indexOf(syncBlock);
       if (idxSync > -1) {
@@ -760,5 +756,17 @@ export class SyncTaskService {
         throw err;
       }
     }
+  }
+
+  /**
+   * Create connecttion to InfluxDB
+   */
+  connectInfluxDB(){
+    this.influxDbClient = new InfluxDBClient(
+      ENV_CONFIG.INFLUX_DB.BUCKET,
+      ENV_CONFIG.INFLUX_DB.ORGANIZTION,
+      ENV_CONFIG.INFLUX_DB.URL,
+      ENV_CONFIG.INFLUX_DB.TOKEN,
+    );
   }
 }
