@@ -545,8 +545,6 @@ export class SyncTaskService {
     }
   }
 
-  ETIMEDOUT
-
   /**
    * Sync data with transaction
    * @param listTransactions
