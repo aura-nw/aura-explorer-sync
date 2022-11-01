@@ -2,24 +2,21 @@ import {
   CONST_CHAR,
   CONST_DELEGATE_TYPE,
   CONST_MSG_TYPE,
-  CONST_PROPOSAL_TYPE,
-  CONTRACT_TRANSACTION_EXECUTE_TYPE,
   CONTRACT_TYPE,
   SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
 import {
   Block,
+  CoingeckoMarkets,
   Delegation,
   DelegatorReward,
   ProposalVote,
   SmartContract,
   SmartContractCode,
-  TokenContract,
   Transaction,
   Validator,
 } from '../entities';
 import { ENV_CONFIG } from '../shared/services/config.service';
-import { Cw20TokenOwner } from '../entities/cw20-token-owner.entity';
 import { TokenCW20Dto } from '../dtos/token-cw20.dto';
 export class SyncDataHelpers {
   private static precision = ENV_CONFIG.CHAIN_INFO.PRECISION_DIV;
@@ -241,12 +238,15 @@ export class SyncDataHelpers {
           ),
         );
         if (attributes.length > 3) {
-          delegation.amount = (Number(
-            attributes[5].value.replace(
-              ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
-              '',
-            ),
-          ) * -1) / this.precision;
+          delegation.amount =
+            (Number(
+              attributes[5].value.replace(
+                ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
+                '',
+              ),
+            ) *
+              -1) /
+            this.precision;
         }
       }
     }
@@ -370,49 +370,6 @@ export class SyncDataHelpers {
     return newValidator;
   }
 
-  static makerCw20TokenData(item: any, marketingInfo: any, tokenInfo: any) {
-    //sync data token
-    const tokenContract = new TokenContract();
-    tokenContract.type = CONTRACT_TYPE.CW20;
-    tokenContract.contract_address = item.contract_address;
-    tokenContract.created_at = new Date(item.createdAt);
-    tokenContract.name = '';
-    tokenContract.symbol = '';
-    tokenContract.decimals = 0;
-    if (item?.asset_info && item.asset_info?.data) {
-      tokenContract.name = item.asset_info.data.name;
-      tokenContract.symbol = item.asset_info.data.symbol;
-      tokenContract.decimals = Number(item.asset_info.data.decimals);
-    }
-    tokenContract.description = '';
-    tokenContract.image = '';
-    if (marketingInfo?.data) {
-      tokenContract.description = marketingInfo.data?.description ? marketingInfo.data.description : '';
-      tokenContract.image = marketingInfo.data?.logo?.url ? marketingInfo.data.logo.url : '';
-    }
-    tokenContract.num_tokens = 0;
-    tokenContract.coin_id = '';
-    if (tokenInfo) {
-      tokenContract.coin_id = tokenInfo.coinId;
-      tokenContract.max_total_supply = tokenInfo.max_supply;
-      tokenContract.price = tokenInfo.current_price;
-      tokenContract.price_change_percentage_24h = tokenInfo.price_change_percentage_24h;
-      tokenContract.volume_24h = tokenInfo.total_volume;
-      tokenContract.circulating_market_cap = tokenInfo.current_price * tokenInfo.circulating_supply;
-      tokenContract.fully_diluted_market_cap = tokenInfo.current_price * tokenInfo.max_supply;
-      tokenContract.holders = tokenInfo.current_holder;
-      tokenContract.holders_change_percentage_24h = tokenInfo.percent_holder;
-    }
-    //sync data token owner
-    const cw20TokenOwner = new Cw20TokenOwner();
-    cw20TokenOwner.contract_address = item.contract_address;
-    cw20TokenOwner.owner = item.owner;
-    cw20TokenOwner.balance = Number(item.balance);
-    cw20TokenOwner.percent_hold = item.percent_hold;
-
-    return [tokenContract, cw20TokenOwner];
-  }
-
   static makeTokenCW721Data(contract: any, tokenInfo: any, numTokenInfo: any) {
     if (tokenInfo && tokenInfo?.data) {
       contract.token_name = tokenInfo.data.name;
@@ -423,11 +380,11 @@ export class SyncDataHelpers {
     }
     return contract;
   }
-  
+
   /**
    * Create TokenCW20 Dto
-   * @param data 
-   * @returns 
+   * @param data
+   * @returns
    */
   static makeTokenCW20Data(data: any): TokenCW20Dto {
     const tokenDto = new TokenCW20Dto();
@@ -457,5 +414,24 @@ export class SyncDataHelpers {
     smartContractCode.creator = message.sender;
 
     return smartContractCode;
+  }
+
+  static makeCoinMarketsData(data: any): CoingeckoMarkets {
+    const coinInfo = new CoingeckoMarkets();
+    coinInfo.contract_address = data.contract_address || '';
+    coinInfo.coin_id = data.id;
+    coinInfo.symbol = data.symbol || '';
+    coinInfo.name = data.name || '';
+    coinInfo.image = data.image || '';
+    coinInfo.current_price = data.current_price || 0;
+    coinInfo.price_change_percentage_24h =
+      data.price_change_percentage_24h || 0;
+    coinInfo.total_volume = data.total_volume || 0;
+    coinInfo.circulating_supply = data.circulating_supply || 0;
+    coinInfo.max_supply = data.max_supply || 0;
+    coinInfo.holders = 0;
+    coinInfo.holders_change_percentage_24h = 0;
+
+    return coinInfo;
   }
 }
