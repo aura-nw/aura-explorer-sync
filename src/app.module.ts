@@ -41,7 +41,6 @@ import { SyncTokenService } from './services/sync-token.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { CoingeckoMarketsRepository } from './repositories/coingecko-markets.repository';
-import { TokenRepository } from './redis-om/repositories/token.repository';
 
 const controllers = [];
 const entities = [
@@ -78,7 +77,6 @@ const repositories = [
   SmartContractCodeRepository,
   Cw20TokenOwnerRepository,
   CoingeckoMarketsRepository,
-  TokenRepository
 ];
 
 const services = [SyncTaskService, SyncContractCodeService, SyncTokenService];

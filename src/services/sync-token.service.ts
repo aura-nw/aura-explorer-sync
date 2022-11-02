@@ -14,7 +14,6 @@ import { TokenCW20Dto } from '../dtos/token-cw20.dto';
 import { CoingeckoMarkets } from '../entities';
 
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
-import { TokenRepository } from '../redis-om/repositories/token.repository';
 import { CoingeckoMarketsRepository } from '../repositories/coingecko-markets.repository';
 
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
@@ -40,7 +39,6 @@ export class SyncTokenService {
     private redisUtil: RedisUtil,
     @InjectSchedule() private readonly schedule: Schedule,
     private smartContractRepository: SmartContractRepository,
-    private tokenRepository: TokenRepository
   ) {
     this._logger.log(
       '============== Constructor Sync Token Service ==============',
@@ -53,7 +51,6 @@ export class SyncTokenService {
 
     // // Call method when init app
     (async () => {
-      await this.tokenRepository.connectToServer();
       await this.syncTokenIds();
       await this.syncCW20TokensPrice();
     })();
@@ -266,16 +263,13 @@ export class SyncTokenService {
 
           const coinInfo = SyncDataHelpers.makeCoinMarketsData(data);
           coinInfo.contract_address = filter?.address || '';
-          // coinMarkets.push(coinInfo);
-
-          // Write to redis
-          await this.tokenRepository.save(coinInfo);
+          coinMarkets.push(coinInfo);
         }
       }
-      // await this.coingeckoMarketsRepository.insertOnDuplicate(coinMarkets, [
-      //   'id',
-      //   'created_at',
-      // ]);
+      await this.coingeckoMarketsRepository.insertOnDuplicate(coinMarkets, [
+        'id',
+        'created_at',
+      ]);
 
       this._logger.log(`============== Write data to Influxdb ==============`);
       await this.influxDbClient.writeBlockTokenPriceAndVolume(cw20Dtos);
