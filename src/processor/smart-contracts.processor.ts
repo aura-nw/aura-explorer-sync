@@ -9,19 +9,27 @@ import {
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import {
+  COINGECKO_API,
   CONST_CHAR,
   CONTRACT_CODE_RESULT,
   CONTRACT_TYPE,
+  INDEXER_API,
   MAINNET_UPLOAD_STATUS,
+  REDIS_KEY,
   SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
-import { SmartContract } from '../entities';
+import { SmartContract, TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { DeploymentRequestsRepository } from '../repositories/deployment-requests.repository';
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
-import { ENV_CONFIG } from '../shared/services/config.service';
+import { ConfigService, ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
+import { RedisUtil } from '../utils/redis.util';
+import * as util from 'util';
+import { TokenMarketsRepository } from '../repositories/token-markets.repository';
+import { In } from 'typeorm';
+import { InfluxDBClient } from '../utils/influxdb-client';
 
 @Processor('smart-contracts')
 export class SmartContractsProcessor {
@@ -30,12 +38,18 @@ export class SmartContractsProcessor {
   private api;
   private smartContractService;
   private nodeEnv = ENV_CONFIG.NODE_ENV;
+  private indexerUrl;
+  private indexerChainId;
+  private influxDbClient: InfluxDBClient;
 
   constructor(
     private _commonUtil: CommonUtil,
+    private configService: ConfigService,
     private smartContractRepository: SmartContractRepository,
+    private tokenMarketsRepository: TokenMarketsRepository,
     private deploymentRequestsRepository: DeploymentRequestsRepository,
     private smartContractCodeRepository: SmartContractCodeRepository,
+    private redisUtil: RedisUtil,
   ) {
     this.logger.log(
       '============== Constructor Smart Contracts Processor Service ==============',
@@ -43,8 +57,13 @@ export class SmartContractsProcessor {
 
     this.rpc = ENV_CONFIG.NODE.RPC;
     this.api = ENV_CONFIG.NODE.API;
+    this.indexerUrl = this.configService.get('INDEXER_URL');
+    this.indexerChainId = this.configService.get('INDEXER_CHAIN_ID');
 
     this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
+
+    // Connect influxdb
+    this.connectInfluxdb();
   }
 
   @Process('sync-instantiate-contracts')
@@ -183,6 +202,171 @@ export class SmartContractsProcessor {
         ['id'],
       );
       this.logger.log(`Sync Instantiate Contract Result: ${result}`);
+    }
+  }
+
+  @Process('sync-token')
+  async handleSyncToken(job: Job) {
+    this.logger.log(job.data);
+    const listTokens = job.data.listTokens;
+    const type = job.data.type;
+
+    if (listTokens.length === 0) return;
+
+    await this.redisUtil.connect();
+    const coingeckoCoins = await this.redisUtil.getValue(
+      REDIS_KEY.COINGECKO_COINS,
+    );
+    const coinList = JSON.parse(coingeckoCoins);
+    const platform = ENV_CONFIG.COINGECKO.COINGEKO_PLATFORM;
+    const smartContracts = [];
+    const tokenMarkets = [];
+    const lstAddress = listTokens.map((i) => i.contract_address);
+    const contracts = await this.smartContractRepository.find({
+      where: { contract_address: In(lstAddress) },
+    });
+    const tokens = await this.tokenMarketsRepository.find({
+      where: { contract_address: In(lstAddress) },
+    });
+    for (let i = 0; i < listTokens.length; i++) {
+      const contract_address = listTokens[i].contract_address;
+      let contract = contracts.find(
+        (m) => m.contract_address === contract_address,
+      );
+      let hasUpdate = false;
+
+      if (!contract.token_name || !contract.num_tokens) {
+        contract = await this._commonUtil.queryMoreInfoFromCosmwasm(
+          this.api,
+          contract_address,
+          contract,
+          type,
+        );
+        hasUpdate = true;
+      }
+
+      // sync coin id from coingecko
+      if (!contract.coin_id) {
+        const coinInfo = coinList.find(
+          (f) => f.platforms?.[`${platform}`] === contract.contract_address,
+        );
+        if (coinInfo) {
+          contract.coin_id = coinInfo.id;
+          hasUpdate = true;
+        }
+      }
+
+      if (hasUpdate) {
+        smartContracts.push(contract);
+      }
+
+      if (type === CONTRACT_TYPE.CW20) {
+        const tokenInfo =
+          tokens.find((m) => m.contract_address === contract_address) ||
+          ({} as TokenMarkets);
+        tokenInfo.coin_id = contract.coin_id || '';
+        tokenInfo.contract_address = contract.contract_address;
+        tokenInfo.name = contract.token_name || '';
+        tokenInfo.symbol = contract.token_symbol || '';
+        if (contract.image) {
+          tokenInfo.image = contract.image;
+        }
+
+        tokenInfo.description = contract.description || '';
+
+        // get holder
+        const para = `${util.format(
+          INDEXER_API.GET_HOLDER_TOKEN,
+          this.indexerChainId,
+          contract_address,
+        )}`;
+        const holderResponse = await this._commonUtil.getDataAPI(
+          this.indexerUrl,
+          para,
+        );
+        if (holderResponse) {
+          tokenInfo.current_holder = Number(holderResponse.data.resultCount);
+          // tokenInfo.holder_change_percentage_24h =
+        }
+        tokenMarkets.push(tokenInfo);
+      }
+    }
+
+    if (smartContracts.length > 0) {
+      await this.smartContractRepository.update(smartContracts);
+    }
+
+    if (tokenMarkets.length > 0) {
+      await this.tokenMarketsRepository.insertOnDuplicate(tokenMarkets, [
+        'created_at',
+      ]);
+    }
+  }
+
+  connectInfluxdb() {
+    this.logger.log(
+      `============== call connectInfluxdb method ==============`,
+    );
+    try {
+      this.influxDbClient = new InfluxDBClient(
+        ENV_CONFIG.INFLUX_DB.BUCKET,
+        ENV_CONFIG.INFLUX_DB.ORGANIZTION,
+        ENV_CONFIG.INFLUX_DB.URL,
+        ENV_CONFIG.INFLUX_DB.TOKEN,
+      );
+      if (this.influxDbClient) {
+        this.influxDbClient.initWriteApi();
+      }
+    } catch (err) {
+      this.logger.log(
+        `call connectInfluxdb method has error: ${err.message}`,
+        err.stack,
+      );
+    }
+  }
+
+  @Process('sync-price-volume')
+  async handleSyncPriceVolume(job: Job) {
+    try {
+      this.logger.log(job.data);
+      const listTokens = job.data.listTokens;
+      const coingecko = ENV_CONFIG.COINGECKO;
+      this.logger.log(`============== Call Coingecko Api ==============`);
+      const coinIds = listTokens.join(',');
+      const coinMarkets: TokenMarkets[] = [];
+
+      const para = `${util.format(
+        COINGECKO_API.GET_COINS_MARKET,
+        coinIds,
+        coingecko.MAX_REQUEST,
+      )}`;
+      const response = await this._commonUtil.getDataAPI(coingecko.API, para);
+      if (response) {
+        for (let index = 0; index < response.length; index++) {
+          const data = response[index];
+
+          let tokenInfo = await this.tokenMarketsRepository.findOne({
+            where: { coin_id: data.id },
+          });
+
+          tokenInfo = SyncDataHelpers.updateTokenMarketsData(tokenInfo, data);
+
+          coinMarkets.push(tokenInfo);
+        }
+      }
+      if (coinMarkets.length > 0) {
+        await this.tokenMarketsRepository.update(coinMarkets);
+
+        this.logger.log(`============== Write data to Influxdb ==============`);
+        await this.influxDbClient.writeBlockTokenPriceAndVolume(coinMarkets);
+      }
+    } catch (err) {
+      this.logger.log(`sync-price-volume has error: ${err.message}`, err.stack);
+      // Reconnect influxDb
+      const errorCode = err?.code || '';
+      if (errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT') {
+        this.connectInfluxdb();
+      }
     }
   }
 
