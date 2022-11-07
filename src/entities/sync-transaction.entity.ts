@@ -7,7 +7,7 @@ export class SyncTransaction extends BaseEntity {
   tx_hash: string;
 
   @Column({ type: 'int', name: 'height' })
-  height: string;
+  height: number;
 
   @Column({ type: 'varchar', name: 'type' })
   type: string;
