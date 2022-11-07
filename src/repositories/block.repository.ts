@@ -18,9 +18,24 @@ export class BlockRepository extends BaseRepository<Block> {
   }
 
   getBlockByRange(start: number, end: number) {
-    return this.repos.createQueryBuilder('blk')
-      .select('blk.chainid, blk.block_hash, blk.height, blk.num_txs, blk.timestamp, blk.proposer')
+    return this.repos
+      .createQueryBuilder('blk')
+      .select(
+        'blk.chainid, blk.block_hash, blk.height, blk.num_txs, blk.timestamp, blk.proposer',
+      )
       .where(`height between :start and :end`, { start, end })
       .getRawMany();
+  }
+
+  async getLastBlockHeightByDate(numOfDay: number) {
+    const lastBlock = await this.repos
+      .createQueryBuilder('blk')
+      .select('blk.height')
+      .limit(1)
+      .where('`timestamp` < (NOW() - INTERVAL  :numOfDay DAY)', { numOfDay })
+      .orderBy('height', 'DESC')
+      .getRawOne();
+
+    return lastBlock.height as number;
   }
 }

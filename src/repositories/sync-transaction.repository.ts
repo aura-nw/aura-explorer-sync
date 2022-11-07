@@ -18,14 +18,8 @@ export class SyncTransactionRepository extends BaseRepository<SyncTransaction> {
   }
 
   async getLatestTransaction() {
-    const transaction = await this.repos.find({
-      take: 1,
-      order: {
-        timestamp: 'DESC',
-      },
-    });
-
-    return transaction?.[0];
+    const transaction = await this.repos.findOne({ order: { height: 'DESC' } });
+    return transaction;
   }
 
   async cleanUp(numOfDay: number) {

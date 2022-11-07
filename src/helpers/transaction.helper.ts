@@ -14,6 +14,10 @@ export class TransactionHelper {
   private static toDecimal = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
   private static minimalDenom = ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM;
 
+  static decode(b64Encoded: string) {
+    return Buffer.from(b64Encoded, 'base64').toString();
+  }
+
   static formatAmount(amount: number) {
     return (amount / TransactionHelper.precision).toFixed(
       TransactionHelper.toDecimal,
@@ -62,7 +66,10 @@ export class TransactionHelper {
             (k) => k.key === TRANSACTION_ATTRIBUTE.AMOUNT,
           );
           const amount = _amount
-            ? atob(_amount.value)?.replace(TransactionHelper.minimalDenom, '')
+            ? TransactionHelper.decode(_amount.value)?.replace(
+                TransactionHelper.minimalDenom,
+                '',
+              )
             : 0;
           total += Number(amount);
         });
@@ -78,10 +85,6 @@ export class TransactionHelper {
       });
 
       return TransactionHelper.formatAmount(total);
-    }
-
-    if (messages.length > 1) {
-      return '123';
     }
 
     if (message?.amount) {
@@ -115,9 +118,7 @@ export class TransactionHelper {
     const newTx = new SyncTransaction();
     const fee = transaction.tx_response.tx.auth_info.fee.amount[0];
     const txFee = fee
-      ? (fee[CONST_CHAR.AMOUNT] / TransactionHelper.precision).toFixed(
-          TransactionHelper.toDecimal,
-        )
+      ? TransactionHelper.formatAmount(fee[CONST_CHAR.AMOUNT])
       : Number('0').toFixed(TransactionHelper.toDecimal);
     const type = TransactionHelper.getTransactionType(messages);
     const { fromAddress, toAddress, contractAddress } =
@@ -130,7 +131,7 @@ export class TransactionHelper {
     newTx.from_address = fromAddress;
     newTx.to_address = toAddress;
     newTx.amount = TransactionHelper.getAmount(messages, events, type);
-    newTx.fee = Number(txFee);
+    newTx.fee = txFee;
     newTx.timestamp = transaction.tx_response.timestamp;
     return newTx;
   }
@@ -155,7 +156,9 @@ export class TransactionHelper {
           ?.attributes?.find(
             (a) => a.key === TRANSACTION_ATTRIBUTE.CONTRACT_ADDRESS,
           );
-        contractAddress = _contractAddress ? atob(_contractAddress.value) : '';
+        contractAddress = _contractAddress
+          ? TransactionHelper.decode(_contractAddress.value)
+          : '';
         break;
       }
       case TRANSACTION_TYPE.EXECUTE_CONTRACT:
@@ -188,7 +191,7 @@ export class TransactionHelper {
         const recipient = events
           .find((e) => e.type === TRANSACTION_EVENT.TRANSFER)
           ?.attributes?.find((a) => a.key === TRANSACTION_ATTRIBUTE.RECIPIENT);
-        toAddress = recipient ? atob(recipient.value) : '';
+        toAddress = recipient ? TransactionHelper.decode(recipient.value) : '';
         contractAddress = toAddress;
         break;
       }
@@ -197,7 +200,7 @@ export class TransactionHelper {
         const recipient = events
           .find((e) => e.type === TRANSACTION_EVENT.TRANSFER)
           ?.attributes?.find((a) => a.key === TRANSACTION_ATTRIBUTE.RECIPIENT);
-        toAddress = recipient ? atob(recipient.value) : '';
+        toAddress = recipient ? TransactionHelper.decode(recipient.value) : '';
         contractAddress = toAddress;
         break;
       }

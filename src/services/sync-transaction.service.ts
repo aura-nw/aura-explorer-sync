@@ -3,6 +3,7 @@ import { Cron, Interval } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from 'nest-schedule';
 import { INDEXER_API } from 'src/common/constants/app.constant';
 import { TransactionHelper } from 'src/helpers/transaction.helper';
+import { BlockRepository } from 'src/repositories/block.repository';
 import { SyncTransactionRepository } from 'src/repositories/sync-transaction.repository';
 import { ConfigService } from 'src/shared/services/config.service';
 import * as util from 'util';
@@ -16,12 +17,12 @@ export class SyncTransactionService {
   private indexerChainId;
 
   private isBlocked = false;
-  private nextTransactionKey = '';
 
   constructor(
     private configService: ConfigService,
     private commonUtil: CommonUtil,
     private syncTxsRepository: SyncTransactionRepository,
+    private blockRepository: BlockRepository,
     @InjectSchedule() private readonly schedule: Schedule,
   ) {
     this._logger.log(
@@ -42,12 +43,18 @@ export class SyncTransactionService {
     this._logger.log('Start crawl transactions ...');
 
     const lastTransaction = await this.syncTxsRepository.getLatestTransaction();
+    let lastBlockHeight = lastTransaction?.height;
+    if (!lastBlockHeight) {
+      lastBlockHeight = await this.blockRepository.getLastBlockHeightByDate(
+        CLEAN_UP_DURATION_DAYS,
+      );
+    }
+
     const numOfSyncedTransactions = await this.handleCrawling(
-      lastTransaction?.tx_hash,
-      this.nextTransactionKey,
+      lastBlockHeight,
+      PAGE_LIMIT,
     );
 
-    this.nextTransactionKey = '';
     this.isBlocked = false;
     this._logger.log(
       `End crawl transactions: ${numOfSyncedTransactions} transactions`,
@@ -71,17 +78,7 @@ export class SyncTransactionService {
     );
   }
 
-  async handleCrawling(
-    lastTxHash: string,
-    nextTransactionKey: string = '',
-    num: number = 0,
-  ) {
-    const expiredTime = new Date();
-    expiredTime.setDate(expiredTime.getDate() - CLEAN_UP_DURATION_DAYS);
-
-    // Fist time craw with 100 records/request, normal with 20 records/request
-    const pageLimit = lastTxHash ? 20 : 100;
-
+  async handleCrawling(fromHeight: number, pageLimit: number = 100) {
     let response;
     try {
       response = await this.commonUtil.getDataAPI(
@@ -89,7 +86,7 @@ export class SyncTransactionService {
           INDEXER_API.TRANSACTION,
           this.indexerChainId,
           pageLimit,
-          nextTransactionKey,
+          fromHeight,
         )}`,
         '',
       );
@@ -98,27 +95,17 @@ export class SyncTransactionService {
     }
 
     if (!response?.data?.transactions) {
-      return num;
-      // // retry on failed
-      // return await this.handleCrawling(lastTxHash, nextTransactionKey, depth);
+      return 0;
     }
 
-    const nextNum = num + pageLimit;
-    const { transactions, nextKey } = response.data;
+    const { transactions } = response.data;
 
     // process data
     await this.handleSaveDatabase(transactions);
 
     // end process data
 
-    const isLastRequest = transactions.some(
-      (t) =>
-        lastTxHash === t.tx_response.txhash ||
-        new Date(t.tx_response.timestamp) < expiredTime,
-    );
-    if (isLastRequest) return num;
-
-    return await this.handleCrawling(lastTxHash, nextKey, nextNum);
+    return transactions.length;
   }
 
   async handleSaveDatabase(transactions: any) {
@@ -132,3 +119,4 @@ export class SyncTransactionService {
 
 // 8 days for sure with 7 days available for UTC-12 (current transaction in UTC 0)
 const CLEAN_UP_DURATION_DAYS = 8;
+const PAGE_LIMIT = 100;
