@@ -92,39 +92,4 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
 
     return await queryBuilder.getRawMany();
   }
-
-  async getCw20TokensHavingCoinId(limit: number, pageIndex: number) {
-    const sqlSelect = `sc.id AS sc_id, sc.token_name AS name, sc.token_symbol AS symbol, sc.contract_address, sc.num_tokens, sc.coin_id`;
-
-    const queryBuilder = this.repos
-      .createQueryBuilder('sc')
-      .select(sqlSelect)
-      .innerJoin(
-        'smart_contract_codes',
-        'scc',
-        `sc.code_id = scc.code_id AND scc.type = '${CONTRACT_TYPE.CW20}' AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}'`,
-      )
-      .where('sc.coin_id is NOT NULL')
-      .limit(limit)
-      .offset(pageIndex * limit)
-      .orderBy('sc.id', 'DESC');
-
-    return await queryBuilder.getRawMany();
-  }
-
-  async countCw20TokensHavingCoinId() {
-    const sqlSelect = `sc.id AS sc_id`;
-
-    const queryBuilder = this.repos
-      .createQueryBuilder('sc')
-      .select(sqlSelect)
-      .innerJoin(
-        'smart_contract_codes',
-        'scc',
-        `sc.code_id = scc.code_id AND scc.type = '${CONTRACT_TYPE.CW20}' AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}'`,
-      )
-      .where('sc.coin_id is NOT NULL');
-
-    return await queryBuilder.getCount();
-  }
 }

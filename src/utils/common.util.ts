@@ -112,30 +112,32 @@ export class CommonUtil {
     type: CONTRACT_TYPE,
   ): Promise<any> {
     try {
-      //get token info
       const base64RequestToken = Buffer.from(
         `{
                   "contract_info": {}
               }`,
       ).toString('base64');
-      const tokenInfo = await this.getDataContractFromBase64Query(
-        api,
-        contractAddress,
-        base64RequestToken,
-      );
-      //get num tokens
+
       const base64RequestNumToken = Buffer.from(
         `{
               "num_tokens": {}
           }`,
       ).toString('base64');
-      const numTokenInfo = await this.getDataContractFromBase64Query(
-        api,
-        contractAddress,
-        base64RequestNumToken,
-      );
 
-      const contract = SyncDataHelpers.makeTokenCW721Data(
+      const [tokenInfo, numTokenInfo] = await Promise.all([
+        this.getDataContractFromBase64Query(
+          api,
+          contractAddress,
+          base64RequestToken,
+        ),
+        this.getDataContractFromBase64Query(
+          api,
+          contractAddress,
+          base64RequestNumToken,
+        ),
+      ]);
+
+      const contract = SyncDataHelpers.updateTokenInfo(
         smartContract,
         tokenInfo,
         numTokenInfo,

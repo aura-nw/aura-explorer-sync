@@ -1,12 +1,12 @@
-import { Column, Entity } from 'typeorm';
-import { BaseEntityIncrementId } from './base/base.entity';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { BaseEntity } from './base/base.entity';
 
-@Entity('coingecko_markets')
-export class CoingeckoMarkets extends BaseEntityIncrementId {
-  @Column({ name: 'contract_address' })
+@Entity('token_markets')
+export class TokenMarkets extends BaseEntity {
+  @PrimaryColumn({ name: 'contract_address' })
   contract_address: string;
 
-  @Column({ name: 'coin_id' })
+  @PrimaryColumn({ name: 'coin_id' })
   coin_id: string;
 
   @Column()
@@ -45,9 +45,12 @@ export class CoingeckoMarkets extends BaseEntityIncrementId {
   @Column({ name: 'circulating_supply', default: 0 })
   circulating_supply: number;
 
-  @Column({ type: 'decimal', precision: 30, scale: 6, default: 0 })
-  holders: number;
+  @Column({ name: 'current_holder' })
+  current_holder: number;
 
-  @Column({ name: 'holders_change_percentage_24h', type: 'float', default: 0 })
-  holders_change_percentage_24h: number;
+  @Column({ name: 'holder_change_percentage_24h', type: 'float', default: 0 })
+  holder_change_percentage_24h;
+
+  @Column({ type: 'text' })
+  description: string;
 }

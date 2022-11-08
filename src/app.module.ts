@@ -7,7 +7,7 @@ import { SmartContractsProcessor } from './processor/smart-contracts.processor';
 import {
   Block,
   BlockSyncError,
-  CoingeckoMarkets,
+  TokenMarkets,
   Delegation,
   DelegatorReward,
   MissedBlock,
@@ -40,7 +40,7 @@ import { SyncTaskService } from './services/sync-task.service';
 import { SyncTokenService } from './services/sync-token.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
-import { CoingeckoMarketsRepository } from './repositories/coingecko-markets.repository';
+import { TokenMarketsRepository } from './repositories/token-markets.repository';
 
 const controllers = [];
 const entities = [
@@ -58,7 +58,7 @@ const entities = [
   TokenContract,
   SmartContractCode,
   Cw20TokenOwner,
-  CoingeckoMarkets,
+  TokenMarkets,
 ];
 
 const repositories = [
@@ -76,7 +76,7 @@ const repositories = [
   TokenContractRepository,
   SmartContractCodeRepository,
   Cw20TokenOwnerRepository,
-  CoingeckoMarketsRepository,
+  TokenMarketsRepository,
 ];
 
 const services = [SyncTaskService, SyncContractCodeService, SyncTokenService];

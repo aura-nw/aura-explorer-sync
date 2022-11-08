@@ -7,7 +7,7 @@ import {
 } from '../common/constants/app.constant';
 import {
   Block,
-  CoingeckoMarkets,
+  TokenMarkets,
   Delegation,
   DelegatorReward,
   ProposalVote,
@@ -370,7 +370,7 @@ export class SyncDataHelpers {
     return newValidator;
   }
 
-  static makeTokenCW721Data(contract: any, tokenInfo: any, numTokenInfo: any) {
+  static updateTokenInfo(contract: any, tokenInfo: any, numTokenInfo: any) {
     if (tokenInfo && tokenInfo?.data) {
       contract.token_name = tokenInfo.data.name;
       contract.token_symbol = tokenInfo.data.symbol;
@@ -416,21 +416,29 @@ export class SyncDataHelpers {
     return smartContractCode;
   }
 
-  static makeCoinMarketsData(data: any): CoingeckoMarkets {
-    const coinInfo = new CoingeckoMarkets();
-    coinInfo.contract_address = data.contract_address || '';
-    coinInfo.coin_id = data.id;
-    coinInfo.symbol = data.symbol || '';
-    coinInfo.name = data.name || '';
-    coinInfo.image = data.image || '';
+  static updateTokenMarketsData(
+    currentData: TokenMarkets,
+    data: any,
+  ): TokenMarkets {
+    const coinInfo = { ...currentData } as TokenMarkets;
+
+    if (!currentData) {
+      coinInfo.coin_id = data.id;
+      coinInfo.contract_address = '';
+      coinInfo.name = data.name;
+      coinInfo.symbol = data.symbol;
+      coinInfo.image = data.image;
+    }
+
+    if (data.image) {
+      coinInfo.image = data.image;
+    }
     coinInfo.current_price = data.current_price || 0;
     coinInfo.price_change_percentage_24h =
       data.price_change_percentage_24h || 0;
     coinInfo.total_volume = data.total_volume || 0;
     coinInfo.circulating_supply = data.circulating_supply || 0;
     coinInfo.max_supply = data.max_supply || 0;
-    coinInfo.holders = 0;
-    coinInfo.holders_change_percentage_24h = 0;
 
     return coinInfo;
   }
