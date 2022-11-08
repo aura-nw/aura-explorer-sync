@@ -89,9 +89,7 @@ export class SyncContractCodeService {
                       item.type,
                     );
 
-                    let smartContract = new SmartContract();
-                    smartContract = { ...contract };
-                    contracts.push(smartContract);
+                    contracts.push(contract);
                   }
                   await this.smartContractRepository.insertOnDuplicate(
                     contracts,
