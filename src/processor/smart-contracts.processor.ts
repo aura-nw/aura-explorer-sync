@@ -257,9 +257,7 @@ export class SmartContractsProcessor {
       }
 
       if (hasUpdate) {
-        let smartContract = new SmartContract();
-        smartContract = { ...contract };
-        smartContracts.push(smartContract);
+        smartContracts.push(contract);
       }
 
       if (type === CONTRACT_TYPE.CW20) {

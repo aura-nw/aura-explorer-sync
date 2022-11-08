@@ -370,17 +370,6 @@ export class SyncDataHelpers {
     return newValidator;
   }
 
-  static updateTokenInfo(contract: any, tokenInfo: any, numTokenInfo: any) {
-    if (tokenInfo && tokenInfo?.data) {
-      contract.token_name = tokenInfo.data.name;
-      contract.token_symbol = tokenInfo.data.symbol;
-    }
-    if (numTokenInfo && numTokenInfo?.data) {
-      contract.num_tokens = Number(numTokenInfo.data.count);
-    }
-    return contract;
-  }
-
   /**
    * Create TokenCW20 Dto
    * @param data

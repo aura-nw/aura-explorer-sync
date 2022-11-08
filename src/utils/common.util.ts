@@ -112,64 +112,64 @@ export class CommonUtil {
     type: CONTRACT_TYPE,
   ): Promise<any> {
     try {
-      const base64RequestToken = Buffer.from(
-        `{
-                  "contract_info": {}
-              }`,
-      ).toString('base64');
-
-      const base64RequestNumToken = Buffer.from(
-        `{
-              "num_tokens": {}
-          }`,
-      ).toString('base64');
-
-      const [tokenInfo, numTokenInfo] = await Promise.all([
-        this.getDataContractFromBase64Query(
-          api,
-          contractAddress,
-          base64RequestToken,
-        ),
-        this.getDataContractFromBase64Query(
-          api,
-          contractAddress,
-          base64RequestNumToken,
-        ),
-      ]);
-
-      const contract = SyncDataHelpers.updateTokenInfo(
-        smartContract,
-        tokenInfo,
-        numTokenInfo,
-      );
-
       if (type === CONTRACT_TYPE.CW20) {
-        try {
-          //get marketing info of token
-          const base64Request = Buffer.from(
-            `{
-                              "marketing_info": {}
-                          }`,
-          ).toString('base64');
-          const marketingInfo = await this.getDataContractFromBase64Query(
+        const tokenInfoQuery =
+          Buffer.from(`{ "token_info": {} }`).toString('base64');
+        const marketingInfoQuery = Buffer.from(
+          `{ "marketing_info": {} }`,
+        ).toString('base64');
+
+        const [tokenInfo, marketingInfo] = await Promise.all([
+          this.getDataContractFromBase64Query(
             api,
             contractAddress,
-            base64Request,
-          );
+            tokenInfoQuery,
+          ),
+          this.getDataContractFromBase64Query(
+            api,
+            contractAddress,
+            marketingInfoQuery,
+          ),
+        ]);
+        if (marketingInfo?.data) {
+          smartContract.image = marketingInfo.data?.logo?.url ?? '';
+          smartContract.description = marketingInfo.data?.description ?? '';
+        }
+        if (tokenInfo?.data) {
+          smartContract.token_name = tokenInfo.data.name;
+          smartContract.token_symbol = tokenInfo.data.symbol;
+        }
+      } else {
+        const base64RequestToken = Buffer.from(
+          `{ "contract_info": {} }`,
+        ).toString('base64');
 
-          if (marketingInfo?.data) {
-            contract.image = marketingInfo.data?.logo?.url ?? '';
-            contract.description = marketingInfo.data?.description ?? '';
-          }
-        } catch (err) {
-          this._logger.log(
-            `${CommonUtil.name} call ${this.queryMoreInfoFromCosmwasm.name} method has error: ${err.message}`,
-            err.stack,
-          );
+        const base64RequestNumToken =
+          Buffer.from(`{ "num_tokens": {} }`).toString('base64');
+
+        const [tokenInfo, numTokenInfo] = await Promise.all([
+          this.getDataContractFromBase64Query(
+            api,
+            contractAddress,
+            base64RequestToken,
+          ),
+          this.getDataContractFromBase64Query(
+            api,
+            contractAddress,
+            base64RequestNumToken,
+          ),
+        ]);
+
+        if (tokenInfo?.data) {
+          smartContract.token_name = tokenInfo.data.name;
+          smartContract.token_symbol = tokenInfo.data.symbol;
+        }
+        if (numTokenInfo?.data) {
+          smartContract.num_tokens = Number(numTokenInfo.data.count);
         }
       }
 
-      return contract;
+      return smartContract;
     } catch (err) {
       this._logger.log(
         `${CommonUtil.name} call ${this.queryMoreInfoFromCosmwasm.name} method has error: ${err.message}`,
