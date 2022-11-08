@@ -45,9 +45,10 @@ export class SyncTransactionService {
     const lastTransaction = await this.syncTxsRepository.getLatestTransaction();
     let lastBlockHeight = lastTransaction?.height;
     if (!lastBlockHeight) {
-      lastBlockHeight = await this.blockRepository.getLastBlockHeightByDate(
-        CLEAN_UP_DURATION_DAYS,
-      );
+      lastBlockHeight =
+        (await this.blockRepository.getLastBlockHeightByDate(
+          CLEAN_UP_DURATION_DAYS,
+        )) || 0;
     }
 
     const numOfSyncedTransactions = await this.handleCrawling(
@@ -86,7 +87,7 @@ export class SyncTransactionService {
           INDEXER_API.TRANSACTION,
           this.indexerChainId,
           pageLimit,
-          fromHeight,
+          fromHeight + 1,
         )}`,
         '',
       );

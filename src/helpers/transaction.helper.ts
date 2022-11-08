@@ -127,6 +127,7 @@ export class TransactionHelper {
     // set values
     newTx.tx_hash = transaction.tx_response.txhash;
     newTx.type = type;
+    newTx.height = transaction.tx_response.height;
     newTx.contract_address = contractAddress;
     newTx.from_address = fromAddress;
     newTx.to_address = toAddress;

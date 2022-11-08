@@ -30,12 +30,12 @@ export class BlockRepository extends BaseRepository<Block> {
   async getLastBlockHeightByDate(numOfDay: number) {
     const lastBlock = await this.repos
       .createQueryBuilder('blk')
-      .select('blk.height')
+      .select('blk.height height')
       .limit(1)
-      .where('`timestamp` < (NOW() - INTERVAL  :numOfDay DAY)', { numOfDay })
+      .where('`timestamp` < (NOW() - INTERVAL :numOfDay DAY)', { numOfDay })
       .orderBy('height', 'DESC')
       .getRawOne();
 
-    return lastBlock.height as number;
+    return lastBlock?.height as number;
   }
 }
