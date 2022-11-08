@@ -4,7 +4,21 @@ import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
 import { SmartContractsProcessor } from './processor/smart-contracts.processor';
-import { Block, BlockSyncError, Delegation, DelegatorReward, MissedBlock, ProposalVote, SmartContract, SmartContractCode, SyncStatus, TokenContract, Transaction, Validator } from './entities';
+import {
+  Block,
+  BlockSyncError,
+  TokenMarkets,
+  Delegation,
+  DelegatorReward,
+  MissedBlock,
+  ProposalVote,
+  SmartContract,
+  SmartContractCode,
+  SyncStatus,
+  TokenContract,
+  Transaction,
+  Validator,
+} from './entities';
 import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
 import { DeploymentRequests } from './entities/deployment-requests.entity';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
@@ -26,6 +40,7 @@ import { SyncTaskService } from './services/sync-task.service';
 import { SyncTokenService } from './services/sync-token.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
+import { TokenMarketsRepository } from './repositories/token-markets.repository';
 
 const controllers = [];
 const entities = [
@@ -42,7 +57,8 @@ const entities = [
   SmartContract,
   TokenContract,
   SmartContractCode,
-  Cw20TokenOwner
+  Cw20TokenOwner,
+  TokenMarkets,
 ];
 
 const repositories = [
@@ -59,18 +75,13 @@ const repositories = [
   SmartContractRepository,
   TokenContractRepository,
   SmartContractCodeRepository,
-  Cw20TokenOwnerRepository
+  Cw20TokenOwnerRepository,
+  TokenMarketsRepository,
 ];
 
-const services = [
-  SyncTaskService,
-  SyncContractCodeService,
-  SyncTokenService
-];
+const services = [SyncTaskService, SyncContractCodeService, SyncTokenService];
 
-const processors = [
-  SmartContractsProcessor
-];
+const processors = [SmartContractsProcessor];
 
 @Module({
   imports: [
@@ -91,10 +102,10 @@ const processors = [
       // prefix: 'EXPLORER_SYNC',
       defaultJobOptions: {
         removeOnComplete: true,
-      }
+      },
     }),
     BullModule.registerQueue({
-      name: 'smart-contracts'
+      name: 'smart-contracts',
     }),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
@@ -105,15 +116,8 @@ const processors = [
       inject: [ConfigService],
     }),
   ],
-  exports: [
-    BullModule,
-    ...processors,
-  ],
+  exports: [BullModule, ...processors],
   controllers: [...controllers],
-  providers: [
-    ...repositories,
-    ...services,
-    ...processors,
-  ],
+  providers: [...repositories, ...services, ...processors],
 })
-export class AppModule { }
+export class AppModule {}

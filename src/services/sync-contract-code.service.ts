@@ -6,7 +6,7 @@ import {
   CONTRACT_CODE_RESULT,
   CONTRACT_CODE_STATUS,
   CONTRACT_TYPE,
-  INDEXER_API
+  INDEXER_API,
 } from '../common/constants/app.constant';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
 import { ConfigService, ENV_CONFIG } from '../shared/services/config.service';
@@ -26,7 +26,7 @@ export class SyncContractCodeService {
     private configService: ConfigService,
     private _commonUtil: CommonUtil,
     private smartContractCodeRepository: SmartContractCodeRepository,
-    private smartContractRepository: SmartContractRepository
+    private smartContractRepository: SmartContractRepository,
   ) {
     this._logger.log(
       '============== Constructor Sync Contract Code Service ==============',
@@ -69,29 +69,31 @@ export class SyncContractCodeService {
             case CONTRACT_CODE_STATUS.COMPLETED:
               item.result = CONTRACT_CODE_RESULT.CORRECT;
               //get contracts with code id
-              if (item.type === CONTRACT_TYPE.CW721) {
+              if (
+                item.type === CONTRACT_TYPE.CW721 ||
+                item.type === CONTRACT_TYPE.CW20
+              ) {
                 const contractDB =
                   await this.smartContractRepository.findByCondition({
-                    code_id: item.code_id
+                    code_id: item.code_id,
                   });
                 if (contractDB && contractDB.length > 0) {
                   const contracts = [];
                   for (let i = 0; i < contractDB.length; i++) {
                     let contract: SmartContract = contractDB[i];
-                    //get token info
-                    const base64RequestToken = Buffer.from(`{
-                      "contract_info": {}
-                    }`).toString('base64');
-                    const tokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contract.contract_address, base64RequestToken);
-                    //get num tokens
-                    const base64RequestNumToken = Buffer.from(`{
-                      "num_tokens": {}
-                    }`).toString('base64');
-                    const numTokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contract.contract_address, base64RequestNumToken);
-                    contract = SyncDataHelpers.makeTokenCW721Data(contract, tokenInfo, numTokenInfo);
+
+                    contract = await this._commonUtil.queryMoreInfoFromCosmwasm(
+                      this.api,
+                      contract.contract_address,
+                      contract,
+                      item.type,
+                    );
                     contracts.push(contract);
                   }
-                  await this.smartContractRepository.insertOnDuplicate(contracts, ['id']);
+                  await this.smartContractRepository.insertOnDuplicate(
+                    contracts,
+                    ['id'],
+                  );
                 }
               }
               break;
