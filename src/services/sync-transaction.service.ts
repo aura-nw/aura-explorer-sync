@@ -5,7 +5,7 @@ import { INDEXER_API } from 'src/common/constants/app.constant';
 import { TransactionHelper } from 'src/helpers/transaction.helper';
 import { BlockRepository } from 'src/repositories/block.repository';
 import { SyncTransactionRepository } from 'src/repositories/sync-transaction.repository';
-import { ConfigService } from 'src/shared/services/config.service';
+import { ConfigService, ENV_CONFIG } from 'src/shared/services/config.service';
 import * as util from 'util';
 import { CommonUtil } from '../utils/common.util';
 
@@ -118,6 +118,5 @@ export class SyncTransactionService {
   }
 }
 
-// 8 days for sure with 7 days available for UTC-12 (current transaction in UTC 0)
-const CLEAN_UP_DURATION_DAYS = 8;
+const CLEAN_UP_DURATION_DAYS = ENV_CONFIG.SYNC_TRANSACTIONS_CLEAN_UP_DAY;
 const PAGE_LIMIT = 100;
