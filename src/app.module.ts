@@ -15,6 +15,7 @@ import {
   SmartContract,
   SmartContractCode,
   SyncStatus,
+  SyncTransaction,
   TokenContract,
   Transaction,
   Validator,
@@ -34,10 +35,12 @@ import { SmartContractRepository } from './repositories/smart-contract.repositor
 import { SyncStatusRepository } from './repositories/sync-status.repository';
 import { TokenContractRepository } from './repositories/token-contract.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
+import { SyncTransactionRepository } from './repositories/sync-transaction.repository';
 import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
 import { SyncTaskService } from './services/sync-task.service';
 import { SyncTokenService } from './services/sync-token.service';
+import { SyncTransactionService } from './services/sync-transaction.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { TokenMarketsRepository } from './repositories/token-markets.repository';
@@ -59,6 +62,7 @@ const entities = [
   SmartContractCode,
   Cw20TokenOwner,
   TokenMarkets,
+  SyncTransaction,
 ];
 
 const repositories = [
@@ -77,9 +81,15 @@ const repositories = [
   SmartContractCodeRepository,
   Cw20TokenOwnerRepository,
   TokenMarketsRepository,
+  SyncTransactionRepository,
 ];
 
-const services = [SyncTaskService, SyncContractCodeService, SyncTokenService];
+const services = [
+  SyncTaskService,
+  SyncContractCodeService,
+  SyncTokenService,
+  SyncTransactionService,
+];
 
 const processors = [SmartContractsProcessor];
 
