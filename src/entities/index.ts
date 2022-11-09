@@ -11,3 +11,4 @@ export * from './smart-contract.entity';
 export * from './token-contract.entity';
 export * from './smart-contract-code.entity';
 export * from './token-markets.entity';
+export * from './sync-transaction.entity';

@@ -42,6 +42,9 @@ export class ConfigService {
       SMART_CONTRACT_SERVICE: process.env.SMART_CONTRACT_SERVICE,
       START_HEIGHT: process.env.START_HEIGHT,
       TIMES_SYNC: Number(process.env.TIMES_SYNC) || 3000,
+      SYNC_TRANSACTIONS_CLEAN_UP_DAY: Number(
+        process.env.SYNC_TRANSACTIONS_CLEAN_UP_DAY || 8,
+      ),
       BLOCK_START: Number(process.env.BLOCK_START) || 0,
       SYNC_DATA_INFLUXD:
         process.env.SYNC_DATA_INFLUXD === 'true' ? true : false,
