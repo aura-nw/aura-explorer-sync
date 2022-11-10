@@ -426,7 +426,8 @@ export class SyncDataHelpers {
     coinInfo.price_change_percentage_24h =
       data.price_change_percentage_24h || 0;
     coinInfo.total_volume = data.total_volume || 0;
-    coinInfo.circulating_supply = data.circulating_supply || 0;
+    coinInfo.circulating_supply =
+      (data.circulating_supply || 0) * coinInfo.current_price;
     coinInfo.max_supply = data.max_supply || 0;
 
     return coinInfo;
