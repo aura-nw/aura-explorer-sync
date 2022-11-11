@@ -13,7 +13,6 @@ import {
   ProposalVote,
   SmartContract,
   SmartContractCode,
-  Transaction,
   Validator,
 } from '../entities';
 import { ENV_CONFIG } from '../shared/services/config.service';
@@ -32,37 +31,6 @@ export class SyncDataHelpers {
     newBlock.round = blockData.block.last_commit.round;
     newBlock.json_data = JSON.stringify(blockData);
     return newBlock;
-  }
-
-  static makeTrxData(
-    txData: any,
-    fetchingBlockHeight: number,
-    txType: string,
-    txRawLogData: string,
-    time: any,
-    txContractAddress: string,
-  ) {
-    const newTx = new Transaction();
-    const fee = txData.tx_response.tx.auth_info.fee.amount[0];
-    const txFee = fee
-      ? (fee[CONST_CHAR.AMOUNT] / this.precision).toFixed(this.toDecimal)
-      : Number('0').toFixed(this.toDecimal);
-    // newTx.blockId = savedBlock.id;
-    newTx.code = txData.tx_response.code;
-    newTx.codespace = txData.tx_response.codespace;
-    newTx.data = txData.tx_response.code === 0 ? txData.tx_response.data : '';
-    newTx.gas_used = txData.tx_response.gas_used;
-    newTx.gas_wanted = txData.tx_response.gas_wanted;
-    newTx.height = fetchingBlockHeight;
-    newTx.info = txData.tx_response.info;
-    newTx.timestamp = time;
-    newTx.tx = JSON.stringify(txData.tx_response);
-    newTx.tx_hash = txData.tx_response.txhash;
-    newTx.type = txType;
-    newTx.fee = txFee;
-    newTx.messages = JSON.stringify(txData.tx_response.tx.body.messages);
-    newTx.contract_address = txContractAddress;
-    return newTx;
   }
 
   static makeTxRawLogData(txData: any) {
