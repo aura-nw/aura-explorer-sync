@@ -120,6 +120,7 @@ export enum INDEXER_API {
   GET_LIST_TOKENS = 'api/v1/asset/getByContractType?contractType=%s&chainid=%s&pageLimit=100&pageOffset=0&countTotal=true',
   GET_HOLDER_TOKEN = 'api/v1/asset/holder?chainid=%s&contractType=CW20&contractAddress=%s&countTotal=true',
   TRANSACTION = 'api/v1/transaction?chainid=%s&pageLimit=%s&fromHeight=%s&reverse=true',
+  GET_HOLDER_INFO_CW20 = 'api/v1/daily-cw20-holder',
 }
 
 export enum COINGECKO_API {
