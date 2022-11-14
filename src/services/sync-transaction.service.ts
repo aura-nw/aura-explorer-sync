@@ -4,7 +4,7 @@ import { InjectSchedule, Schedule } from 'nest-schedule';
 import { INDEXER_API } from 'src/common/constants/app.constant';
 import { TransactionHelper } from 'src/helpers/transaction.helper';
 import { BlockRepository } from 'src/repositories/block.repository';
-import { SyncTransactionRepository } from 'src/repositories/sync-transaction.repository';
+import { TransactionRepository } from 'src/repositories/transaction.repository';
 import { ConfigService, ENV_CONFIG } from 'src/shared/services/config.service';
 import * as util from 'util';
 import { CommonUtil } from '../utils/common.util';
@@ -21,7 +21,7 @@ export class SyncTransactionService {
   constructor(
     private configService: ConfigService,
     private commonUtil: CommonUtil,
-    private syncTxsRepository: SyncTransactionRepository,
+    private txsRepository: TransactionRepository,
     private blockRepository: BlockRepository,
     @InjectSchedule() private readonly schedule: Schedule,
   ) {
@@ -42,7 +42,7 @@ export class SyncTransactionService {
     this.isBlocked = true;
     this._logger.log('Start crawl transactions ...');
 
-    const lastTransaction = await this.syncTxsRepository.getLatestTransaction();
+    const lastTransaction = await this.txsRepository.getLatestTransaction();
     let lastBlockHeight = lastTransaction?.height;
     if (!lastBlockHeight) {
       lastBlockHeight =
@@ -70,7 +70,7 @@ export class SyncTransactionService {
   async cleanupTransactions() {
     this._logger.log('Start cleanup transactions ...');
 
-    const numOfTransactions = await this.syncTxsRepository.cleanUp(
+    const numOfTransactions = await this.txsRepository.cleanUp(
       CLEAN_UP_DURATION_DAYS,
     );
 
@@ -114,7 +114,7 @@ export class SyncTransactionService {
       TransactionHelper.makeSyncTransaction,
     );
 
-    await this.syncTxsRepository.upsert(transactionsToStore, ['tx_hash']);
+    await this.txsRepository.upsert(transactionsToStore, ['tx_hash']);
   }
 }
 

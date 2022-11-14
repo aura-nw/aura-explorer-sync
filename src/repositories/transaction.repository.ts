@@ -16,4 +16,19 @@ export class TransactionRepository extends BaseRepository<Transaction> {
       '============== Constructor Transaction Repository ==============',
     );
   }
+
+  async getLatestTransaction() {
+    const transaction = await this.repos.findOne({ order: { height: 'DESC' } });
+    return transaction;
+  }
+
+  async cleanUp(numOfDay: number) {
+    const result = await this.repos
+      .createQueryBuilder()
+      .delete()
+      .where('`timestamp` < (NOW() - INTERVAL  :numOfDay DAY)', { numOfDay })
+      .execute();
+
+    return result.affected;
+  }
 }

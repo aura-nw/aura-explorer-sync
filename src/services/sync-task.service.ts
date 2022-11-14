@@ -3,16 +3,13 @@ import { Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
-import { DeploymentRequestsRepository } from '../repositories/deployment-requests.repository';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
   CONST_PUBKEY_ADDR,
-  CONTRACT_TRANSACTION_EXECUTE_TYPE,
   NODE_API,
-  SMART_CONTRACT_VERIFICATION
 } from '../common/constants/app.constant';
-import { BlockSyncError, MissedBlock, SmartContract } from '../entities';
+import { BlockSyncError, MissedBlock } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { BlockSyncErrorRepository } from '../repositories/block-sync-error.repository';
 import { BlockRepository } from '../repositories/block.repository';
@@ -20,9 +17,7 @@ import { DelegationRepository } from '../repositories/delegation.repository';
 import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
 import { MissedBlockRepository } from '../repositories/missed-block.repository';
 import { ProposalVoteRepository } from '../repositories/proposal-vote.repository';
-import { SmartContractRepository } from '../repositories/smart-contract.repository';
 import { SyncStatusRepository } from '../repositories/sync-status.repository';
-import { TransactionRepository } from '../repositories/transaction.repository';
 import { ValidatorRepository } from '../repositories/validator.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
@@ -52,13 +47,10 @@ export class SyncTaskService {
     private missedBlockRepository: MissedBlockRepository,
     private blockSyncErrorRepository: BlockSyncErrorRepository,
     private blockRepository: BlockRepository,
-    private txRepository: TransactionRepository,
     private statusRepository: SyncStatusRepository,
     private proposalVoteRepository: ProposalVoteRepository,
     private delegationRepository: DelegationRepository,
     private delegatorRewardRepository: DelegatorRewardRepository,
-    private smartContractRepository: SmartContractRepository,
-    private deploymentRequestsRepository: DeploymentRequestsRepository,
     private smartContractCodeRepository: SmartContractCodeRepository,
     @InjectSchedule() private readonly schedule: Schedule,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue
@@ -425,9 +417,7 @@ export class SyncTaskService {
       }
 
       if (blockData.block.data.txs && blockData.block.data.txs.length > 0) {
-        const transactions = [];
         const listTransactions = [];
-        const influxdbTrans = [];
         let txDatas = [];
         const txs = [];
         for (const key in blockData.block.data.txs) {
@@ -441,26 +431,12 @@ export class SyncTaskService {
         txDatas = await Promise.all(txs);
         let i = 0;
         // create transaction
-        for (const key in blockData.block.data.txs) {
-          const element = blockData.block.data.txs[key];
+        for (const _key in blockData.block.data.txs) {
 
-          const txHash = sha256(Buffer.from(element, 'base64')).toUpperCase();
           const txData = txDatas[i];
 
           i += 1;
-          const [txType, txRawLogData, txContractAddress] =
-            SyncDataHelpers.makeTxRawLogData(txData);
-          // Make up transaction data from block data
-          const newTx = SyncDataHelpers.makeTrxData(
-            txData,
-            syncBlock,
-            txType,
-            txRawLogData,
-            blockData.block.header.time,
-            txContractAddress,
-          );
-
-          transactions.push(newTx);
+          const [txType] = SyncDataHelpers.makeTxRawLogData(txData);
 
           // Check to push into list transaction
           const txTypeCheck = txType.substring(txType.lastIndexOf('.') + 1);
@@ -477,11 +453,7 @@ export class SyncTaskService {
         // Insert data to Block table
         newBlock.gas_used = blockGasUsed;
         newBlock.gas_wanted = blockGasWanted;
-        const savedBlock = await this.blockRepository.upsert([newBlock], []);
-        if (savedBlock) {
-          transactions.map((item) => (item.blockId = savedBlock[0].id));
-          await this.txRepository.insertOnDuplicate(transactions, ['id']);
-        }
+        await this.blockRepository.upsert([newBlock], []);
 
         //sync data with transactions
         if (listTransactions.length > 0) {

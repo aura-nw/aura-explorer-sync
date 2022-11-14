@@ -1,7 +1,6 @@
 import { Column, Entity, OneToMany, Unique } from 'typeorm';
 
 import { BaseEntityIncrementId } from './base/base.entity';
-import { Transaction } from './transaction.entity';
 
 @Entity('blocks')
 export class Block extends BaseEntityIncrementId {
@@ -74,9 +73,6 @@ export class Block extends BaseEntityIncrementId {
     name: 'round',
   })
   round: number;
-
-  @OneToMany(() => Transaction, (tx) => tx.block)
-  txs: Transaction[];
 
   @Column({
     name: 'json_data',
