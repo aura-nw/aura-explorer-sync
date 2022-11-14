@@ -163,13 +163,13 @@ export class TransactionHelper {
         break;
       }
       case TRANSACTION_TYPE.EXECUTE_CONTRACT:
-        const method = Object.keys(message.msg)?.[0];
+        const method = Object.keys(message.msg || {})[0] || '';
+        const msg = message.msg?.[method];
+
         fromAddress = message.sender;
         toAddress =
-          message.msg[Object.keys(message.msg)?.[0]]?.recipient ||
-          message.msg[Object.keys(message.msg)?.[0]]?.owner ||
-          message.msg[Object.keys(message.msg)?.[0]]?.spender ||
-          message.msg[Object.keys(message.msg)?.[0]]?.operator;
+          msg?.recipient || msg?.owner || msg?.spender || msg?.operator || '';
+
         if (method === MODE_EXECUTE_TRANSACTION.BURN) {
           toAddress = '';
         }

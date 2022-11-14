@@ -30,6 +30,8 @@ import * as util from 'util';
 import { TokenMarketsRepository } from '../repositories/token-markets.repository';
 import { In } from 'typeorm';
 import { InfluxDBClient } from '../utils/influxdb-client';
+import { HttpService } from '@nestjs/axios';
+import { lastValueFrom } from 'rxjs';
 
 @Processor('smart-contracts')
 export class SmartContractsProcessor {
@@ -50,6 +52,7 @@ export class SmartContractsProcessor {
     private deploymentRequestsRepository: DeploymentRequestsRepository,
     private smartContractCodeRepository: SmartContractCodeRepository,
     private redisUtil: RedisUtil,
+    private httpService: HttpService,
   ) {
     this.logger.log(
       '============== Constructor Smart Contracts Processor Service ==============',
@@ -228,6 +231,19 @@ export class SmartContractsProcessor {
     const tokens = await this.tokenMarketsRepository.find({
       where: { contract_address: In(lstAddress) },
     });
+
+    const holderResponse = await lastValueFrom(
+      this.httpService.post(
+        `${this.indexerUrl}${INDEXER_API.GET_HOLDER_INFO_CW20}`,
+        {
+          chainId: this.indexerChainId,
+          addresses: lstAddress,
+        },
+      ),
+    ).then((rs) => rs.data);
+
+    const listHolder = holderResponse?.data || [];
+
     for (let i = 0; i < listTokens.length; i++) {
       const contract_address = listTokens[i].contract_address;
       let contract = contracts.find(
@@ -275,19 +291,15 @@ export class SmartContractsProcessor {
         tokenInfo.description = contract.description || '';
 
         // get holder
-        const para = `${util.format(
-          INDEXER_API.GET_HOLDER_TOKEN,
-          this.indexerChainId,
-          contract_address,
-        )}`;
-        const holderResponse = await this._commonUtil.getDataAPI(
-          this.indexerUrl,
-          para,
+        const holderInfo = listHolder.find(
+          (f) => f.contract_address === contract_address,
         );
-        if (holderResponse) {
-          tokenInfo.current_holder = Number(holderResponse.data.resultCount);
-          // tokenInfo.holder_change_percentage_24h =
+        if (holderInfo) {
+          tokenInfo.current_holder = holderInfo.new_holders || 0;
+          tokenInfo.holder_change_percentage_24h =
+            holderInfo.change_percent || 0;
         }
+
         tokenMarkets.push(tokenInfo);
       }
     }
