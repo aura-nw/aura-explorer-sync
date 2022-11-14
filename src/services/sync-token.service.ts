@@ -108,7 +108,7 @@ export class SyncTokenService {
   @Cron('0 */2 * * * *')
   async syncCW20TokensPrice() {
     const numberCW20Tokens =
-      await this.tokenMarketsRepository.countCw20Tokens();
+      await this.tokenMarketsRepository.countCw20TokensHavingCoinId();
     const defaultTokens: string[] = ['aura-network', 'bitcoin'];
     const countData = numberCW20Tokens + defaultTokens.length;
 
@@ -125,7 +125,7 @@ export class SyncTokenService {
             i,
           );
 
-        const tokens = dataPage.map((i) => i.coin_id);
+        const tokens = dataPage?.map((i) => i.coin_id);
 
         if (i === pages - 1) {
           tokens.push(...defaultTokens);

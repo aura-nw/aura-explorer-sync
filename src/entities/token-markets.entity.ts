@@ -1,12 +1,12 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
-import { BaseEntity } from './base/base.entity';
+import { Column, Entity } from 'typeorm';
+import { BaseEntityIncrementId } from './base/base.entity';
 
 @Entity('token_markets')
-export class TokenMarkets extends BaseEntity {
-  @PrimaryColumn({ name: 'contract_address' })
+export class TokenMarkets extends BaseEntityIncrementId {
+  @Column({ name: 'contract_address' })
   contract_address: string;
 
-  @PrimaryColumn({ name: 'coin_id' })
+  @Column({ name: 'coin_id' })
   coin_id: string;
 
   @Column()
@@ -18,13 +18,19 @@ export class TokenMarkets extends BaseEntity {
   @Column()
   image: string;
 
-  @Column({ name: 'max_supply', default: 0 })
+  @Column({
+    name: 'max_supply',
+    type: 'decimal',
+    precision: 38,
+    scale: 6,
+    default: 0,
+  })
   max_supply: number;
 
   @Column({
     name: 'current_price',
     type: 'decimal',
-    precision: 30,
+    precision: 38,
     scale: 6,
     default: 0,
   })
@@ -32,18 +38,37 @@ export class TokenMarkets extends BaseEntity {
 
   @Column({
     name: 'price_change_percentage_24h',
-    type: 'decimal',
-    precision: 30,
-    scale: 6,
+    type: 'float',
     default: 0,
   })
   price_change_percentage_24h: number;
 
-  @Column({ name: 'total_volume', type: 'bigint', default: 0 })
+  @Column({
+    name: 'total_volume',
+    type: 'decimal',
+    precision: 38,
+    scale: 6,
+    default: 0,
+  })
   total_volume: number;
 
-  @Column({ name: 'circulating_supply', default: 0 })
+  @Column({
+    name: 'circulating_supply',
+    type: 'decimal',
+    precision: 38,
+    scale: 6,
+    default: 0,
+  })
   circulating_supply: number;
+
+  @Column({
+    name: 'circulating_market_cap',
+    type: 'decimal',
+    precision: 38,
+    scale: 6,
+    default: 0,
+  })
+  circulating_market_cap: number;
 
   @Column({ name: 'current_holder' })
   current_holder: number;

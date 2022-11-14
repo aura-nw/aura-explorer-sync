@@ -390,13 +390,17 @@ export class SyncDataHelpers {
     if (data.image) {
       coinInfo.image = data.image;
     }
-    coinInfo.current_price = data.current_price || 0;
+    coinInfo.current_price = Number(data.current_price?.toFixed(6)) || 0;
     coinInfo.price_change_percentage_24h =
-      data.price_change_percentage_24h || 0;
-    coinInfo.total_volume = data.total_volume || 0;
+      Number(data.price_change_percentage_24h?.toFixed(6)) || 0;
+    coinInfo.total_volume = Number(data.total_volume?.toFixed(6)) || 0;
     coinInfo.circulating_supply =
-      (data.circulating_supply || 0) * coinInfo.current_price;
-    coinInfo.max_supply = data.max_supply || 0;
+      Number(data.circulating_supply?.toFixed(6)) || 0;
+
+    const circulating_market_cap =
+      coinInfo.circulating_supply * coinInfo.current_price;
+    coinInfo.circulating_market_cap = Number(circulating_market_cap.toFixed(6));
+    coinInfo.max_supply = Number(data.max_supply.toFixed(6)) || 0;
 
     return coinInfo;
   }

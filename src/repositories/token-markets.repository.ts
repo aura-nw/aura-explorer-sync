@@ -17,10 +17,13 @@ export class TokenMarketsRepository extends BaseRepository<TokenMarkets> {
     );
   }
 
-  async countCw20Tokens() {
+  async countCw20TokensHavingCoinId() {
     const sqlSelect = `tm.contract_address, tm.coin_id`;
 
-    const queryBuilder = this.repos.createQueryBuilder('tm').select(sqlSelect);
+    const queryBuilder = this.repos
+      .createQueryBuilder('tm')
+      .select(sqlSelect)
+      .where("tm.coin_id <> '' ");
 
     return await queryBuilder.getCount();
   }
