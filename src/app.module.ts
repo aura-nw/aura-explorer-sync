@@ -15,9 +15,8 @@ import {
   SmartContract,
   SmartContractCode,
   SyncStatus,
-  SyncTransaction,
-  TokenContract,
   Transaction,
+  TokenContract,
   Validator,
 } from './entities';
 import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
@@ -35,7 +34,6 @@ import { SmartContractRepository } from './repositories/smart-contract.repositor
 import { SyncStatusRepository } from './repositories/sync-status.repository';
 import { TokenContractRepository } from './repositories/token-contract.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
-import { SyncTransactionRepository } from './repositories/sync-transaction.repository';
 import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
 import { SyncTaskService } from './services/sync-task.service';
@@ -56,13 +54,12 @@ const entities = [
   DelegatorReward,
   ProposalVote,
   SyncStatus,
-  Transaction,
   SmartContract,
   TokenContract,
   SmartContractCode,
   Cw20TokenOwner,
   TokenMarkets,
-  SyncTransaction,
+  Transaction,
 ];
 
 const repositories = [
@@ -75,13 +72,12 @@ const repositories = [
   DelegatorRewardRepository,
   ProposalVoteRepository,
   SyncStatusRepository,
-  TransactionRepository,
   SmartContractRepository,
   TokenContractRepository,
   SmartContractCodeRepository,
   Cw20TokenOwnerRepository,
   TokenMarketsRepository,
-  SyncTransactionRepository,
+  TransactionRepository,
 ];
 
 const services = [

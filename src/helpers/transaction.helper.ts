@@ -6,7 +6,7 @@ import {
   TRANSACTION_TYPE,
 } from 'src/common/constants/transaction-type.enum';
 import { CONST_CHAR } from '../common/constants/app.constant';
-import { SyncTransaction } from '../entities';
+import { Transaction } from '../entities';
 import { ENV_CONFIG } from '../shared/services/config.service';
 
 export class TransactionHelper {
@@ -115,7 +115,7 @@ export class TransactionHelper {
     const messages = transaction.tx_response.tx.body.messages;
     const events = transaction.tx_response.events;
 
-    const newTx = new SyncTransaction();
+    const newTx = new Transaction();
     const fee = transaction.tx_response.tx.auth_info.fee.amount[0];
     const txFee = fee
       ? TransactionHelper.formatAmount(fee[CONST_CHAR.AMOUNT])
