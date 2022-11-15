@@ -309,9 +309,7 @@ export class SmartContractsProcessor {
     }
 
     if (tokenMarkets.length > 0) {
-      await this.tokenMarketsRepository.insertOnDuplicate(tokenMarkets, [
-        'created_at',
-      ]);
+      await this.tokenMarketsRepository.upsert(tokenMarkets, ['id']);
     }
   }
 
