@@ -16,7 +16,6 @@ import {
   SmartContractCode,
   SyncStatus,
   Transaction,
-  TokenContract,
   Validator,
 } from './entities';
 import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
@@ -32,7 +31,6 @@ import { ProposalVoteRepository } from './repositories/proposal-vote.repository'
 import { SmartContractCodeRepository } from './repositories/smart-contract-code.repository';
 import { SmartContractRepository } from './repositories/smart-contract.repository';
 import { SyncStatusRepository } from './repositories/sync-status.repository';
-import { TokenContractRepository } from './repositories/token-contract.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
 import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
@@ -55,7 +53,6 @@ const entities = [
   ProposalVote,
   SyncStatus,
   SmartContract,
-  TokenContract,
   SmartContractCode,
   Cw20TokenOwner,
   TokenMarkets,
@@ -73,7 +70,6 @@ const repositories = [
   ProposalVoteRepository,
   SyncStatusRepository,
   SmartContractRepository,
-  TokenContractRepository,
   SmartContractCodeRepository,
   Cw20TokenOwnerRepository,
   TokenMarketsRepository,

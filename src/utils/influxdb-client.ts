@@ -19,7 +19,7 @@ export class InfluxDBClient {
     public url: string,
     public token: string,
   ) {
-    this.client = new InfluxDB({ url, token});
+    this.client = new InfluxDB({ url, token });
   }
 
   initQueryApi(): void {
@@ -302,6 +302,7 @@ export class InfluxDBClient {
         )
         .intField('total_volume', token.total_volume)
         .intField('circulating_supply', token.circulating_supply)
+        .intField('circulating_market_cap', token.circulating_market_cap)
         .intField('max_supply', token.max_supply)
 
         .intField('current_holder', token.current_holder)
