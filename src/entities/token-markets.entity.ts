@@ -78,4 +78,13 @@ export class TokenMarkets extends BaseEntityIncrementId {
 
   @Column({ type: 'text' })
   description: string;
+
+  @Column({
+    name: 'market_cap',
+    type: 'decimal',
+    precision: 38,
+    scale: 6,
+    default: 0,
+  })
+  market_cap: number;
 }
