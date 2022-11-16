@@ -2,24 +2,20 @@ import {
   CONST_CHAR,
   CONST_DELEGATE_TYPE,
   CONST_MSG_TYPE,
-  CONST_PROPOSAL_TYPE,
-  CONTRACT_TRANSACTION_EXECUTE_TYPE,
   CONTRACT_TYPE,
   SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
 import {
   Block,
+  TokenMarkets,
   Delegation,
   DelegatorReward,
   ProposalVote,
   SmartContract,
   SmartContractCode,
-  TokenContract,
-  Transaction,
   Validator,
 } from '../entities';
 import { ENV_CONFIG } from '../shared/services/config.service';
-import { Cw20TokenOwner } from '../entities/cw20-token-owner.entity';
 import { TokenCW20Dto } from '../dtos/token-cw20.dto';
 export class SyncDataHelpers {
   private static precision = ENV_CONFIG.CHAIN_INFO.PRECISION_DIV;
@@ -35,37 +31,6 @@ export class SyncDataHelpers {
     newBlock.round = blockData.block.last_commit.round;
     newBlock.json_data = JSON.stringify(blockData);
     return newBlock;
-  }
-
-  static makeTrxData(
-    txData: any,
-    fetchingBlockHeight: number,
-    txType: string,
-    txRawLogData: string,
-    time: any,
-    txContractAddress: string,
-  ) {
-    const newTx = new Transaction();
-    const fee = txData.tx_response.tx.auth_info.fee.amount[0];
-    const txFee = fee
-      ? (fee[CONST_CHAR.AMOUNT] / this.precision).toFixed(this.toDecimal)
-      : Number('0').toFixed(this.toDecimal);
-    // newTx.blockId = savedBlock.id;
-    newTx.code = txData.tx_response.code;
-    newTx.codespace = txData.tx_response.codespace;
-    newTx.data = txData.tx_response.code === 0 ? txData.tx_response.data : '';
-    newTx.gas_used = txData.tx_response.gas_used;
-    newTx.gas_wanted = txData.tx_response.gas_wanted;
-    newTx.height = fetchingBlockHeight;
-    newTx.info = txData.tx_response.info;
-    newTx.timestamp = time;
-    newTx.tx = JSON.stringify(txData.tx_response);
-    newTx.tx_hash = txData.tx_response.txhash;
-    newTx.type = txType;
-    newTx.fee = txFee;
-    newTx.messages = JSON.stringify(txData.tx_response.tx.body.messages);
-    newTx.contract_address = txContractAddress;
-    return newTx;
   }
 
   static makeTxRawLogData(txData: any) {
@@ -241,12 +206,15 @@ export class SyncDataHelpers {
           ),
         );
         if (attributes.length > 3) {
-          delegation.amount = (Number(
-            attributes[5].value.replace(
-              ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
-              '',
-            ),
-          ) * -1) / this.precision;
+          delegation.amount =
+            (Number(
+              attributes[5].value.replace(
+                ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
+                '',
+              ),
+            ) *
+              -1) /
+            this.precision;
         }
       }
     }
@@ -370,64 +338,10 @@ export class SyncDataHelpers {
     return newValidator;
   }
 
-  static makerCw20TokenData(item: any, marketingInfo: any, tokenInfo: any) {
-    //sync data token
-    const tokenContract = new TokenContract();
-    tokenContract.type = CONTRACT_TYPE.CW20;
-    tokenContract.contract_address = item.contract_address;
-    tokenContract.created_at = new Date(item.createdAt);
-    tokenContract.name = '';
-    tokenContract.symbol = '';
-    tokenContract.decimals = 0;
-    if (item?.asset_info && item.asset_info?.data) {
-      tokenContract.name = item.asset_info.data.name;
-      tokenContract.symbol = item.asset_info.data.symbol;
-      tokenContract.decimals = Number(item.asset_info.data.decimals);
-    }
-    tokenContract.description = '';
-    tokenContract.image = '';
-    if (marketingInfo?.data) {
-      tokenContract.description = marketingInfo.data?.description ? marketingInfo.data.description : '';
-      tokenContract.image = marketingInfo.data?.logo?.url ? marketingInfo.data.logo.url : '';
-    }
-    tokenContract.num_tokens = 0;
-    tokenContract.coin_id = '';
-    if (tokenInfo) {
-      tokenContract.coin_id = tokenInfo.coinId;
-      tokenContract.max_total_supply = tokenInfo.max_supply;
-      tokenContract.price = tokenInfo.current_price;
-      tokenContract.price_change_percentage_24h = tokenInfo.price_change_percentage_24h;
-      tokenContract.volume_24h = tokenInfo.total_volume;
-      tokenContract.circulating_market_cap = tokenInfo.current_price * tokenInfo.circulating_supply;
-      tokenContract.fully_diluted_market_cap = tokenInfo.current_price * tokenInfo.max_supply;
-      tokenContract.holders = tokenInfo.current_holder;
-      tokenContract.holders_change_percentage_24h = tokenInfo.percent_holder;
-    }
-    //sync data token owner
-    const cw20TokenOwner = new Cw20TokenOwner();
-    cw20TokenOwner.contract_address = item.contract_address;
-    cw20TokenOwner.owner = item.owner;
-    cw20TokenOwner.balance = Number(item.balance);
-    cw20TokenOwner.percent_hold = item.percent_hold;
-
-    return [tokenContract, cw20TokenOwner];
-  }
-
-  static makeTokenCW721Data(contract: any, tokenInfo: any, numTokenInfo: any) {
-    if (tokenInfo && tokenInfo?.data) {
-      contract.token_name = tokenInfo.data.name;
-      contract.token_symbol = tokenInfo.data.symbol;
-    }
-    if (numTokenInfo && numTokenInfo?.data) {
-      contract.num_tokens = Number(numTokenInfo.data.count);
-    }
-    return contract;
-  }
-  
   /**
    * Create TokenCW20 Dto
-   * @param data 
-   * @returns 
+   * @param data
+   * @returns
    */
   static makeTokenCW20Data(data: any): TokenCW20Dto {
     const tokenDto = new TokenCW20Dto();
@@ -457,5 +371,37 @@ export class SyncDataHelpers {
     smartContractCode.creator = message.sender;
 
     return smartContractCode;
+  }
+
+  static updateTokenMarketsData(
+    currentData: TokenMarkets,
+    data: any,
+  ): TokenMarkets {
+    const coinInfo = { ...currentData } as TokenMarkets;
+
+    if (!currentData) {
+      coinInfo.coin_id = data.id;
+      coinInfo.contract_address = '';
+      coinInfo.name = data.name;
+      coinInfo.symbol = data.symbol;
+      coinInfo.image = data.image;
+    }
+
+    if (data.image) {
+      coinInfo.image = data.image;
+    }
+    coinInfo.current_price = Number(data.current_price?.toFixed(6)) || 0;
+    coinInfo.price_change_percentage_24h =
+      Number(data.price_change_percentage_24h?.toFixed(6)) || 0;
+    coinInfo.total_volume = Number(data.total_volume?.toFixed(6)) || 0;
+    coinInfo.circulating_supply =
+      Number(data.circulating_supply?.toFixed(6)) || 0;
+
+    const circulating_market_cap =
+      coinInfo.circulating_supply * coinInfo.current_price;
+    coinInfo.circulating_market_cap = Number(circulating_market_cap.toFixed(6));
+    coinInfo.max_supply = Number(data.max_supply.toFixed(6)) || 0;
+
+    return coinInfo;
   }
 }
