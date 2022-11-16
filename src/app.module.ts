@@ -4,7 +4,20 @@ import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
 import { SmartContractsProcessor } from './processor/smart-contracts.processor';
-import { Block, BlockSyncError, Delegation, DelegatorReward, MissedBlock, ProposalVote, SmartContract, SmartContractCode, SyncStatus, TokenContract, Transaction, Validator } from './entities';
+import {
+  Block,
+  BlockSyncError,
+  TokenMarkets,
+  Delegation,
+  DelegatorReward,
+  MissedBlock,
+  ProposalVote,
+  SmartContract,
+  SmartContractCode,
+  SyncStatus,
+  Transaction,
+  Validator,
+} from './entities';
 import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
 import { DeploymentRequests } from './entities/deployment-requests.entity';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
@@ -18,14 +31,15 @@ import { ProposalVoteRepository } from './repositories/proposal-vote.repository'
 import { SmartContractCodeRepository } from './repositories/smart-contract-code.repository';
 import { SmartContractRepository } from './repositories/smart-contract.repository';
 import { SyncStatusRepository } from './repositories/sync-status.repository';
-import { TokenContractRepository } from './repositories/token-contract.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
 import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
 import { SyncTaskService } from './services/sync-task.service';
 import { SyncTokenService } from './services/sync-token.service';
+import { SyncTransactionService } from './services/sync-transaction.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
+import { TokenMarketsRepository } from './repositories/token-markets.repository';
 
 const controllers = [];
 const entities = [
@@ -38,11 +52,11 @@ const entities = [
   DelegatorReward,
   ProposalVote,
   SyncStatus,
-  Transaction,
   SmartContract,
-  TokenContract,
   SmartContractCode,
-  Cw20TokenOwner
+  Cw20TokenOwner,
+  TokenMarkets,
+  Transaction,
 ];
 
 const repositories = [
@@ -55,22 +69,21 @@ const repositories = [
   DelegatorRewardRepository,
   ProposalVoteRepository,
   SyncStatusRepository,
-  TransactionRepository,
   SmartContractRepository,
-  TokenContractRepository,
   SmartContractCodeRepository,
-  Cw20TokenOwnerRepository
+  Cw20TokenOwnerRepository,
+  TokenMarketsRepository,
+  TransactionRepository,
 ];
 
 const services = [
   SyncTaskService,
   SyncContractCodeService,
-  SyncTokenService
+  SyncTokenService,
+  SyncTransactionService,
 ];
 
-const processors = [
-  SmartContractsProcessor
-];
+const processors = [SmartContractsProcessor];
 
 @Module({
   imports: [
@@ -91,10 +104,10 @@ const processors = [
       // prefix: 'EXPLORER_SYNC',
       defaultJobOptions: {
         removeOnComplete: true,
-      }
+      },
     }),
     BullModule.registerQueue({
-      name: 'smart-contracts'
+      name: 'smart-contracts',
     }),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
@@ -105,15 +118,8 @@ const processors = [
       inject: [ConfigService],
     }),
   ],
-  exports: [
-    BullModule,
-    ...processors,
-  ],
+  exports: [BullModule, ...processors],
   controllers: [...controllers],
-  providers: [
-    ...repositories,
-    ...services,
-    ...processors,
-  ],
+  providers: [...repositories, ...services, ...processors],
 })
-export class AppModule { }
+export class AppModule {}
