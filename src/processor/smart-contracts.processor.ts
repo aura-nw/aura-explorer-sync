@@ -369,6 +369,7 @@ export class SmartContractsProcessor {
 
         this.logger.log(`============== Write data to Influxdb ==============`);
         await this.influxDbClient.writeBlockTokenPriceAndVolume(coinMarkets);
+        this.logger.log(`============== Write data to Influxdb  successfully ==============`);
       }
     } catch (err) {
       this.logger.log(`sync-price-volume has error: ${err.message}`, err.stack);

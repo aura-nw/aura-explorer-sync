@@ -69,10 +69,8 @@ export class SyncContractCodeService {
             case CONTRACT_CODE_STATUS.COMPLETED:
               item.result = CONTRACT_CODE_RESULT.CORRECT;
               //get contracts with code id
-              if (
-                item.type === CONTRACT_TYPE.CW721 ||
-                item.type === CONTRACT_TYPE.CW20
-              ) {
+              const contractTypes: string[] = [CONTRACT_TYPE.CW721, CONTRACT_TYPE.CW20, CONTRACT_TYPE.CW4973];
+              if (contractTypes.includes(item.type)) {
                 const contractDB =
                   await this.smartContractRepository.findByCondition({
                     code_id: item.code_id,
@@ -86,7 +84,7 @@ export class SyncContractCodeService {
                       this.api,
                       contract.contract_address,
                       contract,
-                      item.type,
+                      CONTRACT_TYPE[item.type],
                     );
 
                     contracts.push(contract);
