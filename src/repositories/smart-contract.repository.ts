@@ -63,8 +63,8 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
     return res;
   }
 
-  async getCW721TokensRegisteredType() {
-    const sqlSelect = `sc.contract_address as contract_address`;
+  async getContractCodeByStatus(status: CONTRACT_CODE_RESULT) {
+    const sqlSelect = `sc.contract_address, scc.result, scc.type`;
 
     const queryBuilder = this.repos
       .createQueryBuilder('sc')
@@ -72,22 +72,7 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
       .innerJoin(
         'smart_contract_codes',
         'scc',
-        `sc.code_id = scc.code_id AND scc.type = '${CONTRACT_TYPE.CW721}' AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}'`,
-      );
-
-    return await queryBuilder.getRawMany();
-  }
-
-  async getCW20TokensRegisteredType() {
-    const sqlSelect = `sc.contract_address as contract_address`;
-
-    const queryBuilder = this.repos
-      .createQueryBuilder('sc')
-      .select(sqlSelect)
-      .innerJoin(
-        'smart_contract_codes',
-        'scc',
-        `sc.code_id = scc.code_id AND scc.type = '${CONTRACT_TYPE.CW20}' AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}'`,
+        `sc.code_id = scc.code_id AND scc.result = '${status}'`,
       );
 
     return await queryBuilder.getRawMany();

@@ -400,8 +400,8 @@ export class SyncDataHelpers {
     const circulating_market_cap =
       coinInfo.circulating_supply * coinInfo.current_price;
     coinInfo.circulating_market_cap = Number(circulating_market_cap.toFixed(6));
-    coinInfo.max_supply = Number(data.max_supply.toFixed(6)) || 0;
-    coinInfo.market_cap = Number(data.market_cap.toFixed(6)) || 0;
+    coinInfo.max_supply = Number(data.max_supply?.toFixed(6)) || 0;
+    coinInfo.market_cap = Number(data.market_cap?.toFixed(6)) || 0;
 
     return coinInfo;
   }
