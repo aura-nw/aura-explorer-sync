@@ -5,7 +5,6 @@ import {
   WriteApi,
 } from '@influxdata/influxdb-client';
 import { CONTRACT_TYPE } from '../common/constants/app.constant';
-import { TokenCW20Dto } from '../dtos/token-cw20.dto';
 import { TokenMarkets } from '../entities';
 
 export class InfluxDBClient {
@@ -304,7 +303,7 @@ export class InfluxDBClient {
         .intField('circulating_supply', token.circulating_supply)
         .intField('circulating_market_cap', token.circulating_market_cap)
         .intField('max_supply', token.max_supply)
-
+        .intField('market_cap', token.market_cap)
         .intField('current_holder', token.current_holder)
         .intField('percent_hold', token.holder_change_percentage_24h)
         .timestamp(this.convertDate(token.updated_at));
