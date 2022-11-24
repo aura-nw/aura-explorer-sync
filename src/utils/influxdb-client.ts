@@ -291,6 +291,7 @@ export class InfluxDBClient {
     const points: Array<Point> = [];
     tokens.forEach((token) => {
       const point = new Point('token_cw20_measurement')
+        .tag("token_id", token.coin_id)
         .stringField('coinId', token.coin_id)
         .stringField('type', CONTRACT_TYPE.CW20)
         .stringField('last_updated', token.updated_at)
