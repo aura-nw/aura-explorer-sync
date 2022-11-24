@@ -177,8 +177,8 @@ export class CommonUtil {
         if (numTokenInfo?.data) {
           smartContract.num_tokens = Number(numTokenInfo.data.count);
         }
-        if(minter?.data){
-          smartContract.minter_address = minter?.data?.minter;
+        if (minter?.data) {
+          smartContract.minter_address = minter.data.minter;
         }
       }
 
