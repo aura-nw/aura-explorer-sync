@@ -59,13 +59,13 @@ export class SyncTokenService {
       if (contractCodes.length > 0) {
 
         //Add queue CW20
-        this.AddContractToQueue(contractCodes, CONTRACT_TYPE.CW20);
+        this.addContractToQueue(contractCodes, CONTRACT_TYPE.CW20);
 
         //Add queue CW721
-        this.AddContractToQueue(contractCodes, CONTRACT_TYPE.CW721);
+        this.addContractToQueue(contractCodes, CONTRACT_TYPE.CW721);
 
         //Add queue CW4973
-        this.AddContractToQueue(contractCodes, CONTRACT_TYPE.CW4973);
+        this.addContractToQueue(contractCodes, CONTRACT_TYPE.CW4973);
       }
 
       this.isTokenContract = false;
@@ -167,7 +167,7 @@ export class SyncTokenService {
    * @param data 
    * @param type 
    */
-  AddContractToQueue(data: Array<any>, type: CONTRACT_TYPE) {
+  addContractToQueue(data: Array<any>, type: CONTRACT_TYPE) {
     const tokens = data?.filter(f => f.type === type);
     if (tokens?.length > 0) {
       let lstAddress = tokens?.map(m => m.contract_address);

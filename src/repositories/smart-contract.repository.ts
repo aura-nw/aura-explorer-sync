@@ -73,7 +73,9 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
         'smart_contract_codes',
         'scc',
         `sc.code_id = scc.code_id AND scc.result = '${status}'`,
-      );
+      )
+      .where("sc.LENGTH(`token_symbol`) = 0 ")
+      .orWhere('sc.LENGTH(`coin_id`) = 0');
 
     return await queryBuilder.getRawMany();
   }
