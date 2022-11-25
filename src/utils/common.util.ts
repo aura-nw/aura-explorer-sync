@@ -20,7 +20,7 @@ import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 @Injectable()
 export class CommonUtil {
   private readonly _logger = new Logger(CommonUtil.name);
-  constructor(private httpService: HttpService) { }
+  constructor(private httpService: HttpService) {}
 
   makeFileObjects(img) {
     // You can create File objects from a Buffer of binary data
@@ -93,11 +93,11 @@ export class CommonUtil {
     return lastValueFrom(
       this.httpService.get(
         api +
-        `${util.format(
-          NODE_API.CONTRACT_INFO,
-          contract_address,
-          base64String,
-        )}`,
+          `${util.format(
+            NODE_API.CONTRACT_INFO,
+            contract_address,
+            base64String,
+          )}`,
         {
           timeout: 30000,
         },
@@ -113,6 +113,7 @@ export class CommonUtil {
   ): Promise<any> {
     try {
       const base64Encode = 'base64';
+      let changed = false;
       if (type === CONTRACT_TYPE.CW20) {
         const tokenInfoQuery =
           Buffer.from(`{ "token_info": {} }`).toString(base64Encode);
@@ -135,10 +136,12 @@ export class CommonUtil {
         if (marketingInfo?.data) {
           smartContract.image = marketingInfo.data?.logo?.url ?? '';
           smartContract.description = marketingInfo.data?.description ?? '';
+          changed = true;
         }
         if (tokenInfo?.data) {
           smartContract.token_name = tokenInfo.data.name;
           smartContract.token_symbol = tokenInfo.data.symbol;
+          changed = true;
         }
       } else {
         const base64RequestToken = Buffer.from(
@@ -148,8 +151,9 @@ export class CommonUtil {
         const base64RequestNumToken =
           Buffer.from(`{ "num_tokens": {} }`).toString(base64Encode);
 
-        const isCW4973 = (type === CONTRACT_TYPE.CW4973) ? true : false;
-        const base64Minter = Buffer.from(`{ "minter": {} }`).toString(base64Encode);
+        const isCW4973 = type === CONTRACT_TYPE.CW4973 ? true : false;
+        const base64Minter =
+          Buffer.from(`{ "minter": {} }`).toString(base64Encode);
 
         const [tokenInfo, numTokenInfo, minter] = await Promise.all([
           this.getDataContractFromBase64Query(
@@ -162,27 +166,31 @@ export class CommonUtil {
             contractAddress,
             base64RequestNumToken,
           ),
-          (isCW4973) ?
-            this.getDataContractFromBase64Query(
-              api,
-              contractAddress,
-              base64Minter,
-            ) : null
+          isCW4973
+            ? this.getDataContractFromBase64Query(
+                api,
+                contractAddress,
+                base64Minter,
+              )
+            : null,
         ]);
 
         if (tokenInfo?.data) {
           smartContract.token_name = tokenInfo.data.name;
           smartContract.token_symbol = tokenInfo.data.symbol;
+          changed = true;
         }
         if (numTokenInfo?.data) {
           smartContract.num_tokens = Number(numTokenInfo.data.count);
+          changed = true;
         }
         if (minter?.data) {
           smartContract.minter_address = minter.data.minter;
+          changed = true;
         }
       }
 
-      return smartContract;
+      return { updatedSmartContract: smartContract, changed };
     } catch (err) {
       this._logger.log(
         `${CommonUtil.name} call ${this.queryMoreInfoFromCosmwasm.name} method has error: ${err.message}`,

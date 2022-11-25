@@ -4,7 +4,7 @@ import {
   OnQueueError,
   OnQueueFailed,
   Process,
-  Processor
+  Processor,
 } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
@@ -17,7 +17,7 @@ import {
   INDEXER_API,
   MAINNET_UPLOAD_STATUS,
   REDIS_KEY,
-  SMART_CONTRACT_VERIFICATION
+  SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
 import { SmartContract, TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -216,12 +216,6 @@ export class SmartContractsProcessor {
 
     if (lstAddress?.length === 0) return;
 
-    await this.redisUtil.connect();
-    const coingeckoCoins = await this.redisUtil.getValue(
-      REDIS_KEY.COINGECKO_COINS,
-    );
-    const coinList = JSON.parse(coingeckoCoins);
-    const platform = ENV_CONFIG.COINGECKO.COINGEKO_PLATFORM;
     const smartContracts = [];
     const tokenMarkets = [];
 
@@ -231,82 +225,42 @@ export class SmartContractsProcessor {
       }),
       this.tokenMarketsRepository.find({
         where: { contract_address: In(lstAddress) },
-      })
-    ])
-
-    const holderResponse = await lastValueFrom(
-      this.httpService.post(
-        `${this.indexerUrl}${INDEXER_API.GET_HOLDER_INFO_CW20}`,
-        {
-          chainId: this.indexerChainId,
-          addresses: lstAddress,
-        },
-      ),
-    ).then((rs) => rs.data);
-
-    const listHolder = holderResponse?.data || [];
+      }),
+    ]);
 
     for (let i = 0; i < lstAddress.length; i++) {
       const contract_address = lstAddress[i];
       let contract = contracts.find(
         (m) => m.contract_address === contract_address,
       );
-      let hasUpdate = false;
 
       if (!contract.token_name || !contract.num_tokens) {
-        contract = await this._commonUtil.queryMoreInfoFromCosmwasm(
-          this.api,
-          contract_address,
-          contract,
-          type,
-        );
-        hasUpdate = true;
-      }
-
-      // sync coin id from coingecko
-      if (!contract.coin_id) {
-        const coinInfo = coinList.find(
-          (f) => f.platforms?.[`${platform}`] === contract.contract_address,
-        );
-        if (coinInfo) {
-          contract.coin_id = coinInfo.id;
-          hasUpdate = true;
+        const { updatedSmartContract, changed } =
+          await this._commonUtil.queryMoreInfoFromCosmwasm(
+            this.api,
+            contract_address,
+            contract,
+            type,
+          );
+        if (changed) {
+          contract = updatedSmartContract;
+          smartContracts.push(contract);
         }
-      }
-
-      if (hasUpdate) {
-        smartContracts.push(contract);
       }
 
       if (type === CONTRACT_TYPE.CW20) {
-        let tokenInfo =
+        const tokenInfo =
           tokens.find((m) => m.contract_address === contract_address) ||
-          ({} as TokenMarkets);
+          new TokenMarkets();
 
-        if (!tokenInfo) {
-          tokenInfo = new TokenMarkets();
-        }
-
-        tokenInfo.coin_id = contract.coin_id || '';
+        tokenInfo.coin_id = tokenInfo.coin_id || '';
         tokenInfo.contract_address = contract.contract_address;
         tokenInfo.name = contract.token_name || '';
         tokenInfo.symbol = contract.token_symbol || '';
+        tokenInfo.description = contract.description || '';
         if (contract.image) {
           tokenInfo.image = contract.image;
         }
-
-        tokenInfo.description = contract.description || '';
-
-        // get holder
-        const holderInfo = listHolder.find(
-          (f) => f.contract_address === contract_address,
-        );
-        if (holderInfo) {
-          tokenInfo.current_holder = holderInfo.new_holders || 0;
-          tokenInfo.holder_change_percentage_24h =
-            holderInfo.change_percent || 0;
-        }
-
         tokenMarkets.push(tokenInfo);
       }
     }
@@ -362,15 +316,15 @@ export class SmartContractsProcessor {
         this._commonUtil.getDataAPI(coingecko.API, para),
         this.tokenMarketsRepository.find({
           where: {
-            coin_id: In(listTokens)
-          }
-        })
+            coin_id: In(listTokens),
+          },
+        }),
       ]);
 
       if (response) {
         for (let index = 0; index < response.length; index++) {
           const data = response[index];
-          let tokenInfo = tokenInfos?.find(f => f.coin_id === data.id);
+          let tokenInfo = tokenInfos?.find((f) => f.coin_id === data.id);
           tokenInfo = SyncDataHelpers.updateTokenMarketsData(tokenInfo, data);
           coinMarkets.push(tokenInfo);
         }
@@ -380,7 +334,9 @@ export class SmartContractsProcessor {
 
         this.logger.log(`============== Write data to Influxdb ==============`);
         await this.influxDbClient.writeBlockTokenPriceAndVolume(coinMarkets);
-        this.logger.log(`============== Write data to Influxdb  successfully ==============`);
+        this.logger.log(
+          `============== Write data to Influxdb  successfully ==============`,
+        );
       }
     } catch (err) {
       this.logger.log(`sync-price-volume has error: ${err.message}`, err.stack);
@@ -389,6 +345,41 @@ export class SmartContractsProcessor {
       if (errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT') {
         this.connectInfluxdb();
       }
+    }
+  }
+
+  @Process('sync-coin-id')
+  async handleSyncCoinId(job: Job) {
+    try {
+      this.logger.log(
+        `============== sync-coin-id from coingecko start ==============`,
+      );
+      this.logger.log(job.data);
+      const tokens = job.data.tokens;
+
+      await this.redisUtil.connect();
+      const coingeckoCoins = await this.redisUtil.getValue(
+        REDIS_KEY.COINGECKO_COINS,
+      );
+      const coinList = JSON.parse(coingeckoCoins);
+      const platform = ENV_CONFIG.COINGECKO.COINGEKO_PLATFORM;
+      const updatingTokens: TokenMarkets[] = [];
+
+      tokens.forEach((item: TokenMarkets) => {
+        const coinInfo = coinList.find(
+          (f) => f.platforms?.[`${platform}`] === item.contract_address,
+        );
+        if (coinInfo) {
+          item.coin_id = coinInfo.id;
+          updatingTokens.push(item);
+        }
+      });
+
+      if (updatingTokens.length > 0) {
+        await this.tokenMarketsRepository.update(updatingTokens);
+      }
+    } catch (err) {
+      this.logger.log(`sync-coin-id has error: ${err.message}`, err.stack);
     }
   }
 

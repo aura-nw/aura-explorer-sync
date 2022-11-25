@@ -70,12 +70,6 @@ export class TokenMarkets extends BaseEntityIncrementId {
   })
   circulating_market_cap: number;
 
-  @Column({ name: 'current_holder' })
-  current_holder: number;
-
-  @Column({ name: 'holder_change_percentage_24h', type: 'float', default: 0 })
-  holder_change_percentage_24h;
-
   @Column({ type: 'text' })
   description: string;
 

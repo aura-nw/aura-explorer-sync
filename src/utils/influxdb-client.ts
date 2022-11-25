@@ -294,18 +294,16 @@ export class InfluxDBClient {
         .stringField('coinId', token.coin_id)
         .stringField('type', CONTRACT_TYPE.CW20)
         .stringField('last_updated', token.updated_at)
-        .intField('current_price', token.current_price)
-        .intField(
+        .floatField('current_price', token.current_price)
+        .floatField(
           'price_change_percentage_24h',
           token.price_change_percentage_24h,
         )
-        .intField('total_volume', token.total_volume)
-        .intField('circulating_supply', token.circulating_supply)
-        .intField('circulating_market_cap', token.circulating_market_cap)
-        .intField('max_supply', token.max_supply)
-        .intField('market_cap', token.market_cap)
-        .intField('current_holder', token.current_holder)
-        .intField('percent_hold', token.holder_change_percentage_24h)
+        .floatField('total_volume', token.total_volume)
+        .floatField('circulating_supply', token.circulating_supply)
+        .floatField('circulating_market_cap', token.circulating_market_cap)
+        .floatField('max_supply', token.max_supply)
+        .floatField('market_cap', token.market_cap)
         .timestamp(this.convertDate(token.updated_at));
       points.push(point);
     });

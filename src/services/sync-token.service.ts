@@ -14,8 +14,9 @@ import { TokenMarketsRepository } from '../repositories/token-markets.repository
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
-
 import { RedisUtil } from '../utils/redis.util';
+import { Equal, In } from 'typeorm';
+import { TokenMarkets } from '../entities';
 
 @Injectable()
 export class SyncTokenService {
@@ -39,6 +40,7 @@ export class SyncTokenService {
     (async () => {
       await this.syncTokenIds();
       await this.syncCW20TokensPrice();
+      await this.syncCW20Token();
     })();
   }
 
@@ -54,10 +56,11 @@ export class SyncTokenService {
     try {
       this.isTokenContract = true;
       const contractCodes =
-        await this.smartContractRepository.getContractCodeByStatus(CONTRACT_CODE_RESULT.CORRECT);
+        await this.smartContractRepository.getContractCodeByStatus(
+          CONTRACT_CODE_RESULT.CORRECT,
+        );
 
       if (contractCodes.length > 0) {
-
         //Add queue CW20
         this.addContractToQueue(contractCodes, CONTRACT_TYPE.CW20);
 
@@ -97,20 +100,19 @@ export class SyncTokenService {
 
       try {
         // Get data CW20 by paging
-        const dataPage =
+        const dataHavingCoinId =
           await this.tokenMarketsRepository.getCw20TokenMarketsHavingCoinId(
             limit,
             i,
           );
 
-        const tokens = dataPage?.map((i) => i.coin_id);
-
+        const tokensHavingCoinId = dataHavingCoinId?.map((i) => i.coin_id);
         if (i === pages - 1) {
-          tokens.push(...defaultTokens);
+          tokensHavingCoinId.push(...defaultTokens);
         }
-        if (tokens.length > 0) {
+        if (tokensHavingCoinId.length > 0) {
           this.contractQueue.add('sync-price-volume', {
-            listTokens: tokens,
+            listTokens: tokensHavingCoinId,
           });
         }
       } catch (err) {
@@ -151,6 +153,17 @@ export class SyncTokenService {
         await this.redisUtil.setValue(REDIS_KEY.COINGECKO_COINS, list);
       }
 
+      // handle sync-coin-id
+      const tokenNoCoinIds = await this.tokenMarketsRepository.find({
+        where: { coin_id: Equal('') },
+      });
+
+      if (tokenNoCoinIds.length > 0) {
+        this.contractQueue.add('sync-coin-id', {
+          tokens: tokenNoCoinIds,
+        });
+      }
+
       this.isSyncTokenIds = false;
     } catch (error) {
       this._logger.error(
@@ -162,22 +175,64 @@ export class SyncTokenService {
     }
   }
 
+  async syncCW20Token() {
+    this._logger.log(null, 'syncCW20Token start...');
+    console.log('----------------------------------------------------->');
+    try {
+      const cw20Info = await this.smartContractRepository.getCW20Info();
+      const listAddress = cw20Info.map((i) => i.contract_address);
+      const tokens = await this.tokenMarketsRepository.find({
+        where: { contract_address: In(listAddress) },
+      });
+      const insetingTokens: TokenMarkets[] = [];
+      cw20Info.forEach((item) => {
+        const existing = tokens.find(
+          (f) => f.contract_address === item.contract_address,
+        );
+        if (!existing) {
+          const tokenInfo = new TokenMarkets();
+          tokenInfo.coin_id = '';
+          tokenInfo.contract_address = item.contract_address;
+          tokenInfo.name = item.token_name || '';
+          tokenInfo.symbol = item.token_symbol || '';
+          tokenInfo.description = item.description || '';
+          tokenInfo.image = item.image || '';
+          insetingTokens.push(tokenInfo);
+        }
+      });
+      if (insetingTokens.length > 0) {
+        await this.tokenMarketsRepository.update(insetingTokens);
+      }
+    } catch (error) {
+      this._logger.error(
+        `syncCW20Token was error, ${error.name}: ${error.message}`,
+      );
+      this._logger.error(`${error.stack}`);
+
+      throw error;
+    }
+  }
+
   /**
    * Add contract to queue
-   * @param data 
-   * @param type 
+   * @param data
+   * @param type
    */
   addContractToQueue(data: Array<any>, type: CONTRACT_TYPE) {
-    const tokens = data?.filter(f => f.type === type);
+    const tokens = data?.filter((f) => f.type === type);
     if (tokens?.length > 0) {
-      let lstAddress = tokens?.map(m => m.contract_address);
-      this.contractQueue.add('sync-token', {
-        lstAddress,
-        type,
-      }, {
-        removeOnComplete: true,
-        removeOnFail: true
-      });
+      const lstAddress = tokens?.map((m) => m.contract_address);
+      this.contractQueue.add(
+        'sync-token',
+        {
+          lstAddress,
+          type,
+        },
+        {
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      );
     }
   }
 }
