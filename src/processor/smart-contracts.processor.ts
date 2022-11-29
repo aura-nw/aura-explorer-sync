@@ -233,11 +233,10 @@ export class SmartContractsProcessor {
     });
 
     const holderResponse = await lastValueFrom(
-      this.httpService.post(
+      this.httpService.get(
         `${this.indexerUrl}${INDEXER_API.GET_HOLDER_INFO_CW20}`,
         {
-          chainId: this.indexerChainId,
-          addresses: lstAddress,
+          params: { chainId: this.indexerChainId, addresses: lstAddress },
         },
       ),
     ).then((rs) => rs.data);
