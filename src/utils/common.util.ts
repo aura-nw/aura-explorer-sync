@@ -138,6 +138,7 @@ export class CommonUtil {
         if (tokenInfo?.data) {
           smartContract.token_name = tokenInfo.data.name;
           smartContract.token_symbol = tokenInfo.data.symbol;
+          smartContract.decimals = tokenInfo.data.decimals || 0;
         }
       } else {
         const base64RequestToken = Buffer.from(
