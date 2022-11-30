@@ -5,6 +5,7 @@ import { Queue } from 'bull';
 
 import {
   COINGECKO_API,
+  CONTRACT_CODE_RESULT,
   CONTRACT_TYPE,
   REDIS_KEY,
 } from '../common/constants/app.constant';
@@ -13,15 +14,15 @@ import { TokenMarketsRepository } from '../repositories/token-markets.repository
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
-
 import { RedisUtil } from '../utils/redis.util';
+import { Equal, In } from 'typeorm';
+import { TokenMarkets } from '../entities';
 
 @Injectable()
 export class SyncTokenService {
   private readonly _logger = new Logger(SyncTokenService.name);
-  private isSyncCw20Tokens = false;
   private isSyncTokenIds = false;
-  private isSyncCw721Tokens = false;
+  private isTokenContract = false;
 
   constructor(
     private _commonUtil: CommonUtil,
@@ -39,64 +40,41 @@ export class SyncTokenService {
     (async () => {
       await this.syncTokenIds();
       await this.syncCW20TokensPrice();
+      await this.syncCW20Token();
     })();
   }
 
   @Interval(10000)
-  async syncCw721Tokens() {
+  async syncTokenContract() {
     // check status
-    if (this.isSyncCw721Tokens) {
-      this._logger.log(null, 'already syncing cw721 tokens... wait');
+    if (this.isTokenContract) {
+      this._logger.log(null, 'already syncing tokens... waitting');
       return;
     } else {
-      this._logger.log(null, 'fetching data cw721 tokens...');
+      this._logger.log(null, 'fetching data tokens...');
     }
     try {
-      this.isSyncCw721Tokens = true;
-      const listTokens =
-        await this.smartContractRepository.getCW721TokensRegisteredType();
-      this.contractQueue.add('sync-token', {
-        listTokens,
-        type: CONTRACT_TYPE.CW721,
-      });
+      this.isTokenContract = true;
+      const contractCodes =
+        await this.smartContractRepository.getContractCodeByStatus(
+          CONTRACT_CODE_RESULT.CORRECT,
+        );
 
-      this.isSyncCw721Tokens = false;
-    } catch (error) {
-      this._logger.error(
-        `Sync cw721 tokens was error, ${error.name}: ${error.message}`,
-      );
-      this._logger.error(`${error.stack}`);
-      this.isSyncCw721Tokens = false;
-      throw error;
-    }
-  }
+      if (contractCodes.length > 0) {
+        //Add queue CW20
+        this.addContractToQueue(contractCodes, CONTRACT_TYPE.CW20);
 
-  @Interval(10000)
-  async syncCw20Tokens() {
-    // check status
-    if (this.isSyncCw20Tokens) {
-      this._logger.log(null, 'already syncing cw20 tokens... wait');
-      return;
-    } else {
-      this._logger.log(null, 'fetching data cw20 tokens...');
-    }
-    try {
-      this.isSyncCw20Tokens = true;
-      const listTokens =
-        await this.smartContractRepository.getCW20TokensRegisteredType();
+        //Add queue CW721
+        this.addContractToQueue(contractCodes, CONTRACT_TYPE.CW721);
+      }
 
-      this.contractQueue.add('sync-token', {
-        listTokens,
-        type: CONTRACT_TYPE.CW20,
-      });
-
-      this.isSyncCw20Tokens = false;
+      this.isTokenContract = false;
     } catch (error) {
       this._logger.error(
         `Sync cw20 tokens was error, ${error.name}: ${error.message}`,
       );
       this._logger.error(`${error.stack}`);
-      this.isSyncCw20Tokens = false;
+      this.isTokenContract = false;
       throw error;
     }
   }
@@ -119,21 +97,27 @@ export class SyncTokenService {
 
       try {
         // Get data CW20 by paging
-        const dataPage =
+        const dataHavingCoinId =
           await this.tokenMarketsRepository.getCw20TokenMarketsHavingCoinId(
             limit,
             i,
           );
 
-        const tokens = dataPage?.map((i) => i.coin_id);
-
+        const tokensHavingCoinId = dataHavingCoinId?.map((i) => i.coin_id);
         if (i === pages - 1) {
-          tokens.push(...defaultTokens);
+          tokensHavingCoinId.push(...defaultTokens);
         }
-        if (tokens.length > 0) {
-          this.contractQueue.add('sync-price-volume', {
-            listTokens: tokens,
-          });
+        if (tokensHavingCoinId.length > 0) {
+          this.contractQueue.add(
+            'sync-price-volume',
+            {
+              listTokens: tokensHavingCoinId,
+            },
+            {
+              removeOnComplete: true,
+              removeOnFail: true,
+            },
+          );
         }
       } catch (err) {
         this._logger.log(
@@ -173,6 +157,24 @@ export class SyncTokenService {
         await this.redisUtil.setValue(REDIS_KEY.COINGECKO_COINS, list);
       }
 
+      // handle sync-coin-id
+      const tokenNoCoinIds = await this.tokenMarketsRepository.find({
+        where: { coin_id: Equal('') },
+      });
+
+      if (tokenNoCoinIds.length > 0) {
+        this.contractQueue.add(
+          'sync-coin-id',
+          {
+            tokens: tokenNoCoinIds,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+          },
+        );
+      }
+
       this.isSyncTokenIds = false;
     } catch (error) {
       this._logger.error(
@@ -181,6 +183,66 @@ export class SyncTokenService {
       this._logger.error(`${error.stack}`);
       this.isSyncTokenIds = false;
       throw error;
+    }
+  }
+
+  async syncCW20Token() {
+    this._logger.log(null, 'syncCW20Token start...');
+    try {
+      const cw20Info = await this.smartContractRepository.getCW20Info();
+      const listAddress = cw20Info.map((i) => i.contract_address);
+      const tokens = await this.tokenMarketsRepository.find({
+        where: { contract_address: In(listAddress) },
+      });
+      const insetingTokens: TokenMarkets[] = [];
+      cw20Info.forEach((item) => {
+        const existing = tokens.find(
+          (f) => f.contract_address === item.contract_address,
+        );
+        if (!existing) {
+          const tokenInfo = new TokenMarkets();
+          tokenInfo.coin_id = '';
+          tokenInfo.contract_address = item.contract_address;
+          tokenInfo.name = item.token_name || '';
+          tokenInfo.symbol = item.token_symbol || '';
+          tokenInfo.description = item.description || '';
+          tokenInfo.image = item.image || '';
+          insetingTokens.push(tokenInfo);
+        }
+      });
+      if (insetingTokens.length > 0) {
+        await this.tokenMarketsRepository.update(insetingTokens);
+      }
+    } catch (error) {
+      this._logger.error(
+        `syncCW20Token was error, ${error.name}: ${error.message}`,
+      );
+      this._logger.error(`${error.stack}`);
+
+      throw error;
+    }
+  }
+
+  /**
+   * Add contract to queue
+   * @param data
+   * @param type
+   */
+  addContractToQueue(data: Array<any>, type: CONTRACT_TYPE) {
+    const tokens = data?.filter((f) => f.type === type);
+    if (tokens?.length > 0) {
+      const lstAddress = tokens?.map((m) => m.contract_address);
+      this.contractQueue.add(
+        'sync-token',
+        {
+          lstAddress,
+          type,
+        },
+        {
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      );
     }
   }
 }
