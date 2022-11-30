@@ -1,10 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Equal, Not, Repository } from 'typeorm';
 import {
   CONTRACT_CODE_RESULT,
   CONTRACT_TYPE,
-  MESSAGE_ACTION,
   SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
 import { SmartContract } from '../entities';
@@ -63,8 +62,8 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
     return res;
   }
 
-  async getCW721TokensRegisteredType() {
-    const sqlSelect = `sc.contract_address as contract_address`;
+  async getContractCodeByStatus(status: CONTRACT_CODE_RESULT) {
+    const sqlSelect = `sc.contract_address, scc.result, scc.type`;
 
     const queryBuilder = this.repos
       .createQueryBuilder('sc')
@@ -72,14 +71,15 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
       .innerJoin(
         'smart_contract_codes',
         'scc',
-        `sc.code_id = scc.code_id AND scc.type = '${CONTRACT_TYPE.CW721}' AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}'`,
-      );
+        `sc.code_id = scc.code_id AND scc.result = '${status}'`,
+      )
+      .where({ token_symbol: Equal('') });
 
     return await queryBuilder.getRawMany();
   }
 
-  async getCW20TokensRegisteredType() {
-    const sqlSelect = `sc.contract_address as contract_address`;
+  async getCW20Info() {
+    const sqlSelect = `sc.contract_address, sc.token_name, sc.token_symbol, sc.description, sc.image`;
 
     const queryBuilder = this.repos
       .createQueryBuilder('sc')
@@ -87,8 +87,9 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
       .innerJoin(
         'smart_contract_codes',
         'scc',
-        `sc.code_id = scc.code_id AND scc.type = '${CONTRACT_TYPE.CW20}' AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}'`,
-      );
+        `sc.code_id = scc.code_id AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}' AND scc.type = '${CONTRACT_TYPE.CW20}'`,
+      )
+      .where({ token_symbol: Not('') });
 
     return await queryBuilder.getRawMany();
   }

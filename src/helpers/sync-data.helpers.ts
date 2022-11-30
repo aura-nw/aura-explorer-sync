@@ -390,6 +390,9 @@ export class SyncDataHelpers {
     if (data.image) {
       coinInfo.image = data.image;
     }
+
+    coinInfo.name = data.name;
+    coinInfo.symbol = data.symbol;
     coinInfo.current_price = Number(data.current_price?.toFixed(6)) || 0;
     coinInfo.price_change_percentage_24h =
       Number(data.price_change_percentage_24h?.toFixed(6)) || 0;
@@ -403,6 +406,8 @@ export class SyncDataHelpers {
       Number(circulating_market_cap?.toFixed(6)) || 0;
     coinInfo.max_supply = Number(data.max_supply?.toFixed(6)) || 0;
     coinInfo.market_cap = Number(data.market_cap?.toFixed(6)) || 0;
+    coinInfo.fully_diluted_valuation =
+      Number(data.fully_diluted_valuation?.toFixed(6)) || 0;
 
     return coinInfo;
   }
