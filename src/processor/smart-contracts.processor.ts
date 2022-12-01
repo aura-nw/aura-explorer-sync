@@ -18,6 +18,7 @@ import {
   MAINNET_UPLOAD_STATUS,
   REDIS_KEY,
   SMART_CONTRACT_VERIFICATION,
+  SOULBOUND_TOKEN_STATUS,
 } from '../common/constants/app.constant';
 import { SmartContract, TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -33,6 +34,7 @@ import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import { In } from 'typeorm';
 import { InfluxDBClient } from '../utils/influxdb-client';
+import { SoulboundTokenRepository } from '../repositories/soulbound-token.repository';
 
 @Processor('smart-contracts')
 export class SmartContractsProcessor {
@@ -54,6 +56,7 @@ export class SmartContractsProcessor {
     private smartContractCodeRepository: SmartContractCodeRepository,
     private redisUtil: RedisUtil,
     private httpService: HttpService,
+    private soulboundTokenRepos: SoulboundTokenRepository,
   ) {
     this.logger.log(
       '============== Constructor Smart Contracts Processor Service ==============',
@@ -174,6 +177,9 @@ export class SmartContractsProcessor {
         txData,
         message,
       );
+      const burnOrMintMessages = message?.filter(
+        (f) => !!f.msg?.mint?.token_id || !!f.msg?.burn?.token_id,
+      );
       for (const item of _smartContracts) {
         const smartContract = await this.makeInstantiateContractData(
           item.height,
@@ -183,6 +189,25 @@ export class SmartContractsProcessor {
           item.creator_address,
           item.tx_hash,
         );
+        if (
+          burnOrMintMessages?.find((f) => f.contract === item.contract_address)
+        ) {
+          try {
+            this.logger.log(
+              null,
+              `Call contract lcd api to query num_tokens with parameter: {contract_address: ${item.contract_address}}`,
+            );
+            const numTokens = await this._commonUtil.queryNumTokenInfo(
+              this.api,
+              item.contract_address,
+            );
+            if (numTokens !== null) {
+              smartContract.num_tokens = numTokens;
+            }
+          } catch (err) {
+            this.logger.log(null, `Got error in query num_tokens`);
+          }
+        }
         smartContracts.push(smartContract);
       }
     } catch (error) {
@@ -223,9 +248,11 @@ export class SmartContractsProcessor {
       this.smartContractRepository.find({
         where: { contract_address: In(lstAddress) },
       }),
-      this.tokenMarketsRepository.find({
-        where: { contract_address: In(lstAddress) },
-      }),
+      type === CONTRACT_TYPE.CW20
+        ? this.tokenMarketsRepository.find({
+            where: { contract_address: In(lstAddress) },
+          })
+        : null,
     ]);
 
     for (let i = 0; i < lstAddress.length; i++) {
@@ -234,7 +261,7 @@ export class SmartContractsProcessor {
         (m) => m.contract_address === contract_address,
       );
 
-      if (!contract.token_name || !contract.num_tokens) {
+      if (!contract?.token_name) {
         const { updatedSmartContract, changed } =
           await this._commonUtil.queryMoreInfoFromCosmwasm(
             this.api,
@@ -243,7 +270,7 @@ export class SmartContractsProcessor {
             type,
           );
         if (changed) {
-          contract = updatedSmartContract;
+          contract = { ...updatedSmartContract };
           smartContracts.push(contract);
         }
       }
@@ -261,6 +288,8 @@ export class SmartContractsProcessor {
         if (contract.image) {
           tokenInfo.image = contract.image;
         }
+        tokenInfo.description = contract.description || '';
+
         tokenMarkets.push(tokenInfo);
       }
     }
@@ -379,7 +408,30 @@ export class SmartContractsProcessor {
         await this.tokenMarketsRepository.update(updatingTokens);
       }
     } catch (err) {
-      this.logger.log(`sync-coin-id has error: ${err.message}`, err.stack);
+      this.logger.error(`sync-coin-id has error: ${err.message}`, err.stack);
+    }
+  }
+
+  @Process('sync-cw4973-nft-status')
+  async handleSyncCw4973NftStatus(job: Job) {
+    this.logger.log(
+      `============== Queue handleSyncCw4973NftStatus was run! ==============`,
+    );
+    try {
+      const signature = job.data.message?.msg?.signature;
+      const soulboundToken = await this.soulboundTokenRepos.findOne({
+        where: { signature },
+      });
+      if (soulboundToken) {
+        if (job.data.message?.msg?.take) {
+          soulboundToken.status = SOULBOUND_TOKEN_STATUS.EQUIPPED;
+        } else {
+          soulboundToken.status = SOULBOUND_TOKEN_STATUS.UNEQUIPPED;
+        }
+        this.soulboundTokenRepos.update(soulboundToken);
+      }
+    } catch (err) {
+      this.logger.error(`sync-cw4973-nft-status has error: ${err.stack}`);
     }
   }
 

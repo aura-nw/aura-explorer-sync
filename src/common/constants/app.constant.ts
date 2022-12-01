@@ -160,3 +160,9 @@ export enum MAINNET_UPLOAD_STATUS {
 export enum REDIS_KEY {
   COINGECKO_COINS = 'COINGECKO_COINS',
 }
+
+export enum SOULBOUND_TOKEN_STATUS {
+  UNCLAIM = 'Unclaimed',
+  EQUIPPED = 'Equipped',
+  UNEQUIPPED = 'Unequipped',
+}

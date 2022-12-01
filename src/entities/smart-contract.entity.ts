@@ -99,4 +99,7 @@ export class SmartContract extends BaseEntityIncrementId {
 
   @Column({ name: 'minter_address', nullable: true })
   minter_address: string;
+
+  @Column()
+  decimals: number;
 }

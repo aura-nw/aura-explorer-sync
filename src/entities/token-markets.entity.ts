@@ -81,4 +81,13 @@ export class TokenMarkets extends BaseEntityIncrementId {
     default: 0,
   })
   market_cap: number;
+
+  @Column({
+    name: 'fully_diluted_valuation',
+    type: 'decimal',
+    precision: 38,
+    scale: 6,
+    default: 0,
+  })
+  fully_diluted_valuation: number;
 }

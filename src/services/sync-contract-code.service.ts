@@ -12,7 +12,6 @@ import { SmartContractCodeRepository } from '../repositories/smart-contract-code
 import { ConfigService, ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { SmartContract, SmartContractCode } from '../entities';
-import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 
 @Injectable()
 export class SyncContractCodeService {
@@ -69,7 +68,10 @@ export class SyncContractCodeService {
             case CONTRACT_CODE_STATUS.COMPLETED:
               item.result = CONTRACT_CODE_RESULT.CORRECT;
               //get contracts with code id
-              const contractTypes: string[] = [CONTRACT_TYPE.CW721, CONTRACT_TYPE.CW20, CONTRACT_TYPE.CW4973];
+              const contractTypes: string[] = [
+                CONTRACT_TYPE.CW721,
+                CONTRACT_TYPE.CW20,
+              ];
               if (contractTypes.includes(item.type)) {
                 const contractDB =
                   await this.smartContractRepository.findByCondition({

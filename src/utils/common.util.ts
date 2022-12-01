@@ -15,7 +15,6 @@ import {
 import axios from 'axios';
 import * as util from 'util';
 import { SmartContract } from '../entities';
-import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 
 @Injectable()
 export class CommonUtil {
@@ -105,6 +104,24 @@ export class CommonUtil {
     ).then((rs) => rs.data);
   }
 
+  async queryNumTokenInfo(api: string, contractAddress: string): Promise<any> {
+    const base64Encode = 'base64';
+    const base64RequestNumToken =
+      Buffer.from(`{ "num_tokens": {} }`).toString(base64Encode);
+
+    const numTokenInfo = await this.getDataContractFromBase64Query(
+      api,
+      contractAddress,
+      base64RequestNumToken,
+    );
+
+    if (numTokenInfo?.data) {
+      return Number(numTokenInfo.data.count);
+    }
+
+    return null;
+  }
+
   async queryMoreInfoFromCosmwasm(
     api: string,
     contractAddress: string,
@@ -114,6 +131,7 @@ export class CommonUtil {
     try {
       const base64Encode = 'base64';
       let changed = false;
+      const updatedSmartContract = { ...smartContract };
       if (type === CONTRACT_TYPE.CW20) {
         const tokenInfoQuery =
           Buffer.from(`{ "token_info": {} }`).toString(base64Encode);
@@ -134,39 +152,30 @@ export class CommonUtil {
           ),
         ]);
         if (marketingInfo?.data) {
-          smartContract.image = marketingInfo.data?.logo?.url ?? '';
-          smartContract.description = marketingInfo.data?.description ?? '';
-          changed = true;
+          updatedSmartContract.image = marketingInfo.data?.logo?.url ?? '';
+          updatedSmartContract.description =
+            marketingInfo.data?.description ?? '';
         }
         if (tokenInfo?.data) {
-          smartContract.token_name = tokenInfo.data.name;
-          smartContract.token_symbol = tokenInfo.data.symbol;
-          changed = true;
+          updatedSmartContract.token_name = tokenInfo.data.name;
+          updatedSmartContract.token_symbol = tokenInfo.data.symbol;
+          updatedSmartContract.decimals = tokenInfo.data.decimals || 0;
         }
       } else {
         const base64RequestToken = Buffer.from(
           `{ "contract_info": {} }`,
         ).toString(base64Encode);
 
-        const base64RequestNumToken =
-          Buffer.from(`{ "num_tokens": {} }`).toString(base64Encode);
-
-        const isCW4973 = type === CONTRACT_TYPE.CW4973 ? true : false;
         const base64Minter =
           Buffer.from(`{ "minter": {} }`).toString(base64Encode);
 
-        const [tokenInfo, numTokenInfo, minter] = await Promise.all([
+        const [tokenInfo, minter] = await Promise.all([
           this.getDataContractFromBase64Query(
             api,
             contractAddress,
             base64RequestToken,
           ),
-          this.getDataContractFromBase64Query(
-            api,
-            contractAddress,
-            base64RequestNumToken,
-          ),
-          isCW4973
+          type === CONTRACT_TYPE.CW4973
             ? this.getDataContractFromBase64Query(
                 api,
                 contractAddress,
@@ -176,21 +185,16 @@ export class CommonUtil {
         ]);
 
         if (tokenInfo?.data) {
-          smartContract.token_name = tokenInfo.data.name;
-          smartContract.token_symbol = tokenInfo.data.symbol;
-          changed = true;
-        }
-        if (numTokenInfo?.data) {
-          smartContract.num_tokens = Number(numTokenInfo.data.count);
+          updatedSmartContract.token_name = tokenInfo.data.name;
+          updatedSmartContract.token_symbol = tokenInfo.data.symbol;
           changed = true;
         }
         if (minter?.data) {
           smartContract.minter_address = minter.data.minter;
-          changed = true;
         }
       }
 
-      return { updatedSmartContract: smartContract, changed };
+      return { updatedSmartContract, changed };
     } catch (err) {
       this._logger.log(
         `${CommonUtil.name} call ${this.queryMoreInfoFromCosmwasm.name} method has error: ${err.message}`,
