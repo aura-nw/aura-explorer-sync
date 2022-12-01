@@ -387,10 +387,6 @@ export class SyncDataHelpers {
       coinInfo.image = data.image;
     }
 
-    if (data.image) {
-      coinInfo.image = data.image;
-    }
-
     coinInfo.name = data.name;
     coinInfo.symbol = data.symbol;
     coinInfo.current_price = Number(data.current_price?.toFixed(6)) || 0;

@@ -174,9 +174,9 @@ export class SmartContractsProcessor {
         txData,
         message,
       );
-      const burnOrMintMessages = message?.filter(
-        (f) => !!f.msg?.mint?.token_id || !!f.msg?.burn?.token_id,
-      );
+
+      const isBurnOrMint =
+        message?.msg?.mint?.token_id || message?.msg?.burn?.token_id;
       for (const item of _smartContracts) {
         const smartContract = await this.makeInstantiateContractData(
           item.height,
@@ -186,9 +186,7 @@ export class SmartContractsProcessor {
           item.creator_address,
           item.tx_hash,
         );
-        if (
-          burnOrMintMessages?.find((f) => f.contract === item.contract_address)
-        ) {
+        if (isBurnOrMint && message?.contract === item.contract_address) {
           try {
             this.logger.log(
               null,
