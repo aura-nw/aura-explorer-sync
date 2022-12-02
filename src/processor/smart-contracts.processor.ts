@@ -174,9 +174,21 @@ export class SmartContractsProcessor {
         txData,
         message,
       );
+
+      this.logger.log(
+        null,
+        `List contract: ${JSON.stringify(_smartContracts)}`,
+      );
+
       const burnOrMintMessages = message?.filter(
         (f) => !!f.msg?.mint?.token_id || !!f.msg?.burn?.token_id,
       );
+
+      this.logger.log(
+        null,
+        `Get action Mint or Burn values: ${JSON.stringify(burnOrMintMessages)}`,
+      );
+
       for (const item of _smartContracts) {
         const smartContract = await this.makeInstantiateContractData(
           item.height,
@@ -186,9 +198,16 @@ export class SmartContractsProcessor {
           item.creator_address,
           item.tx_hash,
         );
-        if (
-          burnOrMintMessages?.find((f) => f.contract === item.contract_address)
-        ) {
+
+        const burnOrMintAddress = burnOrMintMessages?.find(
+          (f) => f.contract === item.contract_address,
+        );
+        this.logger.log(
+          null,
+          `Check constract address Mint or Burn: ${burnOrMintAddress}`,
+        );
+
+        if (burnOrMintAddress) {
           try {
             this.logger.log(
               null,
