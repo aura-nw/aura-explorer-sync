@@ -182,15 +182,16 @@ export class SmartContractsProcessor {
         null,
         `List contract: ${JSON.stringify(_smartContracts)}`,
       );
+
       const burnOrMintMessages = message?.filter(
         (f) => !!f.msg?.mint?.token_id || !!f.msg?.burn?.token_id,
       );
+
       this.logger.log(
         null,
-        `Get action Mint or Burn  values: ${JSON.stringify(
-          burnOrMintMessages,
-        )}`,
+        `Get action Mint or Burn values: ${JSON.stringify(burnOrMintMessages)}`,
       );
+
       for (const item of _smartContracts) {
         const smartContract = await this.makeInstantiateContractData(
           item.height,
