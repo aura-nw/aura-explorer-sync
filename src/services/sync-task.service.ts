@@ -582,22 +582,30 @@ export class SyncTaskService {
               delegatorRewards.push(reward);
             }
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
-            this.contractQueue.add('sync-execute-contracts', {
-              txData,
-              message,
-            });
+            // Execute contract CW20, CW721
+            const messageContract = message?.filter(
+              (f: any) => !f.msg.take?.signature && !f.msg.unequip?.signature,
+            );
+            if (messageContract?.length > 0) {
+              this.contractQueue.add('sync-execute-contracts', {
+                txData,
+                messageContract,
+              });
+            }
 
-            // CW4973 take or unequip token
-            const takeOrUnequip =
-              message.msg?.take?.signature || message.msg?.unequip?.signature;
-            if (takeOrUnequip) {
+            // Execute contract CW4973
+            const soulboundContracts = message?.filter(
+              (f: any) => f.msg?.take?.signature || f.msg?.unequip?.signature,
+            );
+            if (soulboundContracts?.length > 0) {
               this.contractQueue.add('sync-cw4973-nft-status', {
-                message,
+                soulboundContracts,
               });
             }
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
             this.contractQueue.add('sync-instantiate-contracts', {
               txData,
+              message,
             });
           } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
             const delegation = SyncDataHelpers.makeCreateValidatorData(

@@ -71,6 +71,7 @@ export class SyncContractCodeService {
               const contractTypes: string[] = [
                 CONTRACT_TYPE.CW721,
                 CONTRACT_TYPE.CW20,
+                CONTRACT_TYPE.CW4973,
               ];
               if (contractTypes.includes(item.type)) {
                 const contractDB =

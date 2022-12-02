@@ -170,15 +170,26 @@ export class SmartContractsProcessor {
   async handleExecuteContract(job: Job) {
     this.logger.log(job.data);
     const txData = job.data.txData;
-    const message = job.data.message;
+    const message = job.data.messageContract;
     const smartContracts = [];
     try {
       const _smartContracts = SyncDataHelpers.makeExecuteContractData(
         txData,
         message,
       );
+
+      this.logger.log(
+        null,
+        `List contract: ${JSON.stringify(_smartContracts)}`,
+      );
       const burnOrMintMessages = message?.filter(
         (f) => !!f.msg?.mint?.token_id || !!f.msg?.burn?.token_id,
+      );
+      this.logger.log(
+        null,
+        `Get action Mint or Burn  values: ${JSON.stringify(
+          burnOrMintMessages,
+        )}`,
       );
       for (const item of _smartContracts) {
         const smartContract = await this.makeInstantiateContractData(
@@ -189,9 +200,15 @@ export class SmartContractsProcessor {
           item.creator_address,
           item.tx_hash,
         );
-        if (
-          burnOrMintMessages?.find((f) => f.contract === item.contract_address)
-        ) {
+
+        const burnOrMintAddress = burnOrMintMessages?.find(
+          (f) => f.contract === item.contract_address,
+        );
+        this.logger.log(
+          null,
+          `Check constract address Mint or Burn: ${burnOrMintAddress}`,
+        );
+        if (burnOrMintAddress) {
           try {
             this.logger.log(
               null,
@@ -418,18 +435,37 @@ export class SmartContractsProcessor {
       `============== Queue handleSyncCw4973NftStatus was run! ==============`,
     );
     try {
-      const signature = job.data.message?.msg?.signature;
-      const soulboundToken = await this.soulboundTokenRepos.findOne({
-        where: { signature },
+      const soulboundContracts: any[] = job.data.soulboundContracts;
+      const takes = soulboundContracts.map(
+        (m: any) => m.msg?.take?.signature.signature,
+      );
+      const unequips = soulboundContracts.map(
+        (m: any) => m.msg?.unequip?.signature.signature,
+      );
+
+      const soulboundTokens = await this.soulboundTokenRepos.find({
+        where: { signature: In(takes.concat(unequips)) },
       });
-      if (soulboundToken) {
-        if (job.data.message?.msg?.take) {
-          soulboundToken.status = SOULBOUND_TOKEN_STATUS.EQUIPPED;
-        } else {
-          soulboundToken.status = SOULBOUND_TOKEN_STATUS.UNEQUIPPED;
-        }
-        this.soulboundTokenRepos.update(soulboundToken);
+      if (soulboundTokens) {
+        soulboundTokens.forEach((item) => {
+          const token = soulboundContracts.find(
+            (f: any) =>
+              f.msg?.take?.signature === item.signature ||
+              f.msg?.unequip?.signature === item.signature,
+          );
+          if (token?.msg?.take) {
+            item.status = SOULBOUND_TOKEN_STATUS.EQUIPPED;
+          } else {
+            item.status = SOULBOUND_TOKEN_STATUS.UNEQUIPPED;
+          }
+        });
+        this.soulboundTokenRepos.update(soulboundTokens);
       }
+      this.logger.log(
+        `sync-cw4973-nft-status update complete: ${JSON.stringify(
+          soulboundTokens,
+        )}`,
+      );
     } catch (err) {
       this.logger.error(`sync-cw4973-nft-status has error: ${err.stack}`);
     }
