@@ -92,10 +92,7 @@ export class SyncContractCodeService {
 
                     contracts.push(contract);
                   }
-                  await this.smartContractRepository.insertOnDuplicate(
-                    contracts,
-                    ['id'],
-                  );
+                  await this.smartContractRepository.update(contracts);
                 }
               }
               break;

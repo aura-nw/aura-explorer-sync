@@ -130,7 +130,6 @@ export class CommonUtil {
   ): Promise<any> {
     try {
       const base64Encode = 'base64';
-      let changed = false;
       const updatedSmartContract = { ...smartContract };
       if (type === CONTRACT_TYPE.CW20) {
         const tokenInfoQuery =
@@ -175,11 +174,10 @@ export class CommonUtil {
         if (tokenInfo?.data) {
           updatedSmartContract.token_name = tokenInfo.data.name;
           updatedSmartContract.token_symbol = tokenInfo.data.symbol;
-          changed = true;
         }
       }
 
-      return { updatedSmartContract, changed };
+      return updatedSmartContract;
     } catch (err) {
       this._logger.log(
         `${CommonUtil.name} call ${this.queryMoreInfoFromCosmwasm.name} method has error: ${err.message}`,
