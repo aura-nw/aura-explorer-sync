@@ -183,7 +183,7 @@ export class CommonUtil {
         `${CommonUtil.name} call ${this.queryMoreInfoFromCosmwasm.name} method has error: ${err.message}`,
         err.stack,
       );
-      return smartContract;
+      return null;
     }
   }
 }

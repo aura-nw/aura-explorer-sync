@@ -244,15 +244,15 @@ export class SmartContractsProcessor {
       );
 
       if (!contract?.token_name) {
-        const { data, changed } =
+        const updatedSmartContract =
           await this._commonUtil.queryMoreInfoFromCosmwasm(
             this.api,
             contract_address,
             contract,
             type,
           );
-        if (changed) {
-          contract = { ...data };
+        if (updatedSmartContract) {
+          contract = { ...updatedSmartContract };
           smartContracts.push(contract);
         }
       }
@@ -531,26 +531,5 @@ export class SmartContractsProcessor {
     }
 
     return smartContract;
-  }
-
-  async updateTokenInfoByCodeId(contract: any) {
-    const contractCode = await this.smartContractCodeRepository.findOne({
-      where: { code_id: contract.code_id },
-    });
-    if (
-      contractCode &&
-      contractCode.result === CONTRACT_CODE_RESULT.CORRECT &&
-      (contractCode.type === CONTRACT_TYPE.CW721 ||
-        contractCode.type === CONTRACT_TYPE.CW20)
-    ) {
-      contract = await this._commonUtil.queryMoreInfoFromCosmwasm(
-        this.api,
-        contract.contract_address,
-        contract,
-        contractCode.type,
-      );
-    }
-
-    return contract;
   }
 }
