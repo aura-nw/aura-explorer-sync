@@ -191,7 +191,7 @@ export class SmartContractsProcessor {
             burnOrMintMessages,
           )}`,
         );
-        if (burnOrMintMessages && burnOrMintMessages.length > 0) {
+        if (burnOrMintMessages) {
           this.logger.log(
             `Call contract lcd api to query num_tokens with parameter: {contract_address: ${contract.contract_address}}`,
           );
