@@ -116,5 +116,5 @@ export class SyncContractCodeService {
       this.isSyncContractCode = false;
       throw error;
     }
-  }
+  } 
 }

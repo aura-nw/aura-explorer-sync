@@ -582,14 +582,22 @@ export class SyncTaskService {
               delegatorRewards.push(reward);
             }
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
-            this.contractQueue.add('sync-execute-contracts', {
-              txData,
-              message,
-            });
+            this.contractQueue.add(
+              'sync-execute-contracts',
+              {
+                txData,
+                message,
+              },
+              { removeOnComplete: true, backoff: 1000 },
+            );
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
-            this.contractQueue.add('sync-instantiate-contracts', {
-              txData,
-            });
+            this.contractQueue.add(
+              'sync-instantiate-contracts',
+              {
+                txData,
+              },
+              { removeOnComplete: true, backoff: 1000 },
+            );
           } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
             const delegation = SyncDataHelpers.makeCreateValidatorData(
               txData,
