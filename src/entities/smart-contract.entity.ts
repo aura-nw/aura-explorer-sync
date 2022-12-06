@@ -91,9 +91,6 @@ export class SmartContract extends BaseEntityIncrementId {
   })
   request_id: number;
 
-  @Column({ name: 'coin_id' })
-  coin_id: string;
-
   @Column({ name: 'image' })
   image: string;
 
