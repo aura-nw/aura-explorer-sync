@@ -87,7 +87,11 @@ export class SmartContractsProcessor {
     if (nextKey) {
       while (nextKey) {
         offset = (offset + 1) * limit;
-        nextKey = await this.syncSmartContract(height, limit, offset);
+        try {
+          nextKey = await this.syncSmartContract(height, limit, offset);
+        } catch (err) {
+          nextKey = null;
+        }
       }
     }
   }
