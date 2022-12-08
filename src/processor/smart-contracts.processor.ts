@@ -85,8 +85,16 @@ export class SmartContractsProcessor {
     let nextKey = await this.syncSmartContract(height, limit, offset);
     if (nextKey) {
       while (nextKey) {
-        offset = (offset + 1) * limit;
-        nextKey = await this.syncSmartContract(height, limit, offset);
+        try {
+          offset = (offset + 1) * limit;
+          nextKey = await this.syncSmartContract(height, limit, offset);
+        } catch (error) {
+          this.logger.error(
+            `${this.instantiateContracts.name} call error: ${error.stack}`,
+          );
+          nextKey = null;
+          throw error;
+        }
       }
     }
   }
@@ -172,7 +180,7 @@ export class SmartContractsProcessor {
         return nextKey;
       }
     } catch (error) {
-      this.logger.log(
+      this.logger.error(
         `${this.syncSmartContract.name} call error: ${error.stack}`,
       );
       throw error.message;
@@ -183,6 +191,7 @@ export class SmartContractsProcessor {
   async handleExecuteContract(job: Job) {
     const txData = job.data.txData;
     const message = job.data.message;
+    const contractAddress = message.contract;
     const height = Number(txData.tx_response.height);
     this.logger.log(
       `${
@@ -210,37 +219,8 @@ export class SmartContractsProcessor {
       );
 
       if (burnOrMintMessages) {
-        const contractAddress = message.contract;
-        this.logger.log(
-          `Call contract lcd api to query num_tokens with parameter: {contract_address: ${contractAddress}}`,
-        );
-
-        const urlRequest = `${this.indexerUrl}${util.format(
-          INDEXER_API.GET_SMART_CONTRACTS,
-          this.indexerChainId,
-          height,
-          1,
-          0,
-        )}`;
-        const responses = await this._commonUtil.getDataAPI(
-          urlRequest,
-          `contract_addresses: ${contractAddress}`,
-        );
-        if (responses?.data) {
-          const numTokens = responses.data?.smart_contracts[0]?.num_tokens || 0;
-          if (numTokens > 0) {
-            await this.smartContractRepository.updateNumtokens(
-              contractAddress,
-              numTokens || 0,
-            );
-            this.logger.log(
-              `${this.handleExecuteContract.name} execute complete: Contract address: ${contractAddress}, numTokens: ${numTokens}`,
-            );
-          }
-        }
+        await this.updateNumTokenContract(height, contractAddress);
       }
-      await job.finished();
-      return true;
     } catch (error) {
       this.logger.error(
         `${this.handleExecuteContract.name} has error: ${error.message}`,
@@ -504,5 +484,40 @@ export class SmartContractsProcessor {
       }
     }
     return smartContract;
+  }
+
+  /**
+   * Update num_tokens column
+   * @param height
+   * @param message
+   */
+  async updateNumTokenContract(height: number, contractAddress: string) {
+    this.logger.log(
+      `Call contract lcd api to query num_tokens with parameter: {contract_address: ${contractAddress}}`,
+    );
+
+    const urlRequest = `${this.indexerUrl}${util.format(
+      INDEXER_API.GET_SMART_CONTRACTS,
+      this.indexerChainId,
+      height,
+      1,
+      0,
+    )}`;
+    const responses = await this._commonUtil.getDataAPI(
+      urlRequest,
+      `contract_addresses: ${contractAddress}`,
+    );
+    if (responses?.data) {
+      const numTokens = responses.data?.smart_contracts[0]?.num_tokens || 0;
+      if (numTokens > 0) {
+        await this.smartContractRepository.updateNumtokens(
+          contractAddress,
+          numTokens || 0,
+        );
+        this.logger.log(
+          `${this.handleExecuteContract.name} execute complete: Contract address: ${contractAddress}, numTokens: ${numTokens}`,
+        );
+      }
+    }
   }
 }
