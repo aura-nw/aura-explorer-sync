@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Interval } from '@nestjs/schedule';
+import { CronExpression, Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
@@ -23,7 +23,7 @@ import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import { BackoffOptions, CronRepeatOptions, JobOptions, Queue } from 'bull';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
 @Injectable()
 export class SyncTaskService {
@@ -40,6 +40,9 @@ export class SyncTaskService {
   isCompleteWrite = false;
   maxHeight = ENV_CONFIG.BLOCK_START;
   private nodeEnv = ENV_CONFIG.NODE_ENV;
+  private everyRepeatOptions: CronRepeatOptions = {
+    cron: CronExpression.EVERY_30_SECONDS,
+  };
 
   constructor(
     private _commonUtil: CommonUtil,
@@ -532,6 +535,11 @@ export class SyncTaskService {
     const delegations = [];
     const delegatorRewards = [];
     const smartContractCodes = [];
+    const optionQueue: JobOptions = {
+      removeOnComplete: true,
+      // repeat: this.everyRepeatOptions,
+      backoff: { type: 'fixed', delay: 10 } as BackoffOptions,
+    };
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
       if (
@@ -588,7 +596,7 @@ export class SyncTaskService {
                 txData,
                 message,
               },
-              { removeOnComplete: true, backoff: 1000 },
+              { ...optionQueue },
             );
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
             this.contractQueue.add(
@@ -596,7 +604,7 @@ export class SyncTaskService {
               {
                 txData,
               },
-              { removeOnComplete: true, backoff: 1000 },
+              { ...optionQueue },
             );
           } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
             const delegation = SyncDataHelpers.makeCreateValidatorData(
