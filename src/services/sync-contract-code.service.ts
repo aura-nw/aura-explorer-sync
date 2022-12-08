@@ -68,33 +68,33 @@ export class SyncContractCodeService {
           switch (contractCodeIndexer.data.status) {
             case CONTRACT_CODE_STATUS.COMPLETED:
               item.result = CONTRACT_CODE_RESULT.CORRECT;
-              //get contracts with code id
-              const contractTypes: string[] = [
-                CONTRACT_TYPE.CW721,
-                CONTRACT_TYPE.CW20,
-              ];
-              if (contractTypes.includes(item.type)) {
-                const contractDB =
-                  await this.smartContractRepository.findByCondition({
-                    code_id: item.code_id,
-                  });
-                if (contractDB && contractDB.length > 0) {
-                  const contracts = [];
-                  for (let i = 0; i < contractDB.length; i++) {
-                    let contract: SmartContract = contractDB[i];
+              // //get contracts with code id
+              // const contractTypes: string[] = [
+              //   CONTRACT_TYPE.CW721,
+              //   CONTRACT_TYPE.CW20,
+              // ];
+              // if (contractTypes.includes(item.type)) {
+              //   const contractDB =
+              //     await this.smartContractRepository.findByCondition({
+              //       code_id: item.code_id,
+              //     });
+              //   if (contractDB && contractDB.length > 0) {
+              //     const contracts = [];
+              //     for (let i = 0; i < contractDB.length; i++) {
+              //       let contract: SmartContract = contractDB[i];
 
-                    contract = await this._commonUtil.queryMoreInfoFromCosmwasm(
-                      this.api,
-                      contract.contract_address,
-                      contract,
-                      CONTRACT_TYPE[item.type],
-                    );
+              //       contract = await this._commonUtil.queryMoreInfoFromCosmwasm(
+              //         this.api,
+              //         contract.contract_address,
+              //         contract,
+              //         CONTRACT_TYPE[item.type],
+              //       );
 
-                    contracts.push(contract);
-                  }
-                  await this.smartContractRepository.update(contracts);
-                }
-              }
+              //       contracts.push(contract);
+              //     }
+              //     await this.smartContractRepository.update(contracts);
+              //   }
+              // }
               break;
             case CONTRACT_CODE_STATUS.REJECTED:
               item.result = CONTRACT_CODE_RESULT.INCORRECT;
@@ -116,5 +116,5 @@ export class SyncContractCodeService {
       this.isSyncContractCode = false;
       throw error;
     }
-  } 
+  }
 }
