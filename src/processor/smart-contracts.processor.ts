@@ -12,6 +12,7 @@ import * as util from 'util';
 import {
   COINGECKO_API,
   CONST_CHAR,
+  CONTRACT_TYPE,
   INDEXER_API,
   MAINNET_UPLOAD_STATUS,
   REDIS_KEY,
@@ -128,33 +129,24 @@ export class SmartContractsProcessor {
 
       if (smartContracts.length > 0) {
         const contracts: SmartContract[] = [];
-        const contractAddreses = smartContracts.map(
-          (m: any) => m.contract_address,
-        );
-        const tokens = await this.tokenMarketsRepository.find({
-          where: { contract_address: In(contractAddreses) },
-        });
-
         for (let i = 0; i < smartContracts.length; i++) {
           const item: any = smartContracts[i];
-          const contract = await this.makeInstantiateContractData(item);
-          contracts.push(contract);
+          const { smartContract, contractType } =
+            await this.makeInstantiateContractData(item);
+          contracts.push(smartContract);
 
-          let tokenInfo = new TokenMarkets();
-          if (tokens.length > 0) {
-            tokenInfo = tokens.find(
-              (m) => m.contract_address === contract.contract_address,
-            );
+          if (String(contractType) === CONTRACT_TYPE.CW20) {
+            const tokenInfo = new TokenMarkets();
+            tokenInfo.coin_id = '';
+            tokenInfo.contract_address = smartContract.contract_address;
+            tokenInfo.name = smartContract.token_name || '';
+            tokenInfo.symbol = smartContract.token_symbol || '';
+            if (smartContract.image) {
+              tokenInfo.image = smartContract.image;
+            }
+            tokenInfo.description = smartContract.description || '';
+            tokenMarkets.push(tokenInfo);
           }
-          tokenInfo.coin_id = tokenInfo.coin_id || '';
-          tokenInfo.contract_address = contract.contract_address;
-          tokenInfo.name = contract.token_name || '';
-          tokenInfo.symbol = contract.token_symbol || '';
-          if (contract.image) {
-            tokenInfo.image = contract.image;
-          }
-          tokenInfo.description = contract.description || '';
-          tokenMarkets.push(tokenInfo);
         }
         this.logger.log(
           `Insert data to smart_contracts table : ${JSON.stringify(contracts)}`,
@@ -369,6 +361,7 @@ export class SmartContractsProcessor {
    */
   async makeInstantiateContractData(contract: any) {
     const smartContract = new SmartContract();
+    let contractType = CONTRACT_TYPE.CW721;
     smartContract.id = 0;
     smartContract.height = contract.height;
     smartContract.code_id = contract.code_id;
@@ -415,6 +408,7 @@ export class SmartContractsProcessor {
     if (contractInfo) {
       smartContract.token_name = contractInfo.name;
       smartContract.token_symbol = contractInfo.symbol;
+      contractType = CONTRACT_TYPE.CW721;
     }
 
     if (this.nodeEnv === 'mainnet') {
@@ -481,7 +475,7 @@ export class SmartContractsProcessor {
         }
       }
     }
-    return smartContract;
+    return { smartContract, contractType };
   }
 
   /**
