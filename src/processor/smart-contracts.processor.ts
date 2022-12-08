@@ -12,6 +12,7 @@ import * as util from 'util';
 import {
   COINGECKO_API,
   CONST_CHAR,
+  CONTRACT_TYPE,
   INDEXER_API,
   MAINNET_UPLOAD_STATUS,
   REDIS_KEY,
@@ -137,23 +138,25 @@ export class SmartContractsProcessor {
 
         for (let i = 0; i < smartContracts.length; i++) {
           const item: any = smartContracts[i];
-          const contract = await this.makeInstantiateContractData(item);
-          contracts.push(contract);
+          const { smartContract, contractType } =
+            await this.makeInstantiateContractData(item);
+          contracts.push(smartContract);
 
-          if (tokens.length > 0) {
-            const tokenInfo =
-              tokens.find(
-                (m) => m.contract_address === contract.contract_address,
-              ) || new TokenMarkets();
-
-            tokenInfo.coin_id = tokenInfo.coin_id || '';
-            tokenInfo.contract_address = contract.contract_address;
-            tokenInfo.name = contract.token_name || '';
-            tokenInfo.symbol = contract.token_symbol || '';
-            if (contract.image) {
-              tokenInfo.image = contract.image;
+          if (String(contractType) === CONTRACT_TYPE.CW20) {
+            let tokenInfo = new TokenMarkets();
+            if (tokens.length > 0) {
+              tokenInfo = tokens.find(
+                (m) => m.contract_address === smartContract.contract_address,
+              );
             }
-            tokenInfo.description = contract.description || '';
+            tokenInfo.coin_id = tokenInfo.coin_id || '';
+            tokenInfo.contract_address = smartContract.contract_address;
+            tokenInfo.name = smartContract.token_name || '';
+            tokenInfo.symbol = smartContract.token_symbol || '';
+            if (smartContract.image) {
+              tokenInfo.image = smartContract.image;
+            }
+            tokenInfo.description = smartContract.description || '';
             tokenMarkets.push(tokenInfo);
           }
         }
@@ -370,6 +373,7 @@ export class SmartContractsProcessor {
    */
   async makeInstantiateContractData(contract: any) {
     const smartContract = new SmartContract();
+    let contractType = CONTRACT_TYPE.CW20;
     smartContract.id = 0;
     smartContract.height = contract.height;
     smartContract.code_id = contract.code_id;
@@ -378,7 +382,6 @@ export class SmartContractsProcessor {
     smartContract.creator_address = contract.creator_address;
     smartContract.contract_hash = contract.contract_hash;
     smartContract.tx_hash = contract.tx_hash;
-    smartContract.code_id = contract.code_id;
     smartContract.url = '';
     smartContract.instantiate_msg_schema = '';
     smartContract.query_msg_schema = '';
@@ -417,6 +420,7 @@ export class SmartContractsProcessor {
     if (contractInfo) {
       smartContract.token_name = contractInfo.name;
       smartContract.token_symbol = contractInfo.symbol;
+      contractType = CONTRACT_TYPE.CW721;
     }
 
     if (this.nodeEnv === 'mainnet') {
@@ -483,7 +487,7 @@ export class SmartContractsProcessor {
         }
       }
     }
-    return smartContract;
+    return { smartContract, contractType };
   }
 
   /**
