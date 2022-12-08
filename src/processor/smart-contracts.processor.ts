@@ -129,6 +129,13 @@ export class SmartContractsProcessor {
 
       if (smartContracts.length > 0) {
         const contracts: SmartContract[] = [];
+        const contractAddreses = smartContracts.map(
+          (m: any) => m.contract_address,
+        );
+        const tokens = await this.tokenMarketsRepository.find({
+          where: { contract_address: In(contractAddreses) },
+        });
+
         for (let i = 0; i < smartContracts.length; i++) {
           const item: any = smartContracts[i];
           const { smartContract, contractType } =
@@ -136,8 +143,13 @@ export class SmartContractsProcessor {
           contracts.push(smartContract);
 
           if (String(contractType) === CONTRACT_TYPE.CW20) {
-            const tokenInfo = new TokenMarkets();
-            tokenInfo.coin_id = '';
+            let tokenInfo = new TokenMarkets();
+            if (tokens.length > 0) {
+              tokenInfo = tokens.find(
+                (m) => m.contract_address === smartContract.contract_address,
+              );
+            }
+            tokenInfo.coin_id = tokenInfo.coin_id || '';
             tokenInfo.contract_address = smartContract.contract_address;
             tokenInfo.name = smartContract.token_name || '';
             tokenInfo.symbol = smartContract.token_symbol || '';
@@ -361,7 +373,7 @@ export class SmartContractsProcessor {
    */
   async makeInstantiateContractData(contract: any) {
     const smartContract = new SmartContract();
-    let contractType = CONTRACT_TYPE.CW721;
+    let contractType = CONTRACT_TYPE.CW20;
     smartContract.id = 0;
     smartContract.height = contract.height;
     smartContract.code_id = contract.code_id;
