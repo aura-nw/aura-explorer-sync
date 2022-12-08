@@ -43,7 +43,7 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
       .andWhere(
         'smart_contracts.contract_verification = :contract_verification',
         {
-          contract_verification: SMART_CONTRACT_VERIFICATION.EXACT_MATCH,
+          contract_verification: SMART_CONTRACT_VERIFICATION.VERIFIED,
         },
       )
       .select([
@@ -92,5 +92,18 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
       .where({ token_symbol: Not('') });
 
     return await queryBuilder.getRawMany();
+  }
+
+  /**
+   * Update num_tokens column when transactions have type mint/burn
+   * @param contractAddress
+   * @param numtokens
+   * @returns
+   */
+  async updateNumtokens(contractAddress: string, numtokens: number) {
+    return await this.repos.query(
+      `UPDATE smart_contracts SET num_tokens=? WHERE contract_address=?`,
+      [numtokens, contractAddress],
+    );
   }
 }
