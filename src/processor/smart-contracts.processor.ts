@@ -140,22 +140,21 @@ export class SmartContractsProcessor {
           const contract = await this.makeInstantiateContractData(item);
           contracts.push(contract);
 
+          let tokenInfo = new TokenMarkets();
           if (tokens.length > 0) {
-            const tokenInfo =
-              tokens.find(
-                (m) => m.contract_address === contract.contract_address,
-              ) || new TokenMarkets();
-
-            tokenInfo.coin_id = tokenInfo.coin_id || '';
-            tokenInfo.contract_address = contract.contract_address;
-            tokenInfo.name = contract.token_name || '';
-            tokenInfo.symbol = contract.token_symbol || '';
-            if (contract.image) {
-              tokenInfo.image = contract.image;
-            }
-            tokenInfo.description = contract.description || '';
-            tokenMarkets.push(tokenInfo);
+            tokenInfo = tokens.find(
+              (m) => m.contract_address === contract.contract_address,
+            );
           }
+          tokenInfo.coin_id = tokenInfo.coin_id || '';
+          tokenInfo.contract_address = contract.contract_address;
+          tokenInfo.name = contract.token_name || '';
+          tokenInfo.symbol = contract.token_symbol || '';
+          if (contract.image) {
+            tokenInfo.image = contract.image;
+          }
+          tokenInfo.description = contract.description || '';
+          tokenMarkets.push(tokenInfo);
         }
         this.logger.log(
           `Insert data to smart_contracts table : ${JSON.stringify(contracts)}`,
@@ -378,7 +377,6 @@ export class SmartContractsProcessor {
     smartContract.creator_address = contract.creator_address;
     smartContract.contract_hash = contract.contract_hash;
     smartContract.tx_hash = contract.tx_hash;
-    smartContract.code_id = contract.code_id;
     smartContract.url = '';
     smartContract.instantiate_msg_schema = '';
     smartContract.query_msg_schema = '';
