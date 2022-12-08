@@ -81,6 +81,7 @@ export class SyncTokenService {
             {
               removeOnComplete: true,
               removeOnFail: true,
+              timeout: 10000,
             },
           );
         }
@@ -94,7 +95,7 @@ export class SyncTokenService {
   }
 
   // @todo: use for sync cw20 token ids into redis
-  @Cron('0 */2 * * * *')
+  @Cron('0 */3 * * * *')
   async syncTokenIds() {
     if (this.isSyncTokenIds) {
       this._logger.log(null, 'already syncing token ids... wait');
@@ -136,6 +137,7 @@ export class SyncTokenService {
           {
             removeOnComplete: true,
             removeOnFail: true,
+            timeout: 10000,
           },
         );
       }
