@@ -169,6 +169,7 @@ export class SyncTokenService {
         if (!existing) {
           const tokenInfo = new TokenMarkets();
           tokenInfo.coin_id = '';
+          tokenInfo.code_id = item.code_id;
           tokenInfo.contract_address = item.contract_address;
           tokenInfo.name = item.token_name || '';
           tokenInfo.symbol = item.token_symbol || '';

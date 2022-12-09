@@ -79,7 +79,7 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
   }
 
   async getCW20Info() {
-    const sqlSelect = `sc.contract_address, sc.token_name, sc.token_symbol, sc.description, sc.image`;
+    const sqlSelect = `sc.contract_address, sc.token_name, sc.token_symbol, sc.description, sc.image, sc.code_id`;
 
     const queryBuilder = this.repos
       .createQueryBuilder('sc')
