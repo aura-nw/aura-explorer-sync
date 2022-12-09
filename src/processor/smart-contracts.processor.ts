@@ -49,7 +49,6 @@ export class SmartContractsProcessor {
     private smartContractRepository: SmartContractRepository,
     private tokenMarketsRepository: TokenMarketsRepository,
     private deploymentRequestsRepository: DeploymentRequestsRepository,
-    private smartContractCodeRepository: SmartContractCodeRepository,
     private redisUtil: RedisUtil,
     private httpService: HttpService,
   ) {
@@ -72,8 +71,7 @@ export class SmartContractsProcessor {
   async handleInstantiateContract(job: Job) {
     this.logger.log(`Sync instantiate contracts by job Id ${job.id}`);
     this.logger.log(job.data);
-    const txData = job.data.txData;
-    const height = Number(txData.tx_response.height);
+    const height = job.data.height;
     await this.instantiateContracts(height);
   }
 
@@ -125,41 +123,14 @@ export class SmartContractsProcessor {
       const responses = await this._commonUtil.getDataAPI(urlRequest, '');
       const smartContracts: [] = responses?.data.smart_contracts;
       const nextKey = responses?.data.next_key;
-      const tokenMarkets = [];
 
       if (smartContracts.length > 0) {
         const contracts: SmartContract[] = [];
-        const contractAddreses = smartContracts.map(
-          (m: any) => m.contract_address,
-        );
-        const tokens = await this.tokenMarketsRepository.find({
-          where: { contract_address: In(contractAddreses) },
-        });
 
         for (let i = 0; i < smartContracts.length; i++) {
           const item: any = smartContracts[i];
-          const { smartContract, contractType } =
-            await this.makeInstantiateContractData(item);
+          const smartContract = await this.makeInstantiateContractData(item);
           contracts.push(smartContract);
-
-          if (String(contractType) === CONTRACT_TYPE.CW20) {
-            let tokenInfo = new TokenMarkets();
-            if (tokens.length > 0) {
-              tokenInfo = tokens.find(
-                (m) => m.contract_address === smartContract.contract_address,
-              );
-            }
-            tokenInfo.coin_id = tokenInfo.coin_id || '';
-            tokenInfo.contract_address = smartContract.contract_address;
-            tokenInfo.name = smartContract.token_name || '';
-            tokenInfo.symbol = smartContract.token_symbol || '';
-            tokenInfo.code_id = smartContract.code_id;
-            if (smartContract.image) {
-              tokenInfo.image = smartContract.image;
-            }
-            tokenInfo.description = smartContract.description || '';
-            tokenMarkets.push(tokenInfo);
-          }
         }
         this.logger.log(
           `Insert data to smart_contracts table : ${JSON.stringify(contracts)}`,
@@ -168,18 +139,6 @@ export class SmartContractsProcessor {
           contracts,
           ['id'],
         );
-
-        if (result) {
-          // Insert data to token_markets table
-          if (tokenMarkets.length > 0) {
-            this.logger.log(
-              `Insert data to token_markets table : ${JSON.stringify(
-                tokenMarkets,
-              )}`,
-            );
-            this.tokenMarketsRepository.update(tokenMarkets);
-          }
-        }
         this.logger.log(`Sync Instantiate Contract Result: ${result}`);
         return nextKey;
       }
@@ -374,7 +333,6 @@ export class SmartContractsProcessor {
    */
   async makeInstantiateContractData(contract: any) {
     const smartContract = new SmartContract();
-    let contractType = CONTRACT_TYPE.CW20;
     smartContract.id = 0;
     smartContract.height = contract.height;
     smartContract.code_id = contract.code_id;
@@ -421,7 +379,6 @@ export class SmartContractsProcessor {
     if (contractInfo) {
       smartContract.token_name = contractInfo.name;
       smartContract.token_symbol = contractInfo.symbol;
-      contractType = CONTRACT_TYPE.CW721;
     }
 
     if (this.nodeEnv === 'mainnet') {
@@ -488,7 +445,7 @@ export class SmartContractsProcessor {
         }
       }
     }
-    return { smartContract, contractType };
+    return smartContract;
   }
 
   /**
