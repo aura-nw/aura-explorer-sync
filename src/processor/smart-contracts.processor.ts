@@ -116,10 +116,9 @@ export class SmartContractsProcessor {
       const urlRequest = `${this.indexerUrl}${util.format(
         INDEXER_API.GET_SMART_CONTRACTS,
         this.indexerChainId,
-        height,
         limit,
         offset,
-      )}`;
+      )}&height=${height}`;
 
       // Get list smart contract from Indexer(Heroscope)
       const responses = await this._commonUtil.getDataAPI(urlRequest, '');
@@ -183,7 +182,7 @@ export class SmartContractsProcessor {
       );
 
       if (burnOrMintMessages) {
-        await this.updateNumTokenContract(height, contractAddress);
+        await this.updateNumTokenContract(contractAddress);
       }
 
       //Update tokens martket
@@ -482,7 +481,7 @@ export class SmartContractsProcessor {
    * @param height
    * @param message
    */
-  async updateNumTokenContract(height: number, contractAddress: string) {
+  async updateNumTokenContract(contractAddress: string) {
     this.logger.log(
       `Call contract lcd api to query num_tokens with parameter: {contract_address: ${contractAddress}}`,
     );
@@ -490,10 +489,9 @@ export class SmartContractsProcessor {
     const urlRequest = `${this.indexerUrl}${util.format(
       INDEXER_API.GET_SMART_CONTRACTS,
       this.indexerChainId,
-      height,
       1,
       0,
-    )}`;
+    )}&contract_addresses=${contractAddress}`;
     const responses = await this._commonUtil.getDataAPI(
       urlRequest,
       `contract_addresses: ${contractAddress}`,
