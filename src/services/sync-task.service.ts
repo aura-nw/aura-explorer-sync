@@ -599,10 +599,11 @@ export class SyncTaskService {
               { ...optionQueue },
             );
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
+            const height = Number(txData.tx_response.height);
             this.contractQueue.add(
               'sync-instantiate-contracts',
               {
-                txData,
+                height,
               },
               { ...optionQueue },
             );

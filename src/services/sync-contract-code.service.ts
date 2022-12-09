@@ -11,8 +11,10 @@ import {
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
 import { ConfigService, ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
-import { SmartContract, SmartContractCode } from '../entities';
+import { SmartContract, SmartContractCode, TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
+import { TokenMarketsRepository } from '../repositories/token-markets.repository';
+import { In } from 'typeorm';
 
 @Injectable()
 export class SyncContractCodeService {
@@ -27,6 +29,7 @@ export class SyncContractCodeService {
     private _commonUtil: CommonUtil,
     private smartContractCodeRepository: SmartContractCodeRepository,
     private smartContractRepository: SmartContractRepository,
+    private tokenMarketsRepository: TokenMarketsRepository,
   ) {
     this._logger.log(
       '============== Constructor Sync Contract Code Service ==============',
@@ -73,6 +76,8 @@ export class SyncContractCodeService {
             switch (contractCodeIndexer.data.status) {
               case CONTRACT_CODE_STATUS.COMPLETED:
                 item.result = CONTRACT_CODE_RESULT.CORRECT;
+                // Update data for token makets table
+                await this.updateTokenMarkets(item.code_id, item.type);
                 break;
               case CONTRACT_CODE_STATUS.REJECTED:
                 item.result = CONTRACT_CODE_RESULT.INCORRECT;
@@ -94,6 +99,47 @@ export class SyncContractCodeService {
       this._logger.error(`${error.stack}`);
       this.isSyncContractCode = false;
       throw error;
+    }
+  }
+
+  /**
+   * Update token market from contract
+   * @param codeId
+   * @param contractType
+   */
+  async updateTokenMarkets(codeId: number, contractType: string) {
+    const constracts = await this.smartContractRepository.find({
+      where: { code_id: codeId },
+    });
+    if (constracts && constracts.length > 0) {
+      const addresses = constracts.map((m) => m.contract_address);
+      const tokenMarkets = await this.tokenMarketsRepository.find({
+        where: { contract_address: In(addresses) },
+      });
+      for (let i = 0; i < constracts.length; i++) {
+        const item: SmartContract = constracts[i];
+        if (contractType === CONTRACT_TYPE.CW20) {
+          let tokenInfo = new TokenMarkets();
+          if (tokenMarkets.length > 0) {
+            tokenInfo = tokenMarkets.find(
+              (m) => m.contract_address === item.contract_address,
+            );
+          }
+          tokenInfo.coin_id = tokenInfo.coin_id || '';
+          tokenInfo.contract_address = item.contract_address;
+          tokenInfo.name = item.token_name || '';
+          tokenInfo.symbol = item.token_symbol || '';
+          tokenInfo.code_id = item.code_id;
+          if (item.image) {
+            tokenInfo.image = item.image;
+          }
+          tokenInfo.description = item.description || '';
+          tokenMarkets.push(tokenInfo);
+        }
+      }
+      if (tokenMarkets.length > 0) {
+        await this.tokenMarketsRepository.update(tokenMarkets);
+      }
     }
   }
 }
