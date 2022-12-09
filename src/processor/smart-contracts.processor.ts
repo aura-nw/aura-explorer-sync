@@ -152,10 +152,8 @@ export class SmartContractsProcessor {
 
   @Process('sync-execute-contracts')
   async handleExecuteContract(job: Job) {
-    const txData = job.data.txData;
-    const message = job.data.message;
-    const contractAddress = message.contract;
-    const height = Number(txData.tx_response.height);
+    const height = Number(job.data.height);
+    const contractAddress = job.data.contractAddress;
     this.logger.log(
       `${
         this.handleExecuteContract.name
@@ -163,54 +161,13 @@ export class SmartContractsProcessor {
     );
 
     try {
-      // Get constract instantiate
-      this.logger.log(`Get contract instantiate`);
-      const contractInstantiate = txData.tx_response.logs?.filter((f) =>
-        f.events.find((x) => x.type == CONST_CHAR.INSTANTIATE),
-      );
-      if (contractInstantiate && contractInstantiate.length > 0) {
-        await this.instantiateContracts(height);
-      }
-
       // Get numTokens when contract mint or burn
-      const burnOrMintMessages =
-        message.msg?.mint?.token_id || message.msg?.burn?.token_id;
       this.logger.log(
-        `Check constract address Mint or Burn: ${JSON.stringify(
-          burnOrMintMessages,
-        )}`,
+        `Check constract address Mint or Burn: ${contractAddress}`,
       );
 
-      if (burnOrMintMessages) {
+      if (contractAddress) {
         await this.updateNumTokenContract(contractAddress);
-      }
-
-      //Update tokens martket
-      const smartContract = await this.smartContractRepository.findOne({
-        where: { contract_address: contractAddress },
-      });
-      if (smartContract) {
-        const smartContractCode =
-          await this.smartContractCodeRepository.findOne({
-            where: {
-              code_id: smartContract?.code_id,
-              result: CONTRACT_CODE_RESULT.CORRECT,
-              type: CONTRACT_TYPE.CW20,
-            },
-          });
-        if (smartContractCode) {
-          const tokenInfo = new TokenMarkets();
-          tokenInfo.coin_id = tokenInfo.coin_id || '';
-          tokenInfo.contract_address = smartContract.contract_address;
-          tokenInfo.name = smartContract.token_name || '';
-          tokenInfo.symbol = smartContract.token_symbol || '';
-          tokenInfo.code_id = smartContract.code_id;
-          if (smartContract.image) {
-            tokenInfo.image = smartContract.image;
-          }
-          tokenInfo.description = smartContract.description || '';
-          await this.smartContractCodeRepository.create(tokenInfo);
-        }
       }
     } catch (error) {
       this.logger.error(
