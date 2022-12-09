@@ -538,7 +538,7 @@ export class SyncTaskService {
     const optionQueue: JobOptions = {
       removeOnComplete: true,
       // repeat: this.everyRepeatOptions,
-      backoff: { type: 'fixed', delay: 10 } as BackoffOptions,
+      backoff: { type: 'fixed', delay: 1000 } as BackoffOptions,
     };
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
@@ -590,14 +590,36 @@ export class SyncTaskService {
               delegatorRewards.push(reward);
             }
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
+            const height = Number(txData.tx_response.height);
+            const contractInstantiate = txData.tx_response.logs?.filter((f) =>
+              f.events.find((x) => x.type == CONST_CHAR.INSTANTIATE),
+            );
+            const burnOrMintMessages =
+              message.msg?.mint?.token_id || message.msg?.burn?.token_id;
+
+            const contractAddress = burnOrMintMessages
+              ? message.contract
+              : null;
+
+            const instantiate = contractInstantiate?.length > 0 ? true : false;
+
             this.contractQueue.add(
               'sync-execute-contracts',
               {
-                txData,
-                message,
+                height,
+                contractAddress,
               },
-              { ...optionQueue },
+              { ...optionQueue, timeout: 10000 },
             );
+            if (instantiate) {
+              this.contractQueue.add(
+                'sync-instantiate-contracts',
+                {
+                  height,
+                },
+                { ...optionQueue },
+              );
+            }
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
             const height = Number(txData.tx_response.height);
             this.contractQueue.add(
