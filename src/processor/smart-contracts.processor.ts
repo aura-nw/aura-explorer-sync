@@ -153,6 +153,7 @@ export class SmartContractsProcessor {
             tokenInfo.contract_address = smartContract.contract_address;
             tokenInfo.name = smartContract.token_name || '';
             tokenInfo.symbol = smartContract.token_symbol || '';
+            tokenInfo.code_id = smartContract.code_id;
             if (smartContract.image) {
               tokenInfo.image = smartContract.image;
             }
