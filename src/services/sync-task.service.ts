@@ -606,7 +606,6 @@ export class SyncTaskService {
             this.contractQueue.add(
               'sync-execute-contracts',
               {
-                height,
                 contractAddress,
               },
               { ...optionQueue, timeout: 10000 },

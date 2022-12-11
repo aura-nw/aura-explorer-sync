@@ -11,9 +11,7 @@ import { Job } from 'bull';
 import * as util from 'util';
 import {
   COINGECKO_API,
-  CONST_CHAR,
   CONTRACT_CODE_RESULT,
-  CONTRACT_TYPE,
   INDEXER_API,
   MAINNET_UPLOAD_STATUS,
   REDIS_KEY,
@@ -152,7 +150,6 @@ export class SmartContractsProcessor {
 
   @Process('sync-execute-contracts')
   async handleExecuteContract(job: Job) {
-    const height = Number(job.data.height);
     const contractAddress = job.data.contractAddress;
     this.logger.log(
       `${
@@ -168,6 +165,31 @@ export class SmartContractsProcessor {
 
       if (contractAddress) {
         await this.updateNumTokenContract(contractAddress);
+      }
+
+      const contractCorrect =
+        await this.smartContractRepository.getSmartContractCorrect(
+          contractAddress,
+        );
+      if (
+        contractCorrect &&
+        contractCorrect?.result === CONTRACT_CODE_RESULT.CORRECT
+      ) {
+        // Get token info
+        let tokenInfo = await this.tokenMarketsRepository.findOne({
+          where: { contract_address: contractAddress },
+        });
+        if (!tokenInfo) {
+          tokenInfo = new TokenMarkets();
+          tokenInfo.coin_id = tokenInfo.coin_id || '';
+          tokenInfo.contract_address = contractCorrect.contract_address;
+          tokenInfo.name = contractCorrect.token_name || '';
+          tokenInfo.symbol = contractCorrect.token_symbol || '';
+          tokenInfo.code_id = contractCorrect.code_id;
+          tokenInfo.image = contractCorrect.image || '';
+          tokenInfo.description = contractCorrect.description || '';
+          await this.tokenMarketsRepository.create(tokenInfo);
+        }
       }
     } catch (error) {
       this.logger.error(

@@ -106,4 +106,18 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
       [numtokens, contractAddress],
     );
   }
+
+  /**
+   * Get contract correct by addressß
+   * @param contractAddress
+   */
+  async getSmartContractCorrect(contractAddress: string) {
+    return await this.repos
+      .createQueryBuilder('sm')
+      .select(
+        `sm.contract_address, sm.token_name, sm.token_symbol, sc.image, sc.description, sm.code_id,(SELECT result FROM smart_contract_codes WHERE code_id=sm.code_id) AS result`,
+      )
+      .where('sm.contract_address=:contractAddress', { contractAddress })
+      .getRawOne();
+  }
 }
