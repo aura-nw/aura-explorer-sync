@@ -11,7 +11,7 @@ import { Job } from 'bull';
 import * as util from 'util';
 import {
   COINGECKO_API,
-  CONST_CHAR,
+  CONTRACT_CODE_RESULT,
   CONTRACT_TYPE,
   INDEXER_API,
   MAINNET_UPLOAD_STATUS,
@@ -51,6 +51,7 @@ export class SmartContractsProcessor {
     private deploymentRequestsRepository: DeploymentRequestsRepository,
     private redisUtil: RedisUtil,
     private httpService: HttpService,
+    private smartContractCodeRepository: SmartContractCodeRepository,
   ) {
     this.logger.log(
       '============== Constructor Smart Contracts Processor Service ==============',
@@ -114,19 +115,17 @@ export class SmartContractsProcessor {
       const urlRequest = `${this.indexerUrl}${util.format(
         INDEXER_API.GET_SMART_CONTRACTS,
         this.indexerChainId,
-        height,
         limit,
         offset,
-      )}`;
+      )}&height=${height}`;
 
-      // Get list smart contract from  Indexer(Heroscope)
+      // Get list smart contract from Indexer(Heroscope)
       const responses = await this._commonUtil.getDataAPI(urlRequest, '');
       const smartContracts: [] = responses?.data.smart_contracts;
       const nextKey = responses?.data.next_key;
 
       if (smartContracts.length > 0) {
         const contracts: SmartContract[] = [];
-
         for (let i = 0; i < smartContracts.length; i++) {
           const item: any = smartContracts[i];
           const smartContract = await this.makeInstantiateContractData(item);
@@ -152,7 +151,7 @@ export class SmartContractsProcessor {
 
   @Process('sync-execute-contracts')
   async handleExecuteContract(job: Job) {
-    const height = Number(job.data.height);
+    const burnOrMintMessages = job.data.burnOrMintMessages;
     const contractAddress = job.data.contractAddress;
     this.logger.log(
       `${
@@ -166,8 +165,35 @@ export class SmartContractsProcessor {
         `Check constract address Mint or Burn: ${contractAddress}`,
       );
 
-      if (contractAddress) {
-        await this.updateNumTokenContract(height, contractAddress);
+      if (burnOrMintMessages?.token_id) {
+        if (contractAddress) {
+          await this.updateNumTokenContract(contractAddress);
+        }
+      } else {
+        // Get CW20 contract info
+        const contractCorrect =
+          await this.smartContractRepository.getSmartContractCorrect(
+            contractAddress,
+            CONTRACT_TYPE.CW20,
+          );
+        if (
+          contractCorrect &&
+          contractCorrect?.result === CONTRACT_CODE_RESULT.CORRECT
+        ) {
+          // Get token info
+          const tokenInfo = new TokenMarkets();
+          tokenInfo.coin_id = tokenInfo.coin_id || '';
+          tokenInfo.contract_address = contractCorrect.contract_address;
+          tokenInfo.name = contractCorrect.token_name || '';
+          tokenInfo.symbol = contractCorrect.token_symbol || '';
+          tokenInfo.code_id = contractCorrect.code_id;
+          tokenInfo.image = contractCorrect.image || '';
+          tokenInfo.description = contractCorrect.description || '';
+          await this.tokenMarketsRepository.insertOnDuplicate(
+            [tokenInfo],
+            ['id'],
+          );
+        }
       }
     } catch (error) {
       this.logger.error(
@@ -438,7 +464,7 @@ export class SmartContractsProcessor {
    * @param height
    * @param message
    */
-  async updateNumTokenContract(height: number, contractAddress: string) {
+  async updateNumTokenContract(contractAddress: string) {
     this.logger.log(
       `Call contract lcd api to query num_tokens with parameter: {contract_address: ${contractAddress}}`,
     );
@@ -446,10 +472,10 @@ export class SmartContractsProcessor {
     const urlRequest = `${this.indexerUrl}${util.format(
       INDEXER_API.GET_SMART_CONTRACTS,
       this.indexerChainId,
-      height,
       1,
       0,
-    )}`;
+    )}&contract_addresses[]=${contractAddress}`;
+
     const responses = await this._commonUtil.getDataAPI(
       urlRequest,
       `contract_addresses: ${contractAddress}`,
