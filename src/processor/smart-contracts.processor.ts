@@ -12,6 +12,7 @@ import * as util from 'util';
 import {
   COINGECKO_API,
   CONTRACT_CODE_RESULT,
+  CONTRACT_TYPE,
   INDEXER_API,
   MAINNET_UPLOAD_STATUS,
   REDIS_KEY,
@@ -150,6 +151,7 @@ export class SmartContractsProcessor {
 
   @Process('sync-execute-contracts')
   async handleExecuteContract(job: Job) {
+    const burnOrMintMessages = job.data.burnOrMintMessages;
     const contractAddress = job.data.contractAddress;
     this.logger.log(
       `${
@@ -163,24 +165,23 @@ export class SmartContractsProcessor {
         `Check constract address Mint or Burn: ${contractAddress}`,
       );
 
-      if (contractAddress) {
-        await this.updateNumTokenContract(contractAddress);
-      }
-
-      const contractCorrect =
-        await this.smartContractRepository.getSmartContractCorrect(
-          contractAddress,
-        );
-      if (
-        contractCorrect &&
-        contractCorrect?.result === CONTRACT_CODE_RESULT.CORRECT
-      ) {
-        // Get token info
-        let tokenInfo = await this.tokenMarketsRepository.findOne({
-          where: { contract_address: contractAddress },
-        });
-        if (!tokenInfo) {
-          tokenInfo = new TokenMarkets();
+      if (burnOrMintMessages?.token_id) {
+        if (contractAddress) {
+          await this.updateNumTokenContract(contractAddress);
+        }
+      } else {
+        // Get CW20 contract info
+        const contractCorrect =
+          await this.smartContractRepository.getSmartContractCorrect(
+            contractAddress,
+            CONTRACT_TYPE.CW20,
+          );
+        if (
+          contractCorrect &&
+          contractCorrect?.result === CONTRACT_CODE_RESULT.CORRECT
+        ) {
+          // Get token info
+          const tokenInfo = new TokenMarkets();
           tokenInfo.coin_id = tokenInfo.coin_id || '';
           tokenInfo.contract_address = contractCorrect.contract_address;
           tokenInfo.name = contractCorrect.token_name || '';
@@ -188,7 +189,10 @@ export class SmartContractsProcessor {
           tokenInfo.code_id = contractCorrect.code_id;
           tokenInfo.image = contractCorrect.image || '';
           tokenInfo.description = contractCorrect.description || '';
-          await this.tokenMarketsRepository.create(tokenInfo);
+          await this.tokenMarketsRepository.insertOnDuplicate(
+            [tokenInfo],
+            ['id'],
+          );
         }
       }
     } catch (error) {
