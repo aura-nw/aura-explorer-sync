@@ -474,7 +474,8 @@ export class SmartContractsProcessor {
       this.indexerChainId,
       1,
       0,
-    )}&contract_addresses=${contractAddress}`;
+    )}&contract_addresses[]=${contractAddress}`;
+
     const responses = await this._commonUtil.getDataAPI(
       urlRequest,
       `contract_addresses: ${contractAddress}`,
