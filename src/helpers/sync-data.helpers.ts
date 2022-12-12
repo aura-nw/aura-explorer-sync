@@ -279,31 +279,31 @@ export class SyncDataHelpers {
     return delegation;
   }
 
-  static makeExecuteContractData(txData: any, _message: any) {
-    const smartContracts = [];
-    const tx_hash = txData.tx_response.txhash;
-    const height = txData.tx_response.height;
-    const contract_addresses = txData.tx_response.logs[0].events
-      .find((x) => x.type == CONST_CHAR.INSTANTIATE)
-      .attributes.filter((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS);
-    const code_ids = txData.tx_response.logs[0].events
-      .find((x) => x.type == CONST_CHAR.INSTANTIATE)
-      .attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
-    contract_addresses.map(function (x, i) {
-      const smartContract = new SmartContract();
-      smartContract.code_id = code_ids[i].value;
-      smartContract.contract_address = contract_addresses[i].value;
-      smartContract.creator_address = txData.tx_response.logs[0].events
-        .find((x) => x.type == CONST_CHAR.EXECUTE)
-        .attributes.find((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS).value;
-      smartContract.tx_hash = tx_hash;
-      smartContract.height = height;
-      smartContract.contract_verification =
-        SMART_CONTRACT_VERIFICATION.UNVERIFIED;
-      smartContracts.push(smartContract);
-    });
-    return smartContracts;
-  }
+  // static makeExecuteContractData(txData: any, _message: any) {
+  //   const smartContracts = [];
+  //   const tx_hash = txData.tx_response.txhash;
+  //   const height = txData.tx_response.height;
+  //   const contract_addresses = txData.tx_response.logs[0].events
+  //     .find((x) => x.type == CONST_CHAR.INSTANTIATE)
+  //     .attributes.filter((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS);
+  //   const code_ids = txData.tx_response.logs[0].events
+  //     .find((x) => x.type == CONST_CHAR.INSTANTIATE)
+  //     .attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
+  //   contract_addresses.map(function (x, i) {
+  //     const smartContract = new SmartContract();
+  //     smartContract.code_id = code_ids[i].value;
+  //     smartContract.contract_address = contract_addresses[i].value;
+  //     smartContract.creator_address = txData.tx_response.logs[0].events
+  //       .find((x) => x.type == CONST_CHAR.EXECUTE)
+  //       .attributes.find((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS).value;
+  //     smartContract.tx_hash = tx_hash;
+  //     smartContract.height = height;
+  //     smartContract.contract_verification =
+  //       SMART_CONTRACT_VERIFICATION.UNVERIFIED;
+  //     smartContracts.push(smartContract);
+  //   });
+  //   return smartContracts;
+  // }
 
   static makeValidatorData(
     data: any,
@@ -378,17 +378,6 @@ export class SyncDataHelpers {
     data: any,
   ): TokenMarkets {
     const coinInfo = { ...currentData } as TokenMarkets;
-
-    if (!currentData) {
-      coinInfo.coin_id = data.id;
-      coinInfo.contract_address = '';
-      coinInfo.name = data.name;
-      coinInfo.symbol = data.symbol;
-      coinInfo.image = data.image;
-    }
-
-    coinInfo.name = data.name;
-    coinInfo.symbol = data.symbol;
     coinInfo.current_price = Number(data.current_price?.toFixed(6)) || 0;
     coinInfo.price_change_percentage_24h =
       Number(data.price_change_percentage_24h?.toFixed(6)) || 0;

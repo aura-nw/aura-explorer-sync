@@ -44,44 +44,6 @@ export class SyncTokenService {
     })();
   }
 
-  @Interval(10000)
-  async syncTokenContract() {
-    // check status
-    if (this.isTokenContract) {
-      this._logger.log(null, 'already syncing tokens... waitting');
-      return;
-    } else {
-      this._logger.log(null, 'fetching data tokens...');
-    }
-    try {
-      this.isTokenContract = true;
-      const contractCodes =
-        await this.smartContractRepository.getContractCodeByStatus(
-          CONTRACT_CODE_RESULT.CORRECT,
-        );
-
-      if (contractCodes.length > 0) {
-        //Add queue CW20
-        this.addContractToQueue(contractCodes, CONTRACT_TYPE.CW20);
-
-        //Add queue CW721
-        this.addContractToQueue(contractCodes, CONTRACT_TYPE.CW721);
-
-        //Add queue CW4973
-        this.addContractToQueue(contractCodes, CONTRACT_TYPE.CW4973);
-      }
-
-      this.isTokenContract = false;
-    } catch (error) {
-      this._logger.error(
-        `Sync cw20 tokens was error, ${error.name}: ${error.message}`,
-      );
-      this._logger.error(`${error.stack}`);
-      this.isTokenContract = false;
-      throw error;
-    }
-  }
-
   /**
    * @todo: use for sync cw20 tokens price
    * Create thread to sync data
@@ -119,6 +81,7 @@ export class SyncTokenService {
             {
               removeOnComplete: true,
               removeOnFail: true,
+              timeout: 10000,
             },
           );
         }
@@ -132,7 +95,7 @@ export class SyncTokenService {
   }
 
   // @todo: use for sync cw20 token ids into redis
-  @Cron('0 */2 * * * *')
+  @Cron('0 */3 * * * *')
   async syncTokenIds() {
     if (this.isSyncTokenIds) {
       this._logger.log(null, 'already syncing token ids... wait');
@@ -174,6 +137,7 @@ export class SyncTokenService {
           {
             removeOnComplete: true,
             removeOnFail: true,
+            timeout: 10000,
           },
         );
       }
@@ -223,29 +187,6 @@ export class SyncTokenService {
       this._logger.error(`${error.stack}`);
 
       throw error;
-    }
-  }
-
-  /**
-   * Add contract to queue
-   * @param data
-   * @param type
-   */
-  addContractToQueue(data: Array<any>, type: CONTRACT_TYPE) {
-    const tokens = data?.filter((f) => f.type === type);
-    if (tokens?.length > 0) {
-      const lstAddress = tokens?.map((m) => m.contract_address);
-      this.contractQueue.add(
-        'sync-token',
-        {
-          lstAddress,
-          type,
-        },
-        {
-          removeOnComplete: true,
-          removeOnFail: true,
-        },
-      );
     }
   }
 }

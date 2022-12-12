@@ -1,17 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import { SmartContractRepository } from '../repositories/smart-contract.repository';
+import { In } from 'typeorm';
 import * as util from 'util';
 import {
   CONTRACT_CODE_RESULT,
   CONTRACT_CODE_STATUS,
   CONTRACT_TYPE,
-  INDEXER_API,
+  INDEXER_API
 } from '../common/constants/app.constant';
+import { SmartContract, SmartContractCode, TokenMarkets } from '../entities';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
+import { SmartContractRepository } from '../repositories/smart-contract.repository';
+import { TokenMarketsRepository } from '../repositories/token-markets.repository';
 import { ConfigService, ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
-import { SmartContract, SmartContractCode } from '../entities';
 
 @Injectable()
 export class SyncContractCodeService {
@@ -26,6 +28,7 @@ export class SyncContractCodeService {
     private _commonUtil: CommonUtil,
     private smartContractCodeRepository: SmartContractCodeRepository,
     private smartContractRepository: SmartContractRepository,
+    private tokenMarketsRepository: TokenMarketsRepository,
   ) {
     this._logger.log(
       '============== Constructor Sync Contract Code Service ==============',
@@ -64,48 +67,25 @@ export class SyncContractCodeService {
             )}`,
             '',
           );
-          switch (contractCodeIndexer.data.status) {
-            case CONTRACT_CODE_STATUS.COMPLETED:
-              item.result = CONTRACT_CODE_RESULT.CORRECT;
-              //get contracts with code id
-              const contractTypes: string[] = [
-                CONTRACT_TYPE.CW721,
-                CONTRACT_TYPE.CW20,
-                CONTRACT_TYPE.CW4973,
-              ];
-              if (contractTypes.includes(item.type)) {
-                const contractDB =
-                  await this.smartContractRepository.findByCondition({
-                    code_id: item.code_id,
-                  });
-                if (contractDB && contractDB.length > 0) {
-                  const contracts = [];
-                  for (let i = 0; i < contractDB.length; i++) {
-                    let contract: SmartContract = contractDB[i];
-
-                    contract = await this._commonUtil.queryMoreInfoFromCosmwasm(
-                      this.api,
-                      contract.contract_address,
-                      contract,
-                      CONTRACT_TYPE[item.type],
-                    );
-
-                    contracts.push(contract);
-                  }
-                  await this.smartContractRepository.insertOnDuplicate(
-                    contracts,
-                    ['id'],
-                  );
-                }
-              }
-              break;
-            case CONTRACT_CODE_STATUS.REJECTED:
-              item.result = CONTRACT_CODE_RESULT.INCORRECT;
-              break;
-            default:
-              item.result = CONTRACT_CODE_RESULT.TBD;
+          if (
+            contractCodeIndexer &&
+            contractCodeIndexer?.data.status !== 'NotFound'
+          ) {
+            item.type = contractCodeIndexer?.data?.contractType;
+            switch (contractCodeIndexer.data.status) {
+              case CONTRACT_CODE_STATUS.COMPLETED:
+                item.result = CONTRACT_CODE_RESULT.CORRECT;
+                // Update data for token makets table
+                await this.updateTokenMarkets(item.code_id, item.type);
+                break;
+              case CONTRACT_CODE_STATUS.REJECTED:
+                item.result = CONTRACT_CODE_RESULT.INCORRECT;
+                break;
+              default:
+                item.result = CONTRACT_CODE_RESULT.TBD;
+            }
+            contractCodes.push(item);
           }
-          contractCodes.push(item);
         }
         // update data
         await this.smartContractCodeRepository.update(contractCodes);
@@ -118,6 +98,47 @@ export class SyncContractCodeService {
       this._logger.error(`${error.stack}`);
       this.isSyncContractCode = false;
       throw error;
+    }
+  }
+
+  /**
+   * Update token market from contract
+   * @param codeId
+   * @param contractType
+   */
+  async updateTokenMarkets(codeId: number, contractType: string) {
+    const constracts = await this.smartContractRepository.find({
+      where: { code_id: codeId },
+    });
+    if (constracts && constracts.length > 0) {
+      const addresses = constracts.map((m) => m.contract_address);
+      const tokenMarkets = await this.tokenMarketsRepository.find({
+        where: { contract_address: In(addresses) },
+      });
+      for (let i = 0; i < constracts.length; i++) {
+        const item: SmartContract = constracts[i];
+        if (contractType === CONTRACT_TYPE.CW20) {
+          let tokenInfo = new TokenMarkets();
+          if (tokenMarkets.length > 0) {
+            tokenInfo = tokenMarkets.find(
+              (m) => m.contract_address === item.contract_address,
+            );
+          }
+          tokenInfo.coin_id = tokenInfo.coin_id || '';
+          tokenInfo.contract_address = item.contract_address;
+          tokenInfo.name = item.token_name || '';
+          tokenInfo.symbol = item.token_symbol || '';
+          tokenInfo.code_id = item.code_id;
+          if (item.image) {
+            tokenInfo.image = item.image;
+          }
+          tokenInfo.description = item.description || '';
+          tokenMarkets.push(tokenInfo);
+        }
+      }
+      if (tokenMarkets.length > 0) {
+        await this.tokenMarketsRepository.update(tokenMarkets);
+      }
     }
   }
 }

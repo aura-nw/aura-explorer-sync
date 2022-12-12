@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Interval } from '@nestjs/schedule';
+import { CronExpression, Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
@@ -23,7 +23,7 @@ import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import { BackoffOptions, CronRepeatOptions, JobOptions, Queue } from 'bull';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
 @Injectable()
 export class SyncTaskService {
@@ -40,6 +40,9 @@ export class SyncTaskService {
   isCompleteWrite = false;
   maxHeight = ENV_CONFIG.BLOCK_START;
   private nodeEnv = ENV_CONFIG.NODE_ENV;
+  private everyRepeatOptions: CronRepeatOptions = {
+    cron: CronExpression.EVERY_30_SECONDS,
+  };
 
   constructor(
     private _commonUtil: CommonUtil,
@@ -532,6 +535,11 @@ export class SyncTaskService {
     const delegations = [];
     const delegatorRewards = [];
     const smartContractCodes = [];
+    const optionQueue: JobOptions = {
+      removeOnComplete: true,
+      // repeat: this.everyRepeatOptions,
+      backoff: { type: 'fixed', delay: 1000 } as BackoffOptions,
+    };
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
       if (
@@ -582,16 +590,25 @@ export class SyncTaskService {
               delegatorRewards.push(reward);
             }
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
-            // Execute contract CW20, CW721
-            const messageContract = message?.filter(
-              (f: any) => !f.msg.take?.signature && !f.msg.unequip?.signature,
+            const height = Number(txData.tx_response.height);
+            const contractInstantiate = txData.tx_response.logs?.filter((f) =>
+              f.events.find((x) => x.type == CONST_CHAR.INSTANTIATE),
             );
-            if (messageContract?.length > 0) {
-              this.contractQueue.add('sync-execute-contracts', {
-                txData,
-                messageContract,
-              });
-            }
+            const burnOrMintMessages =
+              message.msg?.mint?.token_id || message.msg?.burn?.token_id;
+
+            const contractAddress = burnOrMintMessages
+              ? message.contract
+              : null;
+
+            this.contractQueue.add(
+              'sync-execute-contracts',
+              {
+                height,
+                contractAddress,
+              },
+              { ...optionQueue, timeout: 10000 },
+            );
 
             // Execute contract CW4973
             const soulboundContracts = message?.filter(
@@ -600,13 +617,31 @@ export class SyncTaskService {
             if (soulboundContracts?.length > 0) {
               this.contractQueue.add('sync-cw4973-nft-status', {
                 soulboundContracts,
-              });
+              },
+                { ...optionQueue },
+              );
+            }
+
+            // Instantiate contract
+            const instantiate = contractInstantiate?.length > 0 ? true : false;
+            if (instantiate) {
+              this.contractQueue.add(
+                'sync-instantiate-contracts',
+                {
+                  height,
+                },
+                { ...optionQueue },
+              );
             }
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
-            this.contractQueue.add('sync-instantiate-contracts', {
-              txData,
-              message,
-            });
+            const height = Number(txData.tx_response.height);
+            this.contractQueue.add(
+              'sync-instantiate-contracts',
+              {
+                height,
+              },
+              { ...optionQueue },
+            );
           } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
             const delegation = SyncDataHelpers.makeCreateValidatorData(
               txData,
@@ -714,8 +749,7 @@ export class SyncTaskService {
         this.influxDbClient.initQueryApi();
 
         this._logger.debug(
-          ` Start idx: ${this.maxHeight + 1} --- end idx: ${
-            this.maxHeight + numRow
+          ` Start idx: ${this.maxHeight + 1} --- end idx: ${this.maxHeight + numRow
           }`,
         );
         const blocks = await this.blockRepository.getBlockByRange(

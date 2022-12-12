@@ -9,6 +9,9 @@ export class TokenMarkets extends BaseEntityIncrementId {
   @Column({ name: 'coin_id' })
   coin_id: string;
 
+  @Column({ name: 'code_id' })
+  code_id: number;
+
   @Column()
   symbol: string;
 
