@@ -313,6 +313,38 @@ export class SmartContractsProcessor {
     }
   }
 
+  @Process('sync-contract-from-height')
+  async syncSmartContractFromHeight(job: Job) {
+    const smartContracts = job.data.smartContracts;
+    const contracts = [];
+    const tokenMarkets = [];
+    const smartContractCodes = [];
+    for (let i = 0; i < smartContracts.length; i++) {
+      const data = smartContracts[i];
+      const contract = this.makeInstantiateContractData(data);
+
+      contracts.push(contract);
+    }
+
+    // Insert Data smart contract
+    if (contracts.length > 0) {
+      await this.smartContractRepository.insertOnDuplicate(contracts, ['id']);
+    }
+
+    // Insert data token markets
+    if (tokenMarkets.length > 0) {
+      await this.tokenMarketsRepository.insertOnDuplicate(tokenMarkets, ['id']);
+    }
+
+    // Insert data smart contract code
+    if (smartContractCodes.length > 0) {
+      await this.smartContractCodeRepository.insertOnDuplicate(
+        smartContractCodes,
+        ['id'],
+      );
+    }
+  }
+
   @OnQueueActive()
   onActive(job: Job) {
     this.logger.log(`Processing job ${job.id} of type ${job.name}...`);
@@ -476,10 +508,7 @@ export class SmartContractsProcessor {
       0,
     )}&contract_addresses[]=${contractAddress}`;
 
-    const responses = await this._commonUtil.getDataAPI(
-      urlRequest,
-      `contract_addresses: ${contractAddress}`,
-    );
+    const responses = await this._commonUtil.getDataAPI(urlRequest, '');
     if (responses?.data) {
       const numTokens = responses.data?.smart_contracts[0]?.num_tokens || 0;
       if (numTokens > 0) {
