@@ -87,7 +87,13 @@ export class SyncTaskService {
         this.statusRepository.findOne(),
       ]);
 
-      if (Number(currentBlock?.height) > Number(blockStatus?.current_block)) {
+      let height = Number(currentBlock?.height);
+      let currentStatusBlock = Number(blockStatus?.current_block);
+
+      this._logger.log(`Current block height: ${height}`);
+      this._logger.log(`Current block status: ${currentStatusBlock}`);
+
+      if (height > currentStatusBlock) {
         currentHeight = Number(currentBlock.height);
       } else {
         currentHeight = Number(blockStatus.current_block) || 0;
@@ -102,7 +108,6 @@ export class SyncTaskService {
         for (let i = currentHeight + 1; i < latestBlk; i++) {
           const blockSyncError = new BlockSyncError();
           blockSyncError.height = i;
-          blockSyncError.block_hash = '';
           blockErrors.push(blockSyncError);
         }
       }
@@ -685,7 +690,6 @@ export class SyncTaskService {
    */
   async insertBlockError(block_hash: string, height: number) {
     const blockSyncError = new BlockSyncError();
-    blockSyncError.block_hash = block_hash;
     blockSyncError.height = height;
     await this.blockSyncErrorRepository.create(blockSyncError);
   }
