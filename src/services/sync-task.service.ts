@@ -87,7 +87,13 @@ export class SyncTaskService {
         this.statusRepository.findOne(),
       ]);
 
-      if (Number(currentBlock?.height) > Number(blockStatus?.current_block)) {
+      let height = Number(currentBlock?.height);
+      let currentStatusBlock = Number(blockStatus?.current_block);
+
+      this._logger.log(`Current block height: ${height}`);
+      this._logger.log(`Current block status: ${currentStatusBlock}`);
+
+      if (height > currentStatusBlock) {
         currentHeight = Number(currentBlock.height);
       } else {
         currentHeight = Number(blockStatus.current_block) || 0;
