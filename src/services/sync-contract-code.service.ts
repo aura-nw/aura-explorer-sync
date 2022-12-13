@@ -77,7 +77,9 @@ export class SyncContractCodeService {
               case CONTRACT_CODE_STATUS.COMPLETED:
                 item.result = CONTRACT_CODE_RESULT.CORRECT;
                 // Update data for token makets table
-                await this.updateTokenMarkets(item.code_id, item.type);
+                if (item.type === CONTRACT_TYPE.CW20) {
+                  await this.updateTokenMarkets(item.code_id);
+                }
                 break;
               case CONTRACT_CODE_STATUS.REJECTED:
                 item.result = CONTRACT_CODE_RESULT.INCORRECT;
@@ -107,7 +109,7 @@ export class SyncContractCodeService {
    * @param codeId
    * @param contractType
    */
-  async updateTokenMarkets(codeId: number, contractType: string) {
+  async updateTokenMarkets(codeId: number) {
     const constracts = await this.smartContractRepository.find({
       where: { code_id: codeId },
     });
@@ -118,24 +120,22 @@ export class SyncContractCodeService {
       });
       for (let i = 0; i < constracts.length; i++) {
         const item: SmartContract = constracts[i];
-        if (contractType === CONTRACT_TYPE.CW20) {
-          let tokenInfo = new TokenMarkets();
-          if (tokenMarkets.length > 0) {
-            tokenInfo = tokenMarkets.find(
-              (m) => m.contract_address === item.contract_address,
-            );
-          }
-          tokenInfo.coin_id = tokenInfo.coin_id || '';
-          tokenInfo.contract_address = item.contract_address;
-          tokenInfo.name = item.token_name || '';
-          tokenInfo.symbol = item.token_symbol || '';
-          tokenInfo.code_id = item.code_id;
-          if (item.image) {
-            tokenInfo.image = item.image;
-          }
-          tokenInfo.description = item.description || '';
-          tokenMarkets.push(tokenInfo);
+        let tokenInfo = new TokenMarkets();
+        if (tokenMarkets.length > 0) {
+          tokenInfo = tokenMarkets.find(
+            (m) => m.contract_address === item.contract_address,
+          );
         }
+        tokenInfo.coin_id = tokenInfo.coin_id || '';
+        tokenInfo.contract_address = item.contract_address;
+        tokenInfo.name = item.token_name || '';
+        tokenInfo.symbol = item.token_symbol || '';
+        tokenInfo.code_id = item.code_id;
+        if (item.image) {
+          tokenInfo.image = item.image;
+        }
+        tokenInfo.description = item.description || '';
+        tokenMarkets.push(tokenInfo);
       }
       if (tokenMarkets.length > 0) {
         await this.tokenMarketsRepository.update(tokenMarkets);
