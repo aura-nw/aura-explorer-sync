@@ -102,7 +102,6 @@ export class SyncTaskService {
         for (let i = currentHeight + 1; i < latestBlk; i++) {
           const blockSyncError = new BlockSyncError();
           blockSyncError.height = i;
-          blockSyncError.block_hash = '';
           blockErrors.push(blockSyncError);
         }
       }
@@ -685,7 +684,6 @@ export class SyncTaskService {
    */
   async insertBlockError(block_hash: string, height: number) {
     const blockSyncError = new BlockSyncError();
-    blockSyncError.block_hash = block_hash;
     blockSyncError.height = height;
     await this.blockSyncErrorRepository.create(blockSyncError);
   }
