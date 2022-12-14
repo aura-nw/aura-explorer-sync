@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CronExpression, Interval } from '@nestjs/schedule';
+import { Interval } from '@nestjs/schedule';
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
 import * as util from 'util';
 import {
@@ -14,9 +14,6 @@ import { CommonUtil } from '../utils/common.util';
 import { SmartContract, SmartContractCode, TokenMarkets } from '../entities';
 import { TokenMarketsRepository } from '../repositories/token-markets.repository';
 import { In } from 'typeorm';
-import { InjectSchedule, Schedule } from 'nest-schedule';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
 
 @Injectable()
 export class SyncContractCodeService {
@@ -25,9 +22,6 @@ export class SyncContractCodeService {
   private indexerChainId;
   private isSyncContractCode = false;
   private api;
-  private contractNextKey = '';
-  private contractLimit = 50;
-  private contractOffset = 0;
 
   constructor(
     private configService: ConfigService,
@@ -35,8 +29,6 @@ export class SyncContractCodeService {
     private smartContractCodeRepository: SmartContractCodeRepository,
     private smartContractRepository: SmartContractRepository,
     private tokenMarketsRepository: TokenMarketsRepository,
-    @InjectSchedule() private readonly schedule: Schedule,
-    @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
   ) {
     this._logger.log(
       '============== Constructor Sync Contract Code Service ==============',
@@ -148,77 +140,5 @@ export class SyncContractCodeService {
         await this.tokenMarketsRepository.update(tokenMarkets);
       }
     }
-  }
-
-  async syncSmartContractFromHeight() {
-    const syncData = false;
-    const fromHeight = 0,
-      toHeight = 0; //get height from redis
-    if (syncData) {
-      // Get data from Indexer(heroscope)
-      let smartContracts = await this.getContractFromIndexer(
-        this.contractLimit,
-        this.contractOffset,
-        fromHeight,
-        toHeight,
-      );
-
-      if (smartContracts.length > 0) {
-        // Push data to queue
-        this.pushDataToQueue(smartContracts);
-        this.contractNextKey = smartContracts?.next_key;
-
-        if (this.contractNextKey && this.contractNextKey?.length > 0) {
-          this.contractOffset = (this.contractOffset + 1) * this.contractLimit;
-          this.schedule.scheduleCronJob(
-            'sync-contract-from-height-cron',
-            CronExpression.EVERY_10_SECONDS,
-            async () => {
-              // Get data from Indexer(heroscope)
-              smartContracts = await this.getContractFromIndexer(
-                this.contractLimit,
-                this.contractOffset,
-                fromHeight,
-                toHeight,
-              );
-              // Push data to queue
-              this.pushDataToQueue(smartContracts);
-              this.contractNextKey = smartContracts?.next_key;
-              return true;
-            },
-            {
-              maxRetry: -1,
-            },
-          );
-        }
-      }
-    }
-  }
-
-  pushDataToQueue(data: any) {
-    this.contractQueue.add('sync-contract-from-height', data, {
-      removeOnComplete: true,
-      backoff: {
-        delay: 10000,
-        type: 'fixed',
-      },
-    });
-  }
-
-  async getContractFromIndexer(
-    limit: number,
-    offset: number,
-    fromHeight: number,
-    toHeight: number,
-  ) {
-    const urlRequest = `${this.indexerUrl}${util.format(
-      INDEXER_API.GET_SMART_CONTRACTS,
-      this.indexerChainId,
-      limit,
-      offset,
-    )}&fromHeight=${fromHeight}&toHeight=${toHeight}`;
-
-    const responses = await this._commonUtil.getDataAPI(urlRequest, '');
-    return responses?.data;
   }
 }

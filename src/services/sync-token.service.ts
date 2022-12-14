@@ -36,7 +36,7 @@ export class SyncTokenService {
       '============== Constructor Sync Token Service ==============',
     );
 
-    // // Call method when init app
+    // Call method when init app
     (async () => {
       await this.syncTokenIds();
       await this.syncCW20TokensPrice();

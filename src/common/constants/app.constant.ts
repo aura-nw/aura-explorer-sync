@@ -112,6 +112,7 @@ export enum CONTRACT_CODE_STATUS {
   WAITING = 'WAITING',
   COMPLETED = 'COMPLETED',
   REJECTED = 'REJECTED',
+  NOT_FOUND = 'NotFound',
 }
 
 export enum INDEXER_API {
