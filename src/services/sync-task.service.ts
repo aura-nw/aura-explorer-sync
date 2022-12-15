@@ -87,7 +87,13 @@ export class SyncTaskService {
         this.statusRepository.findOne(),
       ]);
 
-      if (Number(currentBlock?.height) > Number(blockStatus?.current_block)) {
+      const height = Number(currentBlock?.height);
+      const currentStatusBlock = Number(blockStatus?.current_block);
+
+      this._logger.log(`Current block height: ${height}`);
+      this._logger.log(`Current block status: ${currentStatusBlock}`);
+
+      if (height > currentStatusBlock) {
         currentHeight = Number(currentBlock.height);
       } else {
         currentHeight = Number(blockStatus.current_block) || 0;
@@ -102,7 +108,6 @@ export class SyncTaskService {
         for (let i = currentHeight + 1; i < latestBlk; i++) {
           const blockSyncError = new BlockSyncError();
           blockSyncError.height = i;
-          blockSyncError.block_hash = '';
           blockErrors.push(blockSyncError);
         }
       }
@@ -290,6 +295,8 @@ export class SyncTaskService {
           this.isSyncValidator = false;
           this._logger.error(`${error.name}: ${error.message}`);
           this._logger.error(`${error.stack}`);
+          // Reconnect Influxdb
+          this.reconnectInfluxdb(error);
         }
       }
     }
@@ -370,6 +377,8 @@ export class SyncTaskService {
       this.isSyncMissBlock = false;
       this._logger.error(null, `${error.name}: ${error.message}`);
       this._logger.error(null, `${error.stack}`);
+      // Reconnect Influxdb
+      this.reconnectInfluxdb(error);
     }
   }
 
@@ -618,7 +627,7 @@ export class SyncTaskService {
                 {
                   height,
                 },
-                { ...optionQueue },
+                { ...optionQueue, delay: 5000 },
               );
             }
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
@@ -628,7 +637,7 @@ export class SyncTaskService {
               {
                 height,
               },
-              { ...optionQueue },
+              { ...optionQueue, delay: 5000 },
             );
           } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
             const delegation = SyncDataHelpers.makeCreateValidatorData(
@@ -685,7 +694,6 @@ export class SyncTaskService {
    */
   async insertBlockError(block_hash: string, height: number) {
     const blockSyncError = new BlockSyncError();
-    blockSyncError.block_hash = block_hash;
     blockSyncError.height = height;
     await this.blockSyncErrorRepository.create(blockSyncError);
   }
@@ -784,8 +792,22 @@ export class SyncTaskService {
       } catch (err) {
         this.isCompleteWrite = false;
         this._logger.error(`BlockMissToInfluxdb call error: ${err.stack}`);
+
+        // Reconnect Influxdb
+        this.reconnectInfluxdb(err);
         throw err;
       }
+    }
+  }
+
+  /**
+   * Reconnect Influxdb
+   * @param error
+   */
+  reconnectInfluxdb(error: any) {
+    const errorCode = error?.code || '';
+    if (errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT') {
+      this.connectInfluxDB();
     }
   }
 
