@@ -73,7 +73,14 @@ export class SmartContractsProcessor {
   async handleInstantiateContract(job: Job) {
     this.logger.log(`Sync instantiate contracts by job Id ${job.id}`);
     const height = job.data.height;
-    await this.instantiateContracts(height);
+    try {
+      await this.instantiateContracts(height);
+    } catch (err) {
+      this.logger.error(
+        `${this.handleInstantiateContract.name} job id[${job.id}] execute error: ${err.message}`,
+      );
+      await job.moveToFailed({ message: err.message });
+    }
   }
 
   async instantiateContracts(height: number) {
@@ -81,13 +88,16 @@ export class SmartContractsProcessor {
       `${this.instantiateContracts.name} was called with height: ${height}`,
     );
     const limit = 100;
-    let offset = 0;
-    let nextKey = await this.syncSmartContract(height, limit, offset);
+    let nextKey = await this.syncSmartContract(height, height, limit);
     if (nextKey) {
       while (nextKey) {
         try {
-          offset = (offset + 1) * limit;
-          nextKey = await this.syncSmartContract(height, limit, offset);
+          nextKey = await this.syncSmartContract(
+            height,
+            height,
+            limit,
+            nextKey,
+          );
         } catch (error) {
           this.logger.error(
             `${this.instantiateContracts.name} call error: ${error.stack}`,
@@ -106,23 +116,38 @@ export class SmartContractsProcessor {
    * @param offset
    * @returns
    */
-  async syncSmartContract(height: number, limit: number, offset: number) {
+  async syncSmartContract(
+    fromHeight: number,
+    toHeight: number,
+    limit: number,
+    nextKey = null,
+  ) {
     this.logger.log(
-      `${this.syncSmartContract.name} was called with height: ${height}`,
+      `${this.syncSmartContract.name} was called with paras: { fromHeight:${fromHeight}, toHeight: ${toHeight}}`,
     );
     try {
       // Get contract from indexer
-      const urlRequest = `${this.indexerUrl}${util.format(
-        INDEXER_API.GET_SMART_CONTRACTS,
-        this.indexerChainId,
-        limit,
-        offset,
-      )}&fromHeight=${height}`;
+      let urlRequest = '';
+      if (nextKey) {
+        urlRequest = `${this.indexerUrl}${util.format(
+          INDEXER_API.GET_SMART_CONTRACT_BY_NEXT_KEY,
+          this.indexerChainId,
+          limit,
+          nextKey,
+        )}`;
+      } else {
+        urlRequest = `${this.indexerUrl}${util.format(
+          INDEXER_API.GET_SMART_CONTRACTS,
+          this.indexerChainId,
+          limit,
+          fromHeight,
+          toHeight,
+        )}`;
+      }
 
       // Get list smart contract from Indexer(Heroscope)
       const responses = await this._commonUtil.getDataAPI(urlRequest, '');
       const smartContracts: [] = responses?.data.smart_contracts;
-      const nextKey = responses?.data.next_key;
 
       if (smartContracts.length > 0) {
         const contracts: SmartContract[] = [];
@@ -137,7 +162,11 @@ export class SmartContractsProcessor {
           ['id'],
         );
         this.logger.log(`Sync Instantiate Contract Result: ${result}`);
-        return nextKey;
+        return responses?.data.next_key;
+      } else {
+        const msg = `${this.syncSmartContract.name} call Indexer not data!`;
+        this.logger.error(msg);
+        throw msg;
       }
     } catch (error) {
       this.logger.error(
@@ -526,11 +555,10 @@ export class SmartContractsProcessor {
     );
 
     const urlRequest = `${this.indexerUrl}${util.format(
-      INDEXER_API.GET_SMART_CONTRACTS,
+      INDEXER_API.GET_SMART_CONTRACT_BT_CONTRACT_ADDRESS,
       this.indexerChainId,
-      1,
-      0,
-    )}&contract_addresses[]=${contractAddress}`;
+      contractAddress,
+    )}`;
 
     const responses = await this._commonUtil.getDataAPI(urlRequest, '');
     if (responses?.data) {

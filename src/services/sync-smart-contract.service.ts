@@ -55,6 +55,7 @@ export class SyncSmartContractService {
           this.contractOffset,
           this.fromHeight,
           this.toHeight,
+          this.contractNextKey,
         );
         const smartContracts = responses?.smart_contracts;
         if (smartContracts.length > 0) {
@@ -66,6 +67,7 @@ export class SyncSmartContractService {
               (this.contractOffset + 1) * this.contractLimit;
           } else {
             this.syncData = false;
+            this.contractOffset = 0;
           }
         }
       } catch (err) {
@@ -103,14 +105,25 @@ export class SyncSmartContractService {
     offset: number,
     fromHeight: number,
     toHeight: number,
+    nextKey = null,
   ) {
-    const urlRequest = `${this.indexerUrl}${util.format(
-      INDEXER_API.GET_SMART_CONTRACTS,
-      this.indexerChainId,
-      limit,
-      offset,
-    )}&fromHeight=${fromHeight}&toHeight=${toHeight}`;
-
+    let urlRequest = '';
+    if (nextKey && nextKey?.length > 0) {
+      urlRequest = `${this.indexerUrl}${util.format(
+        INDEXER_API.GET_SMART_CONTRACT_BY_NEXT_KEY,
+        this.indexerChainId,
+        limit,
+        nextKey,
+      )}`;
+    } else {
+      urlRequest = `${this.indexerUrl}${util.format(
+        INDEXER_API.GET_SMART_CONTRACTS,
+        this.indexerChainId,
+        limit,
+        fromHeight,
+        toHeight,
+      )}`;
+    }
     const responses = await this._commonUtil.getDataAPI(urlRequest, '');
     return responses?.data;
   }
