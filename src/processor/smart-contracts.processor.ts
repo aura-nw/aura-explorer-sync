@@ -79,7 +79,7 @@ export class SmartContractsProcessor {
       this.logger.error(
         `${this.handleInstantiateContract.name} job id[${job.id}] execute error: ${err?.message}`,
       );
-      await job.moveToFailed({ message: err?.message });
+      throw err;
     }
   }
 
