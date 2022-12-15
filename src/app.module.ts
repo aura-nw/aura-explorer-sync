@@ -40,6 +40,7 @@ import { SyncTransactionService } from './services/sync-transaction.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { TokenMarketsRepository } from './repositories/token-markets.repository';
+import { SyncSmartContractService } from './services/sync-smart-contract.service';
 
 const controllers = [];
 const entities = [
@@ -81,6 +82,7 @@ const services = [
   SyncContractCodeService,
   SyncTokenService,
   SyncTransactionService,
+  SyncSmartContractService,
 ];
 
 const processors = [SmartContractsProcessor];

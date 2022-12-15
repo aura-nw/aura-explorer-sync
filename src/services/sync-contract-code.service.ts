@@ -12,7 +12,6 @@ import { SmartContractCodeRepository } from '../repositories/smart-contract-code
 import { ConfigService, ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { SmartContract, SmartContractCode, TokenMarkets } from '../entities';
-import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { TokenMarketsRepository } from '../repositories/token-markets.repository';
 import { In } from 'typeorm';
 

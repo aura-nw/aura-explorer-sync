@@ -82,6 +82,12 @@ export class ConfigService {
         MAX_REQUEST: Number(process.env.COINGECKO_MAX_REQUEST) || 250,
         COINGEKO_PLATFORM: process.env.COINGEKO_PLATFORM || 'ethereum',
       },
+      SYNC_SMART_CONTRACT: {
+        FROM_HEIGHT: Number(process.env.SYNC_SMART_CONTRACT_FROM_HEIGHT) || 0,
+        TO_HEIGHT: Number(process.env.SYNC_SMART_CONTRACT_TO_HEIGHT) || 0,
+        SYNC_DATA:
+          process.env.SYNC_SMART_CONTRACT_SYNC_DATA === 'true' ? true : false,
+      },
       NODE_ENV: process.env.NODE_ENV,
     };
   }
