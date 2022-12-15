@@ -79,7 +79,7 @@ export class SyncTransactionService {
     );
   }
 
-  async handleCrawling(fromHeight: number, pageLimit: number = 100) {
+  async handleCrawling(fromHeight: number, pageLimit = 100) {
     let response;
     try {
       response = await this.commonUtil.getDataAPI(

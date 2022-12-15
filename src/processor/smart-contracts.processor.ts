@@ -12,6 +12,7 @@ import * as util from 'util';
 import {
   COINGECKO_API,
   CONTRACT_CODE_RESULT,
+  CONTRACT_CODE_STATUS,
   CONTRACT_TYPE,
   INDEXER_API,
   MAINNET_UPLOAD_STATUS,
@@ -71,9 +72,15 @@ export class SmartContractsProcessor {
   @Process('sync-instantiate-contracts')
   async handleInstantiateContract(job: Job) {
     this.logger.log(`Sync instantiate contracts by job Id ${job.id}`);
-    this.logger.log(job.data);
     const height = job.data.height;
-    await this.instantiateContracts(height);
+    try {
+      await this.instantiateContracts(height);
+    } catch (err) {
+      this.logger.error(
+        `${this.handleInstantiateContract.name} job id[${job.id}] execute error: ${err.message}`,
+      );
+      await job.moveToFailed({ message: err.message });
+    }
   }
 
   async instantiateContracts(height: number) {
@@ -81,13 +88,16 @@ export class SmartContractsProcessor {
       `${this.instantiateContracts.name} was called with height: ${height}`,
     );
     const limit = 100;
-    let offset = 0;
-    let nextKey = await this.syncSmartContract(height, limit, offset);
+    let nextKey = await this.syncSmartContract(height, height, limit);
     if (nextKey) {
       while (nextKey) {
         try {
-          offset = (offset + 1) * limit;
-          nextKey = await this.syncSmartContract(height, limit, offset);
+          nextKey = await this.syncSmartContract(
+            height,
+            height,
+            limit,
+            nextKey,
+          );
         } catch (error) {
           this.logger.error(
             `${this.instantiateContracts.name} call error: ${error.stack}`,
@@ -106,23 +116,38 @@ export class SmartContractsProcessor {
    * @param offset
    * @returns
    */
-  async syncSmartContract(height: number, limit: number, offset: number) {
+  async syncSmartContract(
+    fromHeight: number,
+    toHeight: number,
+    limit: number,
+    nextKey = null,
+  ) {
     this.logger.log(
-      `${this.syncSmartContract.name} was called with height: ${height}`,
+      `${this.syncSmartContract.name} was called with paras: { fromHeight:${fromHeight}, toHeight: ${toHeight}}`,
     );
     try {
       // Get contract from indexer
-      const urlRequest = `${this.indexerUrl}${util.format(
-        INDEXER_API.GET_SMART_CONTRACTS,
-        this.indexerChainId,
-        limit,
-        offset,
-      )}&height=${height}`;
+      let urlRequest = '';
+      if (nextKey) {
+        urlRequest = `${this.indexerUrl}${util.format(
+          INDEXER_API.GET_SMART_CONTRACT_BY_NEXT_KEY,
+          this.indexerChainId,
+          limit,
+          nextKey,
+        )}`;
+      } else {
+        urlRequest = `${this.indexerUrl}${util.format(
+          INDEXER_API.GET_SMART_CONTRACTS,
+          this.indexerChainId,
+          limit,
+          fromHeight,
+          toHeight,
+        )}`;
+      }
 
       // Get list smart contract from Indexer(Heroscope)
       const responses = await this._commonUtil.getDataAPI(urlRequest, '');
       const smartContracts: [] = responses?.data.smart_contracts;
-      const nextKey = responses?.data.next_key;
 
       if (smartContracts.length > 0) {
         const contracts: SmartContract[] = [];
@@ -131,15 +156,17 @@ export class SmartContractsProcessor {
           const smartContract = await this.makeInstantiateContractData(item);
           contracts.push(smartContract);
         }
-        this.logger.log(
-          `Insert data to smart_contracts table : ${JSON.stringify(contracts)}`,
-        );
+        this.logger.log(`Insert data to smart_contracts table...!`);
         const result = await this.smartContractRepository.insertOnDuplicate(
           contracts,
           ['id'],
         );
         this.logger.log(`Sync Instantiate Contract Result: ${result}`);
-        return nextKey;
+        return responses?.data.next_key;
+      } else {
+        const msg = `${this.syncSmartContract.name} call Indexer not data!`;
+        this.logger.error(msg);
+        throw msg;
       }
     } catch (error) {
       this.logger.error(
@@ -153,11 +180,7 @@ export class SmartContractsProcessor {
   async handleExecuteContract(job: Job) {
     const burnOrMintMessages = job.data.burnOrMintMessages;
     const contractAddress = job.data.contractAddress;
-    this.logger.log(
-      `${
-        this.handleExecuteContract.name
-      } was called with data: ${JSON.stringify(job.data)}`,
-    );
+    this.logger.log(`${this.handleExecuteContract.name} was called!`);
 
     try {
       // Get numTokens when contract mint or burn
@@ -229,7 +252,6 @@ export class SmartContractsProcessor {
   @Process('sync-price-volume')
   async handleSyncPriceVolume(job: Job) {
     try {
-      this.logger.log(job.data);
       const listTokens = job.data.listTokens;
       const coingecko = ENV_CONFIG.COINGECKO;
       this.logger.log(`============== Call Coingecko Api ==============`);
@@ -284,7 +306,6 @@ export class SmartContractsProcessor {
       this.logger.log(
         `============== sync-coin-id from coingecko start ==============`,
       );
-      this.logger.log(job.data);
       const tokens = job.data.tokens;
 
       await this.redisUtil.connect();
@@ -310,6 +331,70 @@ export class SmartContractsProcessor {
       }
     } catch (err) {
       this.logger.error(`sync-coin-id has error: ${err.message}`, err.stack);
+    }
+  }
+
+  @Process('sync-contract-from-height')
+  async syncSmartContractFromHeight(job: Job) {
+    this.logger.log(`${this.syncSmartContractFromHeight.name} was called!`);
+    try {
+      const smartContracts = job.data;
+      const contracts = [];
+      const tokenMarkets = [];
+      const smartContractCodes = [];
+      for (let i = 0; i < smartContracts.length; i++) {
+        const data = smartContracts[i];
+        const contract = await this.makeInstantiateContractData(data);
+        if (
+          contract.token_symbol.length === 0 ||
+          contract.token_name.length === 0
+        ) {
+          const msg = data.msg;
+          if (msg) {
+            contract.token_symbol = msg.symbol;
+            contract.token_name = msg.name;
+          }
+        }
+
+        // Create smart contract code data
+        if (data?.contract_type?.status !== CONTRACT_CODE_STATUS.NOT_FOUND) {
+          const smartContractCode = SyncDataHelpers.makeSmartContractCode(data);
+          smartContractCodes.push(smartContractCode);
+        }
+
+        // Create token martket data
+        if (data?.contract_type?.status === CONTRACT_CODE_STATUS.COMPLETED) {
+          const tokenMarket = SyncDataHelpers.makeTokeMarket(contract);
+          tokenMarkets.push(tokenMarket);
+        }
+
+        contracts.push(contract);
+      }
+
+      // Insert Data smart contract
+      if (contracts.length > 0) {
+        await this.smartContractRepository.insertOnDuplicate(contracts, ['id']);
+      }
+
+      // Insert data token markets
+      if (tokenMarkets.length > 0) {
+        await this.tokenMarketsRepository.insertOnDuplicate(tokenMarkets, [
+          'id',
+        ]);
+      }
+
+      // Insert data smart contract code
+      if (smartContractCodes.length > 0) {
+        await this.smartContractCodeRepository.insertOnDuplicate(
+          smartContractCodes,
+          ['id'],
+        );
+      }
+    } catch (err) {
+      this.logger.error(
+        `${this.syncSmartContractFromHeight.name} was called error: ${err.stack}`,
+      );
+      throw err;
     }
   }
 
@@ -381,9 +466,9 @@ export class SmartContractsProcessor {
 
     const marketingInfo = contract.marketing_info;
     if (marketingInfo) {
-      smartContract.description = marketingInfo.description;
-      smartContract.image = marketingInfo.logo.url;
-      smartContract.code_id = contract.code_id;
+      smartContract.description = marketingInfo.description || '';
+      smartContract.image = marketingInfo.logo?.url || '';
+      smartContract.code_id = contract.code_id || '';
     }
 
     const contractInfo = contract.contract_info;
@@ -466,20 +551,16 @@ export class SmartContractsProcessor {
    */
   async updateNumTokenContract(contractAddress: string) {
     this.logger.log(
-      `Call contract lcd api to query num_tokens with parameter: {contract_address: ${contractAddress}}`,
+      `Call contract lcd api to query num_tokens with parameter: contract_address: ${contractAddress}}`,
     );
 
     const urlRequest = `${this.indexerUrl}${util.format(
-      INDEXER_API.GET_SMART_CONTRACTS,
+      INDEXER_API.GET_SMART_CONTRACT_BT_CONTRACT_ADDRESS,
       this.indexerChainId,
-      1,
-      0,
-    )}&contract_addresses[]=${contractAddress}`;
+      contractAddress,
+    )}`;
 
-    const responses = await this._commonUtil.getDataAPI(
-      urlRequest,
-      `contract_addresses: ${contractAddress}`,
-    );
+    const responses = await this._commonUtil.getDataAPI(urlRequest, '');
     if (responses?.data) {
       const numTokens = responses.data?.smart_contracts[0]?.num_tokens || 0;
       if (numTokens > 0) {
@@ -491,6 +572,15 @@ export class SmartContractsProcessor {
           `${this.handleExecuteContract.name} execute complete: Contract address: ${contractAddress}, numTokens: ${numTokens}`,
         );
       }
+    }
+  }
+
+  tokemMarketProcess(data: []) {
+    const filter = data.filter(
+      (item: any) =>
+        item.contract_type?.status === CONTRACT_CODE_RESULT.CORRECT,
+    );
+    if (filter?.length > 0) {
     }
   }
 }

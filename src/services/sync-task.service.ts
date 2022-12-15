@@ -295,6 +295,8 @@ export class SyncTaskService {
           this.isSyncValidator = false;
           this._logger.error(`${error.name}: ${error.message}`);
           this._logger.error(`${error.stack}`);
+          // Reconnect Influxdb
+          this.reconnectInfluxdb(error);
         }
       }
     }
@@ -375,6 +377,8 @@ export class SyncTaskService {
       this.isSyncMissBlock = false;
       this._logger.error(null, `${error.name}: ${error.message}`);
       this._logger.error(null, `${error.stack}`);
+      // Reconnect Influxdb
+      this.reconnectInfluxdb(error);
     }
   }
 
@@ -788,8 +792,22 @@ export class SyncTaskService {
       } catch (err) {
         this.isCompleteWrite = false;
         this._logger.error(`BlockMissToInfluxdb call error: ${err.stack}`);
+
+        // Reconnect Influxdb
+        this.reconnectInfluxdb(err);
         throw err;
       }
+    }
+  }
+
+  /**
+   * Reconnect Influxdb
+   * @param error
+   */
+  reconnectInfluxdb(error: any) {
+    const errorCode = error?.code || '';
+    if (errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT') {
+      this.connectInfluxDB();
     }
   }
 
