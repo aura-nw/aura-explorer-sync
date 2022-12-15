@@ -160,7 +160,6 @@ export class SyncTokenService {
                 tokenAura.price_change_percentage_24h = tokenAuraInfo.price_change_percentage_24h || 0;
             }
             //insert/update table token_contracts
-            this._logger.log(`Update price aura coin: ${JSON.stringify(tokenAura)}`);
             await this.tokenContractRepository.insertOnDuplicate([tokenAura], ['id']);
 
             this.isSyncAuraToken = false;
@@ -359,6 +358,9 @@ export class SyncTokenService {
 
         } catch (err) {
             this._logger.log(`${SyncTokenService.name} call ${this.syncPriceAndVolume.name} method has error: ${err.message}`, err.stack);
+            if(err === 'ECONNREFUSED' || err === 'ETIMEDOUT') {
+                this.connectInfluxdb();
+            }
         }
     }
 
@@ -400,6 +402,9 @@ export class SyncTokenService {
             );
             this._logger.error(`${error.stack}`);
             this.isSynAuraAndBtcToken = false;
+            if(error === 'ECONNREFUSED' || error === 'ETIMEDOUT') {
+                this.connectInfluxdb();
+            }
             throw error;
         }
     }

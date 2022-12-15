@@ -37,7 +37,6 @@ export class SmartContractsProcessor {
 
     @Process('sync-instantiate-contracts')
     async handleInstantiateContract(job: Job) {
-        this.logger.log(job.data);
         let smartContracts = [];
         const txData = job.data.txData;
         try {
@@ -114,7 +113,6 @@ export class SmartContractsProcessor {
 
     @Process('sync-execute-contracts')
     async handleExecuteContract(job: Job) {
-        this.logger.log(job.data);
         const txData = job.data.txData;
         const message = job.data.message;
         const smartContracts = [];
