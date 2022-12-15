@@ -627,7 +627,7 @@ export class SyncTaskService {
                 {
                   height,
                 },
-                { ...optionQueue, delay: 5000 },
+                { ...optionQueue, delay: 7000 },
               );
             }
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
@@ -637,7 +637,7 @@ export class SyncTaskService {
               {
                 height,
               },
-              { ...optionQueue, delay: 5000 },
+              { ...optionQueue, delay: 7000 },
             );
           } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
             const delegation = SyncDataHelpers.makeCreateValidatorData(
