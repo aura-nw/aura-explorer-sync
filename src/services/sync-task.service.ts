@@ -87,8 +87,8 @@ export class SyncTaskService {
         this.statusRepository.findOne(),
       ]);
 
-      let height = Number(currentBlock?.height);
-      let currentStatusBlock = Number(blockStatus?.current_block);
+      const height = Number(currentBlock?.height);
+      const currentStatusBlock = Number(blockStatus?.current_block);
 
       this._logger.log(`Current block height: ${height}`);
       this._logger.log(`Current block status: ${currentStatusBlock}`);
@@ -627,7 +627,7 @@ export class SyncTaskService {
                 {
                   height,
                 },
-                { ...optionQueue },
+                { ...optionQueue, delay: 5000 },
               );
             }
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
@@ -637,7 +637,7 @@ export class SyncTaskService {
               {
                 height,
               },
-              { ...optionQueue },
+              { ...optionQueue, delay: 5000 },
             );
           } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
             const delegation = SyncDataHelpers.makeCreateValidatorData(
