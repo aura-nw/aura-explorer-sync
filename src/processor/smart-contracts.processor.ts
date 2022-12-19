@@ -363,7 +363,10 @@ export class SmartContractsProcessor {
         }
 
         // Create token martket data
-        if (data?.contract_type?.status === CONTRACT_CODE_STATUS.COMPLETED) {
+        if (
+          data?.contract_type?.status === CONTRACT_CODE_STATUS.COMPLETED &&
+          data?.contract_type?.type === CONTRACT_TYPE.CW20
+        ) {
           const tokenMarket = SyncDataHelpers.makeTokeMarket(contract);
           tokenMarkets.push(tokenMarket);
         }
@@ -572,15 +575,6 @@ export class SmartContractsProcessor {
           `${this.handleExecuteContract.name} execute complete: Contract address: ${contractAddress}, numTokens: ${numTokens}`,
         );
       }
-    }
-  }
-
-  tokemMarketProcess(data: []) {
-    const filter = data.filter(
-      (item: any) =>
-        item.contract_type?.status === CONTRACT_CODE_RESULT.CORRECT,
-    );
-    if (filter?.length > 0) {
     }
   }
 }

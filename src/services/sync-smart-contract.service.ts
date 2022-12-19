@@ -52,7 +52,6 @@ export class SyncSmartContractService {
         );
         const responses = await this.getContractFromIndexer(
           this.contractLimit,
-          this.contractOffset,
           this.fromHeight,
           this.toHeight,
           this.contractNextKey,
@@ -102,7 +101,6 @@ export class SyncSmartContractService {
    */
   async getContractFromIndexer(
     limit: number,
-    offset: number,
     fromHeight: number,
     toHeight: number,
     nextKey = null,
