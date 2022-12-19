@@ -1,14 +1,9 @@
 import { InjectQueue } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, Interval } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { Queue } from 'bull';
 
-import {
-  COINGECKO_API,
-  CONTRACT_CODE_RESULT,
-  CONTRACT_TYPE,
-  REDIS_KEY,
-} from '../common/constants/app.constant';
+import { COINGECKO_API, REDIS_KEY } from '../common/constants/app.constant';
 
 import { TokenMarketsRepository } from '../repositories/token-markets.repository';
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
@@ -36,7 +31,7 @@ export class SyncTokenService {
       '============== Constructor Sync Token Service ==============',
     );
 
-    // // Call method when init app
+    // Call method when init app
     (async () => {
       await this.syncTokenIds();
       await this.syncCW20TokensPrice();
@@ -169,6 +164,7 @@ export class SyncTokenService {
         if (!existing) {
           const tokenInfo = new TokenMarkets();
           tokenInfo.coin_id = '';
+          tokenInfo.code_id = item.code_id;
           tokenInfo.contract_address = item.contract_address;
           tokenInfo.name = item.token_name || '';
           tokenInfo.symbol = item.token_symbol || '';

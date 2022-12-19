@@ -42,6 +42,7 @@ import { SharedModule } from './shared/shared.module';
 import { TokenMarketsRepository } from './repositories/token-markets.repository';
 import { SoulboundTokenRepository } from './repositories/soulbound-token.repository';
 import { SoulboundToken } from './entities/soulbound-token.entity';
+import { SyncSmartContractService } from './services/sync-smart-contract.service';
 
 const controllers = [];
 const entities = [
@@ -85,6 +86,7 @@ const services = [
   SyncContractCodeService,
   SyncTokenService,
   SyncTransactionService,
+  SyncSmartContractService,
 ];
 
 const processors = [SmartContractsProcessor];

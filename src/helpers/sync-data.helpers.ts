@@ -2,8 +2,9 @@ import {
   CONST_CHAR,
   CONST_DELEGATE_TYPE,
   CONST_MSG_TYPE,
+  CONTRACT_CODE_RESULT,
+  CONTRACT_CODE_STATUS,
   CONTRACT_TYPE,
-  SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
 import {
   Block,
@@ -279,32 +280,6 @@ export class SyncDataHelpers {
     return delegation;
   }
 
-  // static makeExecuteContractData(txData: any, _message: any) {
-  //   const smartContracts = [];
-  //   const tx_hash = txData.tx_response.txhash;
-  //   const height = txData.tx_response.height;
-  //   const contract_addresses = txData.tx_response.logs[0].events
-  //     .find((x) => x.type == CONST_CHAR.INSTANTIATE)
-  //     .attributes.filter((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS);
-  //   const code_ids = txData.tx_response.logs[0].events
-  //     .find((x) => x.type == CONST_CHAR.INSTANTIATE)
-  //     .attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
-  //   contract_addresses.map(function (x, i) {
-  //     const smartContract = new SmartContract();
-  //     smartContract.code_id = code_ids[i].value;
-  //     smartContract.contract_address = contract_addresses[i].value;
-  //     smartContract.creator_address = txData.tx_response.logs[0].events
-  //       .find((x) => x.type == CONST_CHAR.EXECUTE)
-  //       .attributes.find((x) => x.key == CONST_CHAR._CONTRACT_ADDRESS).value;
-  //     smartContract.tx_hash = tx_hash;
-  //     smartContract.height = height;
-  //     smartContract.contract_verification =
-  //       SMART_CONTRACT_VERIFICATION.UNVERIFIED;
-  //     smartContracts.push(smartContract);
-  //   });
-  //   return smartContracts;
-  // }
-
   static makeValidatorData(
     data: any,
     account_address: string,
@@ -395,5 +370,52 @@ export class SyncDataHelpers {
       Number(data.fully_diluted_valuation?.toFixed(6)) || 0;
 
     return coinInfo;
+  }
+
+  /**
+   * Create TokenMarkets entity
+   * @param smartContract
+   * @returns
+   */
+  static makeTokeMarket(smartContract: SmartContract) {
+    const tokemMarket = new TokenMarkets();
+    tokemMarket.contract_address = smartContract.contract_address;
+    tokemMarket.code_id = smartContract.code_id;
+    tokemMarket.coin_id = '';
+    tokemMarket.symbol = smartContract.token_symbol;
+    tokemMarket.image = smartContract.image;
+    tokemMarket.name = smartContract.token_name;
+    return tokemMarket;
+  }
+
+  /**
+   * Create SmartContractCode entity
+   * @param data
+   * @returns
+   */
+  static makeSmartContractCode(data: any) {
+    const smartContractCode = new SmartContractCode();
+    const contractType = data.contract_type;
+    smartContractCode.code_id = data.code_id;
+    smartContractCode.creator = contractType.creator || '';
+    smartContractCode.type = contractType.type;
+    switch (contractType.status) {
+      case CONTRACT_CODE_STATUS.COMPLETED:
+        smartContractCode.result = CONTRACT_CODE_RESULT.CORRECT;
+        break;
+      case CONTRACT_CODE_STATUS.REJECTED:
+        smartContractCode.result = CONTRACT_CODE_RESULT.INCORRECT;
+        break;
+      case CONTRACT_CODE_STATUS.TBD:
+        smartContractCode.result = CONTRACT_CODE_RESULT.TBD;
+        break;
+      case CONTRACT_CODE_STATUS.WAITING:
+        smartContractCode.result = CONTRACT_CODE_RESULT.TBD;
+        break;
+      default:
+        smartContractCode.result = '';
+        smartContractCode.type = '';
+    }
+    return smartContractCode;
   }
 }

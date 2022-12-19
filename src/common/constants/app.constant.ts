@@ -113,6 +113,7 @@ export enum CONTRACT_CODE_STATUS {
   WAITING = 'WAITING',
   COMPLETED = 'COMPLETED',
   REJECTED = 'REJECTED',
+  NOT_FOUND = 'NotFound',
 }
 
 export enum INDEXER_API {
@@ -121,7 +122,9 @@ export enum INDEXER_API {
   GET_HOLDER_TOKEN = 'api/v1/asset/holder?chainid=%s&contractType=CW20&contractAddress=%s&countTotal=true',
   TRANSACTION = 'api/v1/transaction?chainid=%s&pageLimit=%s&fromHeight=%s&reverse=true',
   GET_HOLDER_INFO_CW20 = 'api/v1/daily-cw20-holder',
-  GET_SMART_CONTRACTS = 'api/v1/smart-contracts?chainId=%s&height=%s&limit=%s&offset=%s',
+  GET_SMART_CONTRACTS = 'api/v1/smart-contracts?chainId=%s&limit=%s&fromHeight=%s&toHeight=%s',
+  GET_SMART_CONTRACT_BY_NEXT_KEY = 'api/v1/smart-contracts?chainId=%s&limit=%s&nextKey=%s',
+  GET_SMART_CONTRACT_BT_CONTRACT_ADDRESS = 'api/v1/smart-contracts?chainId=%s&contract_addresses[]=%s',
 }
 
 export enum COINGECKO_API {

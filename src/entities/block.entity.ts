@@ -59,12 +59,14 @@ export class Block extends BaseEntityIncrementId {
   @Column({
     default: 0,
     name: 'gas_used',
+    type: 'bigint',
   })
   gas_used: number;
 
   @Column({
     default: 0,
     name: 'gas_wanted',
+    type: 'bigint',
   })
   gas_wanted: number;
 

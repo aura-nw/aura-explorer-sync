@@ -79,7 +79,7 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
   }
 
   async getCW20Info() {
-    const sqlSelect = `sc.contract_address, sc.token_name, sc.token_symbol, sc.description, sc.image`;
+    const sqlSelect = `sc.contract_address, sc.token_name, sc.token_symbol, sc.description, sc.image, sc.code_id`;
 
     const queryBuilder = this.repos
       .createQueryBuilder('sc')
@@ -105,5 +105,24 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
       `UPDATE smart_contracts SET num_tokens=? WHERE contract_address=?`,
       [numtokens, contractAddress],
     );
+  }
+
+  /**
+   * Get contract correct by addressß
+   * @param contractAddress
+   */
+  async getSmartContractCorrect(contractAddress: string, type: string) {
+    return await this.repos
+      .createQueryBuilder('sm')
+      .select(
+        `sm.contract_address, sm.token_name, sm.token_symbol, sc.image, sc.description, sm.code_id, scc.result, scc.\`type\``,
+      )
+      .innerJoin(
+        'smart_contract_codes',
+        'scc',
+        `sc.code_id = scc.code_id AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}' AND scc.type = '${type}'`,
+      )
+      .where('sm.contract_address=:contractAddress', { contractAddress })
+      .getRawOne();
   }
 }
