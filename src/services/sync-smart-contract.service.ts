@@ -52,7 +52,6 @@ export class SyncSmartContractService {
         );
         const responses = await this.getContractFromIndexer(
           this.contractLimit,
-          this.contractOffset,
           this.fromHeight,
           this.toHeight,
           this.contractNextKey,
