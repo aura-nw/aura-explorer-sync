@@ -102,7 +102,6 @@ export class SyncSmartContractService {
    */
   async getContractFromIndexer(
     limit: number,
-    offset: number,
     fromHeight: number,
     toHeight: number,
     nextKey = null,
