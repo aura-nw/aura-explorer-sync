@@ -79,7 +79,7 @@ export class SmartContractsProcessor {
       this.logger.error(
         `${this.handleInstantiateContract.name} job id[${job.id}] execute error: ${err?.message}`,
       );
-      await job.moveToFailed({ message: err?.message });
+      throw err;
     }
   }
 
@@ -459,22 +459,22 @@ export class SmartContractsProcessor {
 
     const tokenInfo = contract.token_info;
     if (tokenInfo) {
-      smartContract.token_name = tokenInfo.name;
-      smartContract.token_symbol = tokenInfo.symbol;
-      smartContract.decimals = tokenInfo.decimals;
+      smartContract.token_name = tokenInfo?.name || '';
+      smartContract.token_symbol = tokenInfo?.symbol || '';
+      smartContract.decimals = tokenInfo?.decimals || '';
     }
 
     const marketingInfo = contract.marketing_info;
     if (marketingInfo) {
-      smartContract.description = marketingInfo.description || '';
+      smartContract.description = marketingInfo?.description || '';
       smartContract.image = marketingInfo.logo?.url || '';
-      smartContract.code_id = contract.code_id || '';
+      smartContract.code_id = contract?.code_id || '';
     }
 
     const contractInfo = contract.contract_info;
     if (contractInfo) {
-      smartContract.token_name = contractInfo.name;
-      smartContract.token_symbol = contractInfo.symbol;
+      smartContract.token_name = contractInfo?.name || '';
+      smartContract.token_symbol = contractInfo?.symbol || '';
     }
 
     if (this.nodeEnv === 'mainnet') {
