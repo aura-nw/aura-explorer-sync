@@ -355,9 +355,6 @@ export class SmartContractsProcessor {
             contract.token_name = msg.name;
           }
         }
-        if (contract.code_id === 14) {
-          console.log('fffffff');
-        }
 
         // Create smart contract code data
         if (data?.contract_type?.status !== CONTRACT_CODE_STATUS.NOT_FOUND) {
@@ -578,15 +575,6 @@ export class SmartContractsProcessor {
           `${this.handleExecuteContract.name} execute complete: Contract address: ${contractAddress}, numTokens: ${numTokens}`,
         );
       }
-    }
-  }
-
-  tokemMarketProcess(data: []) {
-    const filter = data.filter(
-      (item: any) =>
-        item.contract_type?.status === CONTRACT_CODE_RESULT.CORRECT,
-    );
-    if (filter?.length > 0) {
     }
   }
 }
