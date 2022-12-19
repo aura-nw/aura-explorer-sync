@@ -1,14 +1,9 @@
 import { InjectQueue } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, Interval } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { Queue } from 'bull';
 
-import {
-  COINGECKO_API,
-  CONTRACT_CODE_RESULT,
-  CONTRACT_TYPE,
-  REDIS_KEY,
-} from '../common/constants/app.constant';
+import { COINGECKO_API, REDIS_KEY } from '../common/constants/app.constant';
 
 import { TokenMarketsRepository } from '../repositories/token-markets.repository';
 import { SmartContractRepository } from '../repositories/smart-contract.repository';

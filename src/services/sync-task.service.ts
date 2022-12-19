@@ -112,14 +112,15 @@ export class SyncTaskService {
         }
       }
       if (blockErrors.length > 0) {
-        this._logger.log(`blockErrors:${blockErrors}`);
+        this._logger.log(`Insert data to database`);
         await this.blockSyncErrorRepository.insertOnDuplicate(blockErrors, [
           'id',
         ]);
       }
     } catch (error) {
+      const heights = blockErrors.map((m) => m.height);
       this._logger.log(
-        `error when generate base blocks:${blockErrors}`,
+        `error when generate base blocks:${heights}`,
         error.stack,
       );
       throw error;
@@ -176,8 +177,6 @@ export class SyncTaskService {
     } else {
       this._logger.log('Fetching data validator...');
     }
-
-    this.influxDbClient.initWriteApi();
 
     // get validators
     const paramsValidator = NODE_API.VALIDATOR;
@@ -281,22 +280,11 @@ export class SyncTaskService {
             ['id'],
           );
 
-          // TODO: Write validator to influxdb
-          this.influxDbClient.writeValidator(
-            newValidator.operator_address,
-            newValidator.title,
-            newValidator.jailed,
-            newValidator.power,
-          );
-          await this.influxDbClient.flushData();
-
           this.isSyncValidator = false;
         } catch (error) {
           this.isSyncValidator = false;
           this._logger.error(`${error.name}: ${error.message}`);
           this._logger.error(`${error.stack}`);
-          // Reconnect Influxdb
-          this.reconnectInfluxdb(error);
         }
       }
     }
@@ -358,12 +346,6 @@ export class SyncTaskService {
                     [newMissedBlock],
                     ['height'],
                   );
-                  // TODO: Write missed block to influxdb
-                  this.influxDbClient.writeMissedBlock(
-                    newMissedBlock.validator_address,
-                    newMissedBlock.height,
-                  );
-                  this.influxDbClient.flushData();
                 } catch (error) {
                   this._logger.error(null, `Missed is already existed!`);
                 }
@@ -377,8 +359,6 @@ export class SyncTaskService {
       this.isSyncMissBlock = false;
       this._logger.error(null, `${error.name}: ${error.message}`);
       this._logger.error(null, `${error.stack}`);
-      // Reconnect Influxdb
-      this.reconnectInfluxdb(error);
     }
   }
 
@@ -475,9 +455,6 @@ export class SyncTaskService {
 
         //sync data with transactions
         if (listTransactions.length > 0) {
-          // // TODO: Write tx to influxdb
-          // this.influxDbClient.writeTxs([...influxdbTrans]);
-
           await this.syncDataWithTransactions(listTransactions);
         }
       } else {
@@ -522,10 +499,7 @@ export class SyncTaskService {
       this._logger.error(null, `${error.stack}`);
 
       // Reconnect influxDb
-      const errorCode = error?.code || '';
-      if (errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT') {
-        this.connectInfluxDB();
-      }
+      this.reconnectInfluxdb(error);
 
       const idxSync = this.schedulesSync.indexOf(syncBlock);
       if (idxSync > -1) {
@@ -661,9 +635,6 @@ export class SyncTaskService {
       ]);
     }
     if (delegations.length > 0) {
-      // TODO: Write delegation to influxdb
-      this.influxDbClient.writeDelegations(delegations);
-
       await this.delegationRepository.insertOnDuplicate(delegations, ['id']);
     }
     if (delegatorRewards.length > 0) {
@@ -725,79 +696,6 @@ export class SyncTaskService {
       paramsBlockLatest,
     );
     return results;
-  }
-
-  /**
-   * Write block were to influxdb
-   * @returns
-   */
-  // @Interval(2000)
-  async BlockMissToInfluxdb() {
-    const numRow = 500;
-    if (ENV_CONFIG.SYNC_DATA_INFLUXD) {
-      try {
-        if (this.isCompleteWrite) {
-          this._logger.debug(`BlockMissToInfluxdb is running...!`);
-          return;
-        } else {
-          this._logger.debug(`BlockMissToInfluxdb is start write...!`);
-        }
-        this.influxDbClient.initQueryApi();
-
-        this._logger.debug(
-          ` Start idx: ${this.maxHeight + 1} --- end idx: ${
-            this.maxHeight + numRow
-          }`,
-        );
-        const blocks = await this.blockRepository.getBlockByRange(
-          this.maxHeight + 1,
-          this.maxHeight + numRow,
-        );
-
-        this._logger.debug(` Push data to array to write Influxdb`);
-        const length = blocks?.length;
-        if (blocks && length > 0) {
-          this.isCompleteWrite = true;
-          // TODO: init write api
-          this.influxDbClient.initWriteApi();
-          const points: Array<any> = [];
-          for (let idx = 0; idx < length; idx++) {
-            const block = blocks[idx];
-            points.push({
-              chainid: block.chainid,
-              block_hash: block.block_hash,
-              height: block.height,
-              num_txs: block.num_txs,
-              timestamp: block.timestamp,
-              proposer: block.proposer,
-            });
-          }
-          this._logger.debug(` Push data complete`);
-          if (points.length > 0) {
-            this.influxDbClient.writeBlocks(points);
-            this._logger.debug(
-              `BlockMissToInfluxdb is start write successfully`,
-            );
-          }
-
-          // If the result is of length numRow or not? If equals set maxHeight = this.maxHeight + numRow else set maxHeight = this.maxHeight + length
-          if (length === numRow) {
-            this.maxHeight = this.maxHeight + numRow;
-          } else {
-            this.maxHeight = this.maxHeight + length;
-          }
-
-          this.isCompleteWrite = false;
-        }
-      } catch (err) {
-        this.isCompleteWrite = false;
-        this._logger.error(`BlockMissToInfluxdb call error: ${err.stack}`);
-
-        // Reconnect Influxdb
-        this.reconnectInfluxdb(err);
-        throw err;
-      }
-    }
   }
 
   /**
