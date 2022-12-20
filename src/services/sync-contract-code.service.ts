@@ -121,9 +121,10 @@ export class SyncContractCodeService {
         const item: SmartContract = constracts[i];
         let tokenInfo = new TokenMarkets();
         if (tokenMarkets.length > 0) {
-          tokenInfo = tokenMarkets.find(
-            (m) => m.contract_address === item.contract_address,
-          );
+          tokenInfo =
+            tokenMarkets.find(
+              (m) => m.contract_address === item.contract_address,
+            ) || new TokenMarkets();
         }
         tokenInfo.coin_id = tokenInfo?.coin_id || '';
         tokenInfo.contract_address = item.contract_address;

@@ -521,7 +521,7 @@ export class SyncTaskService {
     const optionQueue: JobOptions = {
       removeOnComplete: true,
       // repeat: this.everyRepeatOptions,
-      backoff: { type: 'fixed', delay: 1000 } as BackoffOptions,
+      backoff: { type: 'fixed', delay: 3000 } as BackoffOptions,
     };
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
