@@ -385,6 +385,7 @@ export class SyncDataHelpers {
     tokemMarket.symbol = smartContract.token_symbol;
     tokemMarket.image = smartContract.image;
     tokemMarket.name = smartContract.token_name;
+    tokemMarket.description = smartContract.description;
     return tokemMarket;
   }
 
