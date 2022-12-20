@@ -342,6 +342,16 @@ export class SmartContractsProcessor {
       const contracts = [];
       const tokenMarkets = [];
       const smartContractCodes = [];
+      let tokenMarketInfos = [];
+      let contractAddresses = [];
+      if (smartContracts?.length > 0) {
+        contractAddresses = smartContracts.map((m) => m.contract_address);
+        tokenMarketInfos = await this.tokenMarketsRepository.find({
+          where: {
+            contract_address: In(contractAddresses),
+          },
+        });
+      }
       for (let i = 0; i < smartContracts.length; i++) {
         const data = smartContracts[i];
         const contract = await this.makeInstantiateContractData(data);
@@ -367,8 +377,13 @@ export class SmartContractsProcessor {
           data?.contract_type?.status === CONTRACT_CODE_STATUS.COMPLETED &&
           data?.contract_type?.type === CONTRACT_TYPE.CW20
         ) {
-          const tokenMarket = SyncDataHelpers.makeTokeMarket(contract);
-          tokenMarkets.push(tokenMarket);
+          const tokenInfo = tokenMarketInfos.find(
+            (f) => f.contract_address === data.contract_address,
+          );
+          if (!tokenInfo) {
+            const tokenMarket = SyncDataHelpers.makeTokeMarket(contract);
+            tokenMarkets.push(tokenMarket);
+          }
         }
 
         contracts.push(contract);
