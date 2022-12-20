@@ -79,14 +79,10 @@ export class SyncContractCodeService {
                   for (let i = 0; i < contractDB.length; i++) {
                     let contract: SmartContract = contractDB[i];
                     //get token info
-                    const base64RequestToken = Buffer.from(`{
-                      "contract_info": {}
-                    }`).toString('base64');
+                    const base64RequestToken = Buffer.from(`{ "contract_info": {} }`).toString('base64');
                     const tokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contract.contract_address, base64RequestToken);
                     //get num tokens
-                    const base64RequestNumToken = Buffer.from(`{
-                      "num_tokens": {}
-                    }`).toString('base64');
+                    const base64RequestNumToken = Buffer.from(`{ "num_tokens": {} }`).toString('base64');
                     const numTokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contract.contract_address, base64RequestNumToken);
                     contract = SyncDataHelpers.makeTokenCW721Data(contract, tokenInfo, numTokenInfo);
                     contracts.push(contract);

@@ -193,14 +193,10 @@ export class SyncTokenService {
                         where: { contract_address: contractAddress },
                     });
                     //get token info
-                    const base64RequestToken = Buffer.from(`{
-                            "contract_info": {}
-                        }`).toString('base64');
+                    const base64RequestToken = Buffer.from(`{ "contract_info": {} }`).toString('base64');
                     const tokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestToken);
                     //get num tokens
-                    const base64RequestNumToken = Buffer.from(`{
-                        "num_tokens": {}
-                    }`).toString('base64');
+                    const base64RequestNumToken = Buffer.from(`{ "num_tokens": {} }`).toString('base64');
                     const numTokenInfo = await this._commonUtil.getDataContractFromBase64Query(this.api, contractAddress, base64RequestNumToken);
                     contract = SyncDataHelpers.makeTokenCW721Data(contract, tokenInfo, numTokenInfo);
                     smartContracts.push(contract);
