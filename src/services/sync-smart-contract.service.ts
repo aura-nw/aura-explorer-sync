@@ -19,6 +19,7 @@ export class SyncSmartContractService {
   private syncData = false;
   private fromHeight = 0;
   private toHeight = 0;
+  private totalContract = 0;
 
   constructor(
     private configService: ConfigService,
@@ -58,6 +59,7 @@ export class SyncSmartContractService {
         );
         const smartContracts = responses?.smart_contracts;
         if (smartContracts.length > 0) {
+          this.totalContract += smartContracts.length;
           // Push data to queue
           this.pushDataToQueue(smartContracts);
           this.contractNextKey = responses?.next_key;
@@ -69,6 +71,7 @@ export class SyncSmartContractService {
             this.contractOffset = 0;
           }
         }
+        this.logger.log(`Total contract is: ${this.totalContract}`);
       } catch (err) {
         this.logger.error(
           `${this.syncSmartContractFromHeight.name} was called error: ${err.stack}`,
