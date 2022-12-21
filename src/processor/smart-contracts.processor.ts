@@ -447,9 +447,10 @@ export class SmartContractsProcessor {
    */
   async makeInstantiateContractData(contract: any) {
     const smartContract = new SmartContract();
+    const codeIds = contract?.code_id;
     smartContract.id = 0;
     smartContract.height = contract.height;
-    smartContract.code_id = contract.code_id;
+    smartContract.code_id = codeIds.id;
     smartContract.contract_name = contract.contract_name;
     smartContract.contract_address = contract.contract_address;
     smartContract.creator_address = contract.creator_address;
@@ -486,7 +487,7 @@ export class SmartContractsProcessor {
     if (marketingInfo) {
       smartContract.description = marketingInfo?.description || '';
       smartContract.image = marketingInfo.logo?.url || '';
-      smartContract.code_id = contract?.code_id || '';
+      smartContract.code_id = codeIds?.id || 0;
     }
 
     const contractInfo = contract.contract_info;
