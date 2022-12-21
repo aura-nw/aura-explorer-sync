@@ -397,8 +397,9 @@ export class SyncDataHelpers {
   static makeSmartContractCode(data: any) {
     const smartContractCode = new SmartContractCode();
     const contractType = data.contract_type;
-    smartContractCode.code_id = data.code_id;
-    smartContractCode.creator = contractType.creator || '';
+    const codeId = data?.code_id;
+    smartContractCode.code_id = codeId?.id;
+    smartContractCode.creator = codeId?.creator || '';
     smartContractCode.type = contractType.type;
     switch (contractType.status) {
       case CONTRACT_CODE_STATUS.COMPLETED:
