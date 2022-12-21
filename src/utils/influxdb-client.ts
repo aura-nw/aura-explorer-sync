@@ -2,9 +2,10 @@ import {
   InfluxDB,
   Point,
   QueryApi,
-  WriteApi
+  WriteApi,
 } from '@influxdata/influxdb-client';
-import { TokenCW20Dto } from '../dtos/token-cw20.dto';
+import { CONTRACT_TYPE } from '../common/constants/app.constant';
+import { TokenMarkets } from '../entities';
 
 export class InfluxDBClient {
   private client: InfluxDB;
@@ -17,7 +18,7 @@ export class InfluxDBClient {
     public url: string,
     public token: string,
   ) {
-    this.client = new InfluxDB({ url, token, timeout: 30000 });
+    this.client = new InfluxDB({ url, token });
   }
 
   initQueryApi(): void {
@@ -137,7 +138,8 @@ export class InfluxDBClient {
   convertDate(timestamp: any): Date {
     const strTime = String(timestamp);
     const idx = strTime.lastIndexOf('.');
-    let dateConvert = (idx > (-1)) ? strTime.substring(0, idx) + '.000Z' : strTime;
+    const dateConvert =
+      idx > -1 ? strTime.substring(0, idx) + '.000Z' : strTime;
     return new Date(dateConvert);
   }
 
@@ -223,7 +225,6 @@ export class InfluxDBClient {
     this.writeApi.writePoint(point);
   }
 
-
   /**
    * Flush data to insert record influxdb
    */
@@ -233,10 +234,10 @@ export class InfluxDBClient {
 
   /**
    * Get max data by column
-   * @param measurement 
-   * @param start 
-   * @param coloumn 
-   * @returns 
+   * @param measurement
+   * @param start
+   * @param coloumn
+   * @returns
    */
   getMax(measurement: string, start: string, coloumn: string): Promise<any> {
     const query = `from(bucket: "${this.bucket}") |> range(start: ${start}) |> filter(fn: (r) => r._measurement == "${measurement}")|> filter(fn: (r) => r._field == "${coloumn}")|> max() `;
@@ -265,7 +266,7 @@ export class InfluxDBClient {
 
   /**
    * Write blocks to Influxd
-   * @param values 
+   * @param values
    */
   async writeBlocks(values: Array<any>): Promise<void> {
     const points: Array<Point> = [];
@@ -286,25 +287,27 @@ export class InfluxDBClient {
     }
   }
 
-
-  async writeBlockTokenPriceAndVolume(tokens: TokenCW20Dto[]) {
+  async writeBlockTokenPriceAndVolume(tokens: TokenMarkets[]) {
     const points: Array<Point> = [];
-    tokens.forEach(token => {
+    tokens.forEach((token) => {
       const point = new Point('token_cw20_measurement')
-        .stringField('coinId', token.coinId)
-        .stringField('type', token.type)
-        .stringField('last_updated', token.last_updated)
-        .intField('current_price', token.current_price)
-        .intField('market_cap_rank', token.market_cap_rank)
-        .intField('price_change_24h', token.price_change_24h)
-        .intField('price_change_percentage_24h', token.price_change_percentage_24h)
-        .intField('total_volume', token.total_volume)
-        .intField('circulating_supply', token.circulating_supply)
-        .intField('max_supply', token.max_supply)
-        .intField('previous_holder', token.previous_holder)
-        .intField('current_holder', token.current_holder)
-        .intField('percent_hold', token.percent_holder)
-        .timestamp(this.convertDate(token.timestamp));
+        .tag('token_id', token.coin_id)
+        .stringField('coinId', token.coin_id)
+        .stringField('type', CONTRACT_TYPE.CW20)
+        .stringField('last_updated', token.updated_at)
+        .floatField('current_price', token.current_price)
+        .floatField(
+          'price_change_percentage_24h',
+          token.price_change_percentage_24h,
+        )
+        .floatField('total_volume', token.total_volume)
+        .floatField('circulating_supply', token.circulating_supply)
+        .floatField('circulating_market_cap', token.circulating_market_cap)
+        .floatField('max_supply', token.max_supply)
+        .floatField('market_cap', token.market_cap)
+        // .intField('current_holder', token.current_holder)
+        // .floatField('percent_hold', token.holder_change_percentage_24h)
+        .timestamp(this.convertDate(token.updated_at));
       points.push(point);
     });
 

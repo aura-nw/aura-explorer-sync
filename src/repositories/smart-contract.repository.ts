@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { CONTRACT_CODE_RESULT, CONTRACT_TYPE, MESSAGE_ACTION, SMART_CONTRACT_VERIFICATION } from '../common/constants/app.constant';
+import { Equal, Not, Repository } from 'typeorm';
+import {
+  CONTRACT_CODE_RESULT,
+  CONTRACT_TYPE,
+  SMART_CONTRACT_VERIFICATION,
+} from '../common/constants/app.constant';
 import { SmartContract } from '../entities';
 import { BaseRepository } from './base.repository';
 
@@ -36,9 +40,12 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
       .where('smart_contracts.contract_hash = :contract_hash', {
         contract_hash,
       })
-      .andWhere('smart_contracts.contract_verification = :contract_verification', {
-        contract_verification: SMART_CONTRACT_VERIFICATION.EXACT_MATCH,
-      })
+      .andWhere(
+        'smart_contracts.contract_verification = :contract_verification',
+        {
+          contract_verification: SMART_CONTRACT_VERIFICATION.VERIFIED,
+        },
+      )
       .select([
         'smart_contracts.contract_address as contract_address',
         'smart_contracts.url as url',
@@ -55,11 +62,67 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
     return res;
   }
 
-  async getTokensRegisteredType() {
-    const sql = `SELECT sc.contract_address
-      FROM smart_contracts sc
-        INNER JOIN smart_contract_codes scc ON sc.code_id = scc.code_id AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}' AND scc.type = '${CONTRACT_TYPE.CW721}'`;
+  async getContractCodeByStatus(status: CONTRACT_CODE_RESULT) {
+    const sqlSelect = `sc.contract_address, scc.result, scc.type`;
 
-    return await this.repos.query(sql, []);
+    const queryBuilder = this.repos
+      .createQueryBuilder('sc')
+      .select(sqlSelect)
+      .innerJoin(
+        'smart_contract_codes',
+        'scc',
+        `sc.code_id = scc.code_id AND scc.result = '${status}'`,
+      )
+      .where({ token_symbol: Equal('') });
+
+    return await queryBuilder.getRawMany();
+  }
+
+  async getCW20Info() {
+    const sqlSelect = `sc.contract_address, sc.token_name, sc.token_symbol, sc.description, sc.image, sc.code_id`;
+
+    const queryBuilder = this.repos
+      .createQueryBuilder('sc')
+      .select(sqlSelect)
+      .innerJoin(
+        'smart_contract_codes',
+        'scc',
+        `sc.code_id = scc.code_id AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}' AND scc.type = '${CONTRACT_TYPE.CW20}'`,
+      )
+      .where({ token_symbol: Not('') });
+
+    return await queryBuilder.getRawMany();
+  }
+
+  /**
+   * Update num_tokens column when transactions have type mint/burn
+   * @param contractAddress
+   * @param numtokens
+   * @returns
+   */
+  async updateNumtokens(contractAddress: string, numtokens: number) {
+    return await this.repos.query(
+      `UPDATE smart_contracts SET num_tokens=? WHERE contract_address=?`,
+      [numtokens, contractAddress],
+    );
+  }
+
+  /**
+   * Get contract correct by addressß
+   * @param contractAddress
+   */
+  async getSmartContractCorrect(contractAddress: string, type: string) {
+    return await this.repos
+      .createQueryBuilder('sm')
+      .select(
+        `sm.contract_address, sm.token_name, sm.token_symbol, sc.image, sc.description, sm.code_id, scc.result, scc.\`type\``,
+      )
+      .innerJoin(
+        'smart_contract_codes',
+        'scc',
+        `sc.code_id = scc.code_id AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}' AND scc.type = '${type}'`,
+      )
+      .where('sm.contract_address=:contractAddress', { contractAddress })
+      .getRawOne();
   }
 }

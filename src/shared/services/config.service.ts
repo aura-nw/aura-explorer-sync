@@ -42,15 +42,23 @@ export class ConfigService {
       SMART_CONTRACT_SERVICE: process.env.SMART_CONTRACT_SERVICE,
       START_HEIGHT: process.env.START_HEIGHT,
       TIMES_SYNC: Number(process.env.TIMES_SYNC) || 3000,
+      SYNC_TRANSACTIONS_CLEAN_UP_DAY: Number(
+        process.env.SYNC_TRANSACTIONS_CLEAN_UP_DAY || 8,
+      ),
       BLOCK_START: Number(process.env.BLOCK_START) || 0,
-      SYNC_DATA_INFLUXD: (process.env.SYNC_DATA_INFLUXD === 'true') ? true : false,
+      SYNC_DATA_INFLUXD:
+        process.env.SYNC_DATA_INFLUXD === 'true' ? true : false,
       REDIS: {
         HOST: process.env.REDIS_HOST,
         PORT: Number(process.env.REDIS_PORT) || 6379,
         PREFIX: process.env.REDIS_PREFIX,
         DB: process.env.REDIS_DB,
-        USERNAME: (!process.env.REDIS_USERNAME || (process.env.REDIS_USERNAME === 'default')) ? '' : process.env.REDIS_USERNAME,
-        PASSWORD: process.env.REDIS_PASSWORD || ''
+        USERNAME:
+          !process.env.REDIS_USERNAME ||
+          process.env.REDIS_USERNAME === 'default'
+            ? ''
+            : process.env.REDIS_USERNAME,
+        PASSWORD: process.env.REDIS_PASSWORD || '',
       },
       NODE: {
         API: process.env.API,
@@ -72,6 +80,13 @@ export class ConfigService {
         API: process.env.COINGECKO_API,
         COIN_ID: process.env.COINGECKO_COIN_ID,
         MAX_REQUEST: Number(process.env.COINGECKO_MAX_REQUEST) || 250,
+        COINGEKO_PLATFORM: process.env.COINGEKO_PLATFORM || 'ethereum',
+      },
+      SYNC_SMART_CONTRACT: {
+        FROM_HEIGHT: Number(process.env.SYNC_SMART_CONTRACT_FROM_HEIGHT) || 0,
+        TO_HEIGHT: Number(process.env.SYNC_SMART_CONTRACT_TO_HEIGHT) || 0,
+        SYNC_DATA:
+          process.env.SYNC_SMART_CONTRACT_SYNC_DATA === 'true' ? true : false,
       },
       NODE_ENV: process.env.NODE_ENV,
     };
@@ -93,7 +108,7 @@ export class ConfigService {
       migrationsRun: true,
       connectTimeout: 1000,
       synchronize: false,
-      // logging: true,
+      logging: this.get('DB_LOGGING') === 'true',
       namingStrategy: new PascalCaseStrategy(),
       multipleStatements: true,
     };
