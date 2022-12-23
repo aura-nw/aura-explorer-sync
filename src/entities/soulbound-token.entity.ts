@@ -16,6 +16,9 @@ export class SoulboundToken extends BaseEntityIncrementId {
   token_uri: string;
 
   @Column()
+  token_img: string;
+
+  @Column()
   @Index({ unique: false })
   receiver_address: string;
 
@@ -28,6 +31,9 @@ export class SoulboundToken extends BaseEntityIncrementId {
 
   @Column({ nullable: true, type: 'text' })
   signature: string;
+
+  @Column({ nullable: true, type: 'text' })
+  pub_key: string;
 
   @Column({ default: false })
   picked: boolean;
