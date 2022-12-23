@@ -269,7 +269,7 @@ export class SyncDataHelpers {
     return proposalVote;
   }
 
-  static makeCreateValidatorData(txData: any, message: any) {
+  static makeDelegationData(txData: any, message: any) {
     const delegation = new Delegation();
     delegation.tx_hash = txData.tx_response.txhash;
     delegation.delegator_address = message.delegator_address;
@@ -352,7 +352,7 @@ export class SyncDataHelpers {
     currentData: TokenMarkets,
     data: any,
   ): TokenMarkets {
-    const coinInfo = { ...currentData } as TokenMarkets;
+    const coinInfo = { ...currentData };
     coinInfo.current_price = Number(data.current_price?.toFixed(6)) || 0;
     coinInfo.price_change_percentage_24h =
       Number(data.price_change_percentage_24h?.toFixed(6)) || 0;
