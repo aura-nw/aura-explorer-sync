@@ -269,7 +269,7 @@ export class SyncDataHelpers {
     return proposalVote;
   }
 
-  static makeCreateValidatorData(txData: any, message: any) {
+  static makeDelegationData(txData: any, message: any) {
     const delegation = new Delegation();
     delegation.tx_hash = txData.tx_response.txhash;
     delegation.delegator_address = message.delegator_address;
@@ -352,7 +352,7 @@ export class SyncDataHelpers {
     currentData: TokenMarkets,
     data: any,
   ): TokenMarkets {
-    const coinInfo = { ...currentData } as TokenMarkets;
+    const coinInfo = { ...currentData };
     coinInfo.current_price = Number(data.current_price?.toFixed(6)) || 0;
     coinInfo.price_change_percentage_24h =
       Number(data.price_change_percentage_24h?.toFixed(6)) || 0;
@@ -385,6 +385,7 @@ export class SyncDataHelpers {
     tokemMarket.symbol = smartContract.token_symbol;
     tokemMarket.image = smartContract.image;
     tokemMarket.name = smartContract.token_name;
+    tokemMarket.description = smartContract.description;
     return tokemMarket;
   }
 
@@ -396,8 +397,9 @@ export class SyncDataHelpers {
   static makeSmartContractCode(data: any) {
     const smartContractCode = new SmartContractCode();
     const contractType = data.contract_type;
-    smartContractCode.code_id = data.code_id;
-    smartContractCode.creator = contractType.creator || '';
+    const codeId = data?.code_id;
+    smartContractCode.code_id = codeId?.id;
+    smartContractCode.creator = codeId?.creator || '';
     smartContractCode.type = contractType.type;
     switch (contractType.status) {
       case CONTRACT_CODE_STATUS.COMPLETED:

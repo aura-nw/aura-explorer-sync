@@ -280,8 +280,10 @@ export class SmartContractsProcessor {
         for (let index = 0; index < response.length; index++) {
           const data = response[index];
           let tokenInfo = tokenInfos?.find((f) => f.coin_id === data.id);
-          tokenInfo = SyncDataHelpers.updateTokenMarketsData(tokenInfo, data);
-          coinMarkets.push(tokenInfo);
+          if (tokenInfo) {
+            tokenInfo = SyncDataHelpers.updateTokenMarketsData(tokenInfo, data);
+            coinMarkets.push(tokenInfo);
+          }
         }
       }
       if (coinMarkets.length > 0) {
@@ -345,6 +347,16 @@ export class SmartContractsProcessor {
       const contracts = [];
       const tokenMarkets = [];
       const smartContractCodes = [];
+      let tokenMarketInfos = [];
+      let contractAddresses = [];
+      if (smartContracts?.length > 0) {
+        contractAddresses = smartContracts.map((m) => m.contract_address);
+        tokenMarketInfos = await this.tokenMarketsRepository.find({
+          where: {
+            contract_address: In(contractAddresses),
+          },
+        });
+      }
       for (let i = 0; i < smartContracts.length; i++) {
         const data = smartContracts[i];
         const contract = await this.makeInstantiateContractData(data);
@@ -366,9 +378,17 @@ export class SmartContractsProcessor {
         }
 
         // Create token martket data
-        if (data?.contract_type?.status === CONTRACT_CODE_STATUS.COMPLETED) {
-          const tokenMarket = SyncDataHelpers.makeTokeMarket(contract);
-          tokenMarkets.push(tokenMarket);
+        if (
+          data?.contract_type?.status === CONTRACT_CODE_STATUS.COMPLETED &&
+          data?.contract_type?.type === CONTRACT_TYPE.CW20
+        ) {
+          const tokenInfo = tokenMarketInfos.find(
+            (f) => f.contract_address === data.contract_address,
+          );
+          if (!tokenInfo) {
+            const tokenMarket = SyncDataHelpers.makeTokeMarket(contract);
+            tokenMarkets.push(tokenMarket);
+          }
         }
 
         contracts.push(contract);
@@ -474,9 +494,10 @@ export class SmartContractsProcessor {
    */
   async makeInstantiateContractData(contract: any) {
     const smartContract = new SmartContract();
+    const codeIds = contract?.code_id;
     smartContract.id = 0;
     smartContract.height = contract.height;
-    smartContract.code_id = contract.code_id;
+    smartContract.code_id = codeIds.id;
     smartContract.contract_name = contract.contract_name;
     smartContract.contract_address = contract.contract_address;
     smartContract.creator_address = contract.creator_address;
@@ -513,7 +534,7 @@ export class SmartContractsProcessor {
     if (marketingInfo) {
       smartContract.description = marketingInfo?.description || '';
       smartContract.image = marketingInfo.logo?.url || '';
-      smartContract.code_id = contract?.code_id || '';
+      smartContract.code_id = codeIds?.id || 0;
     }
 
     const contractInfo = contract.contract_info;
@@ -617,15 +638,6 @@ export class SmartContractsProcessor {
           `${this.handleExecuteContract.name} execute complete: Contract address: ${contractAddress}, numTokens: ${numTokens}`,
         );
       }
-    }
-  }
-
-  tokemMarketProcess(data: []) {
-    const filter = data.filter(
-      (item: any) =>
-        item.contract_type?.status === CONTRACT_CODE_RESULT.CORRECT,
-    );
-    if (filter?.length > 0) {
     }
   }
 }
