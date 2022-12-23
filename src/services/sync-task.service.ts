@@ -49,7 +49,6 @@ export class SyncTaskService {
     private validatorRepository: ValidatorRepository,
     private missedBlockRepository: MissedBlockRepository,
     private blockSyncErrorRepository: BlockSyncErrorRepository,
-    private blockRepository: BlockRepository,
     private statusRepository: SyncStatusRepository,
     private proposalVoteRepository: ProposalVoteRepository,
     private delegationRepository: DelegationRepository,
@@ -275,10 +274,7 @@ export class SyncTaskService {
           } catch (error) {
             this._logger.error(null, `Not exist delegations`);
           }
-          await this.validatorRepository.insertOnDuplicate(
-            [newValidator],
-            ['id'],
-          );
+          await this.validatorRepository.update(newValidator);
 
           this.isSyncValidator = false;
         } catch (error) {
@@ -369,16 +365,6 @@ export class SyncTaskService {
     );
 
     try {
-      // TODO: init write api
-      this.influxDbClient.initWriteApi();
-
-      // get validators
-      const paramsValidator = NODE_API.VALIDATOR;
-      const validatorData = await this._commonUtil.getDataAPI(
-        this.api,
-        paramsValidator,
-      );
-
       // fetching block from node
       const paramsBlock = `block?height=${syncBlock}`;
       const blockData = await this._commonUtil.getDataRPC(
@@ -390,30 +376,13 @@ export class SyncTaskService {
       blockData.block.header.time = this.influxDbClient.convertDate(
         blockData.block.header.time,
       );
-      const newBlock = SyncDataHelpers.makeBlockData(blockData);
-
-      const operatorAddress = blockData.block.header.proposer_address;
-      let blockGasUsed = 0;
-      let blockGasWanted = 0;
 
       //Insert block error table
       if (!recallSync) {
-        await this.insertBlockError(newBlock.block_hash, newBlock.height);
+        await this.insertBlockError(syncBlock);
 
         // Mark schedule is running
-        this.schedulesSync.push(Number(newBlock.height));
-      }
-
-      // Set proposer and operator_address from validators
-      for (const key in validatorData.validators) {
-        const ele = validatorData.validators[key];
-        const pubkey = this._commonUtil.getAddressFromPubkey(
-          ele.consensus_pubkey.key,
-        );
-        if (pubkey === operatorAddress) {
-          newBlock.proposer = ele.description.moniker;
-          newBlock.operator_address = ele.operator_address;
-        }
+        this.schedulesSync.push(syncBlock);
       }
 
       if (blockData.block.data.txs && blockData.block.data.txs.length > 0) {
@@ -428,12 +397,10 @@ export class SyncTaskService {
         }
 
         txDatas = await Promise.all(txs);
-        let i = 0;
         // create transaction
-        for (const _key in blockData.block.data.txs) {
+        const txLength = blockData.block.data.txs?.length || 0;
+        for (let i = 0; i < txLength; i++) {
           const txData = txDatas[i];
-
-          i += 1;
           const [txType] = SyncDataHelpers.makeTxRawLogData(txData);
 
           // Check to push into list transaction
@@ -444,40 +411,13 @@ export class SyncTaskService {
           ) {
             listTransactions.push(txData);
           }
-          blockGasUsed += parseInt(txData.tx_response.gas_used);
-          blockGasWanted += parseInt(txData.tx_response.gas_wanted);
         }
-
-        // Insert data to Block table
-        newBlock.gas_used = blockGasUsed;
-        newBlock.gas_wanted = blockGasWanted;
-        await this.blockRepository.upsert([newBlock], []);
 
         //sync data with transactions
         if (listTransactions.length > 0) {
           await this.syncDataWithTransactions(listTransactions);
         }
-      } else {
-        //Insert or update Block
-        await this.blockRepository.insertOnDuplicate([newBlock], ['id']);
       }
-
-      // TODO: Write block to influxdb
-      this.influxDbClient.writeBlock(
-        newBlock.height,
-        newBlock.block_hash,
-        newBlock.num_txs,
-        newBlock.chainid,
-        newBlock.timestamp,
-        newBlock.proposer,
-      );
-
-      await this.influxDbClient.flushData();
-
-      /**
-       * TODO: Flush pending writes and close writeApi.
-       */
-      // this.influxDbClient.closeWriteApi();
 
       await this.updateStatus(syncBlock);
 
@@ -497,10 +437,6 @@ export class SyncTaskService {
         `Sync Blocked & Transaction were error height: ${syncBlock}, ${error.name}: ${error.message}`,
       );
       this._logger.error(null, `${error.stack}`);
-
-      // Reconnect influxDb
-      this.reconnectInfluxdb(error);
-
       const idxSync = this.schedulesSync.indexOf(syncBlock);
       if (idxSync > -1) {
         this.schedulesSync.splice(idxSync, 1);
@@ -614,7 +550,7 @@ export class SyncTaskService {
               { ...optionQueue, delay: 7000 },
             );
           } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
-            const delegation = SyncDataHelpers.makeCreateValidatorData(
+            const delegation = SyncDataHelpers.makeDelegationData(
               txData,
               message,
             );
@@ -663,7 +599,7 @@ export class SyncTaskService {
    * @param block_hash
    * @param height
    */
-  async insertBlockError(block_hash: string, height: number) {
+  async insertBlockError(height: number) {
     const blockSyncError = new BlockSyncError();
     blockSyncError.height = height;
     await this.blockSyncErrorRepository.create(blockSyncError);

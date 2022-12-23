@@ -277,8 +277,10 @@ export class SmartContractsProcessor {
         for (let index = 0; index < response.length; index++) {
           const data = response[index];
           let tokenInfo = tokenInfos?.find((f) => f.coin_id === data.id);
-          tokenInfo = SyncDataHelpers.updateTokenMarketsData(tokenInfo, data);
-          coinMarkets.push(tokenInfo);
+          if (tokenInfo) {
+            tokenInfo = SyncDataHelpers.updateTokenMarketsData(tokenInfo, data);
+            coinMarkets.push(tokenInfo);
+          }
         }
       }
       if (coinMarkets.length > 0) {

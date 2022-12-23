@@ -115,7 +115,7 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
     return await this.repos
       .createQueryBuilder('sm')
       .select(
-        `sm.contract_address, sm.token_name, sm.token_symbol, sc.image, sc.description, sm.code_id, scc.result, scc.\`type\``,
+        `sm.contract_address, sm.token_name, sm.token_symbol, sm.image, sc.description, sm.code_id, scc.result, scc.\`type\``,
       )
       .innerJoin(
         'smart_contract_codes',

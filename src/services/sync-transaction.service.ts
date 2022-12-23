@@ -43,14 +43,7 @@ export class SyncTransactionService {
     this._logger.log('Start crawl transactions ...');
 
     const lastTransaction = await this.txsRepository.getLatestTransaction();
-    let lastBlockHeight = lastTransaction?.height;
-    if (!lastBlockHeight) {
-      lastBlockHeight =
-        (await this.blockRepository.getLastBlockHeightByDate(
-          CLEAN_UP_DURATION_DAYS,
-        )) || 0;
-    }
-
+    const lastBlockHeight = lastTransaction?.height || 0;
     const numOfSyncedTransactions = await this.handleCrawling(
       lastBlockHeight,
       PAGE_LIMIT,
