@@ -16,11 +16,4 @@ export class BlockRepository extends BaseRepository<Block> {
       '============== Constructor Block Repository ==============',
     );
   }
-
-  getBlockByRange(start: number, end: number) {
-    return this.repos.createQueryBuilder('blk')
-      .select('blk.chainid, blk.block_hash, blk.height, blk.num_txs, blk.timestamp, blk.proposer')
-      .where(`height between :start and :end`, { start, end })
-      .getRawMany();
-  }
 }

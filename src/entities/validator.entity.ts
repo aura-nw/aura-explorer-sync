@@ -1,10 +1,9 @@
-import { Column, Entity, Unique } from 'typeorm';
-import { BaseEntityIncrementId } from './base/base.entity';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { BaseEntity } from './base/base.entity';
 
 @Entity('validators')
-@Unique('operator_address', ['operator_address'])
-export class Validator extends BaseEntityIncrementId {
-  @Column({ name: 'operator_address', update: false })
+export class Validator extends BaseEntity {
+  @PrimaryColumn({ name: 'operator_address', type: 'varchar' })
   operator_address: string;
 
   @Column({
@@ -100,7 +99,7 @@ export class Validator extends BaseEntityIncrementId {
   @Column({
     name: 'details',
     nullable: true,
-    type: 'text'
+    type: 'text',
   })
   details: string;
 

@@ -1,18 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Interval } from '@nestjs/schedule';
+import { CronExpression, Interval } from '@nestjs/schedule';
 import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
-import { DeploymentRequestsRepository } from '../repositories/deployment-requests.repository';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
   CONST_PUBKEY_ADDR,
-  CONTRACT_TRANSACTION_EXECUTE_TYPE,
   NODE_API,
-  SMART_CONTRACT_VERIFICATION
 } from '../common/constants/app.constant';
-import { BlockSyncError, MissedBlock, SmartContract } from '../entities';
+import { BlockSyncError, MissedBlock } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { BlockSyncErrorRepository } from '../repositories/block-sync-error.repository';
 import { BlockRepository } from '../repositories/block.repository';
@@ -20,15 +17,13 @@ import { DelegationRepository } from '../repositories/delegation.repository';
 import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
 import { MissedBlockRepository } from '../repositories/missed-block.repository';
 import { ProposalVoteRepository } from '../repositories/proposal-vote.repository';
-import { SmartContractRepository } from '../repositories/smart-contract.repository';
 import { SyncStatusRepository } from '../repositories/sync-status.repository';
-import { TransactionRepository } from '../repositories/transaction.repository';
 import { ValidatorRepository } from '../repositories/validator.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import { BackoffOptions, CronRepeatOptions, JobOptions, Queue } from 'bull';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
 @Injectable()
 export class SyncTaskService {
@@ -45,28 +40,29 @@ export class SyncTaskService {
   isCompleteWrite = false;
   maxHeight = ENV_CONFIG.BLOCK_START;
   private nodeEnv = ENV_CONFIG.NODE_ENV;
+  private everyRepeatOptions: CronRepeatOptions = {
+    cron: CronExpression.EVERY_30_SECONDS,
+  };
 
   constructor(
     private _commonUtil: CommonUtil,
     private validatorRepository: ValidatorRepository,
     private missedBlockRepository: MissedBlockRepository,
     private blockSyncErrorRepository: BlockSyncErrorRepository,
-    private blockRepository: BlockRepository,
-    private txRepository: TransactionRepository,
     private statusRepository: SyncStatusRepository,
     private proposalVoteRepository: ProposalVoteRepository,
     private delegationRepository: DelegationRepository,
     private delegatorRewardRepository: DelegatorRewardRepository,
     private smartContractCodeRepository: SmartContractCodeRepository,
     @InjectSchedule() private readonly schedule: Schedule,
-    @InjectQueue('smart-contracts') private readonly contractQueue: Queue
+    @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
   ) {
     this._logger.log(
       '============== Constructor Sync Task Service ==============',
     );
 
     this.rpc = ENV_CONFIG.NODE.RPC;
-    this.api = ENV_CONFIG.NODE.API;   
+    this.api = ENV_CONFIG.NODE.API;
 
     this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
     this.threads = ENV_CONFIG.THREADS;
@@ -84,15 +80,14 @@ export class SyncTaskService {
     try {
       let currentHeight = 0;
       this._logger.log('start cron generate block sync error');
-      const [blockLatest, currentBlock, blockStatus] =
-        await Promise.all([
-          this.getBlockLatest(),
-          this.blockSyncErrorRepository.max('height'),
-          this.statusRepository.findOne()
-        ]);
+      const [blockLatest, currentBlock, blockStatus] = await Promise.all([
+        this.getBlockLatest(),
+        this.blockSyncErrorRepository.max('height'),
+        this.statusRepository.findOne(),
+      ]);
 
-      let height = Number(currentBlock?.height);
-      let currentStatusBlock = Number(blockStatus?.current_block);
+      const height = Number(currentBlock?.height);
+      const currentStatusBlock = Number(blockStatus?.current_block);
 
       this._logger.log(`Current block height: ${height}`);
       this._logger.log(`Current block status: ${currentStatusBlock}`);
@@ -112,34 +107,39 @@ export class SyncTaskService {
         for (let i = currentHeight + 1; i < latestBlk; i++) {
           const blockSyncError = new BlockSyncError();
           blockSyncError.height = i;
-          blockErrors.push(blockSyncError)
+          blockErrors.push(blockSyncError);
         }
       }
       if (blockErrors.length > 0) {
-        await this.blockSyncErrorRepository.insertOnDuplicate(blockErrors, ['id'])
+        this._logger.log(`Insert data to database`);
+        await this.blockSyncErrorRepository.insertOnDuplicate(blockErrors, [
+          'id',
+        ]);
       }
     } catch (error) {
-      this._logger.log(`error when generate base blocks:${blockErrors}`, error.stack);
+      const heights = blockErrors.map((m) => m.height);
+      this._logger.log(
+        `error when generate base blocks:${heights}`,
+        error.stack,
+      );
       throw error;
     }
-
   }
 
   /**
    * Procces block insert data to db
-  */
+   */
   @Interval(3000)
   async processBlock() {
     // Get the highest block and insert into SyncBlockError
     try {
-      const results =
-        await this.blockSyncErrorRepository.find({
-          order: {
-            height: 'asc'
-          },
-          take: this.threads
-        });
-      results.forEach(el => {
+      const results = await this.blockSyncErrorRepository.find({
+        order: {
+          height: 'asc',
+        },
+        take: this.threads,
+      });
+      results.forEach((el) => {
         try {
           this.schedule.scheduleTimeoutJob(
             el.height.toString(),
@@ -154,19 +154,17 @@ export class SyncTaskService {
               return true;
             },
             {
-              maxRetry: -1
-            }
+              maxRetry: -1,
+            },
           );
         } catch (error) {
           this._logger.log('Catch duplicate height ', error.stack);
         }
-
-      })
+      });
     } catch (error) {
       this._logger.log('error when process blocks', error.stack);
       throw error;
     }
-
   }
 
   @Interval(5000)
@@ -276,7 +274,8 @@ export class SyncTaskService {
           } catch (error) {
             this._logger.error(null, `Not exist delegations`);
           }
-          await this.validatorRepository.insertOnDuplicate([newValidator], ['id']);
+          await this.validatorRepository.update(newValidator);
+
           this.isSyncValidator = false;
         } catch (error) {
           this.isSyncValidator = false;
@@ -340,7 +339,10 @@ export class SyncTaskService {
 
                 // insert into table missed-block
                 try {
-                  await this.missedBlockRepository.upsert([newMissedBlock], ['height']);
+                  await this.missedBlockRepository.upsert(
+                    [newMissedBlock],
+                    ['height'],
+                  );
                 } catch (error) {
                   this._logger.error(null, `Missed is already existed!`);
                 }
@@ -364,16 +366,6 @@ export class SyncTaskService {
     );
 
     try {
-      // TODO: init write api
-      this.influxDbClient.initWriteApi();
-
-      // get validators
-      const paramsValidator = NODE_API.VALIDATOR;
-      const validatorData = await this._commonUtil.getDataAPI(
-        this.api,
-        paramsValidator,
-      );
-
       // fetching block from node
       const paramsBlock = `block?height=${syncBlock}`;
       const blockData = await this._commonUtil.getDataRPC(
@@ -382,37 +374,20 @@ export class SyncTaskService {
       );
 
       // make block object from block data
-      blockData.block.header.time = this.influxDbClient.convertDate(blockData.block.header.time);
-      const newBlock = SyncDataHelpers.makeBlockData(blockData);
-
-      const operatorAddress = blockData.block.header.proposer_address;
-      let blockGasUsed = 0;
-      let blockGasWanted = 0;
+      blockData.block.header.time = this.influxDbClient.convertDate(
+        blockData.block.header.time,
+      );
 
       //Insert block error table
       if (!recallSync) {
-        await this.insertBlockError(newBlock.block_hash, newBlock.height);
+        await this.insertBlockError(syncBlock);
 
         // Mark schedule is running
-        this.schedulesSync.push(Number(newBlock.height));
-      }
-
-      // Set proposer and operator_address from validators
-      for (const key in validatorData.validators) {
-        const ele = validatorData.validators[key];
-        const pubkey = this._commonUtil.getAddressFromPubkey(
-          ele.consensus_pubkey.key,
-        );
-        if (pubkey === operatorAddress) {
-          newBlock.proposer = ele.description.moniker;
-          newBlock.operator_address = ele.operator_address;
-        }
+        this.schedulesSync.push(syncBlock);
       }
 
       if (blockData.block.data.txs && blockData.block.data.txs.length > 0) {
-        const transactions = [];
         const listTransactions = [];
-        const influxdbTrans = [];
         let txDatas = [];
         const txs = [];
         for (const key in blockData.block.data.txs) {
@@ -420,32 +395,14 @@ export class SyncTaskService {
           const txHash = sha256(Buffer.from(element, 'base64')).toUpperCase();
           const paramsTx = `cosmos/tx/v1beta1/txs/${txHash}`;
           txs.push(this._commonUtil.getDataAPI(this.api, paramsTx));
-
         }
 
         txDatas = await Promise.all(txs);
-        let i = 0;
         // create transaction
-        for (const key in blockData.block.data.txs) {
-          const element = blockData.block.data.txs[key];
-
-          const txHash = sha256(Buffer.from(element, 'base64')).toUpperCase();
+        const txLength = blockData.block.data.txs?.length || 0;
+        for (let i = 0; i < txLength; i++) {
           const txData = txDatas[i];
-
-          i += 1;
-          const [txType, txRawLogData, txContractAddress] =
-            SyncDataHelpers.makeTxRawLogData(txData);
-          // Make up transaction data from block data
-          const newTx = SyncDataHelpers.makeTrxData(
-            txData,
-            syncBlock,
-            txType,
-            txRawLogData,
-            blockData.block.header.time,
-            txContractAddress,
-          );
-
-          transactions.push(newTx);
+          const [txType] = SyncDataHelpers.makeTxRawLogData(txData);
 
           // Check to push into list transaction
           const txTypeCheck = txType.substring(txType.lastIndexOf('.') + 1);
@@ -455,44 +412,13 @@ export class SyncTaskService {
           ) {
             listTransactions.push(txData);
           }
-          blockGasUsed += parseInt(txData.tx_response.gas_used);
-          blockGasWanted += parseInt(txData.tx_response.gas_wanted);
-        }
-
-        // Insert data to Block table
-        newBlock.gas_used = blockGasUsed;
-        newBlock.gas_wanted = blockGasWanted;
-        const savedBlock = await this.blockRepository.upsert([newBlock], []);
-        if (savedBlock) {
-          transactions.map((item) => (item.blockId = savedBlock[0].id));
-          await this.txRepository.insertOnDuplicate(transactions, ['id']);
         }
 
         //sync data with transactions
         if (listTransactions.length > 0) {
           await this.syncDataWithTransactions(listTransactions);
         }
-      } else {
-        //Insert or update Block
-        await this.blockRepository.insertOnDuplicate([newBlock], ['id']);
       }
-
-      // TODO: Write block to influxdb
-      this.influxDbClient.writeBlock(
-         newBlock.height,
-        newBlock.block_hash,
-        newBlock.num_txs,
-        newBlock.chainid,
-        newBlock.timestamp,
-        newBlock.proposer,
-      );
-
-      await this.influxDbClient.flushData();
-
-      /**
-       * TODO: Flush pending writes and close writeApi.
-       */
-      // this.influxDbClient.closeWriteApi();
 
       await this.updateStatus(syncBlock);
 
@@ -512,13 +438,6 @@ export class SyncTaskService {
         `Sync Blocked & Transaction were error height: ${syncBlock}, ${error.name}: ${error.message}`,
       );
       this._logger.error(null, `${error.stack}`);
-
-      // Reconnect influxDb
-      const errorCode = error?.code || '';
-      if(errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT'){
-        this.connectInfluxDB();
-      }
-
       const idxSync = this.schedulesSync.indexOf(syncBlock);
       if (idxSync > -1) {
         this.schedulesSync.splice(idxSync, 1);
@@ -536,6 +455,11 @@ export class SyncTaskService {
     const delegations = [];
     const delegatorRewards = [];
     const smartContractCodes = [];
+    const optionQueue: JobOptions = {
+      removeOnComplete: true,
+      // repeat: this.everyRepeatOptions,
+      backoff: { type: 'fixed', delay: 3000 } as BackoffOptions,
+    };
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
       if (
@@ -586,16 +510,48 @@ export class SyncTaskService {
               delegatorRewards.push(reward);
             }
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
-            this.contractQueue.add('sync-execute-contracts', {
-              txData,
-              message,
-            });
+            const height = Number(txData.tx_response.height);
+            const contractInstantiate = txData.tx_response.logs?.filter((f) =>
+              f.events.find((x) => x.type == CONST_CHAR.INSTANTIATE),
+            );
+            const burnOrMintMessages = message.msg?.mint || message.msg?.burn;
+
+            // Mint or Burn contract
+            if (burnOrMintMessages) {
+              const contractAddress = message.contract;
+
+              this.contractQueue.add(
+                'sync-execute-contracts',
+                {
+                  burnOrMintMessages,
+                  contractAddress,
+                },
+                { ...optionQueue, timeout: 10000 },
+              );
+            }
+
+            // Instantiate contract
+            const instantiate = contractInstantiate?.length > 0 ? true : false;
+            if (instantiate) {
+              this.contractQueue.add(
+                'sync-instantiate-contracts',
+                {
+                  height,
+                },
+                { ...optionQueue, delay: 7000 },
+              );
+            }
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
-            this.contractQueue.add('sync-instantiate-contracts', {
-              txData,
-            });
+            const height = Number(txData.tx_response.height);
+            this.contractQueue.add(
+              'sync-instantiate-contracts',
+              {
+                height,
+              },
+              { ...optionQueue, delay: 7000 },
+            );
           } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
-            const delegation = SyncDataHelpers.makeCreateValidatorData(
+            const delegation = SyncDataHelpers.makeDelegationData(
               txData,
               message,
             );
@@ -611,22 +567,29 @@ export class SyncTaskService {
       }
     }
     if (proposalVotes.length > 0) {
-      await this.proposalVoteRepository.insertOnDuplicate(proposalVotes, ['id']);
+      await this.proposalVoteRepository.insertOnDuplicate(proposalVotes, [
+        'id',
+      ]);
     }
     if (delegations.length > 0) {
       await this.delegationRepository.insertOnDuplicate(delegations, ['id']);
     }
     if (delegatorRewards.length > 0) {
-      await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, ['id']);
+      await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, [
+        'id',
+      ]);
     }
     if (smartContractCodes.length > 0) {
-      await this.smartContractCodeRepository.insertOnDuplicate(smartContractCodes, ['id']);
+      await this.smartContractCodeRepository.insertOnDuplicate(
+        smartContractCodes,
+        ['id'],
+      );
     }
   }
 
   /**
    * Remove data from block error sync table
-   * @param height 
+   * @param height
    */
   async removeBlockError(height: number) {
     await this.blockSyncErrorRepository.remove({ height: height });
@@ -634,10 +597,10 @@ export class SyncTaskService {
 
   /**
    * Add data to block error sync table
-   * @param block_hash 
-   * @param height 
+   * @param block_hash
+   * @param height
    */
-  async insertBlockError(block_hash: string, height: number) {
+  async insertBlockError(height: number) {
     const blockSyncError = new BlockSyncError();
     blockSyncError.height = height;
     await this.blockSyncErrorRepository.create(blockSyncError);
@@ -673,9 +636,20 @@ export class SyncTaskService {
   }
 
   /**
+   * Reconnect Influxdb
+   * @param error
+   */
+  reconnectInfluxdb(error: any) {
+    const errorCode = error?.code || '';
+    if (errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT') {
+      this.connectInfluxDB();
+    }
+  }
+
+  /**
    * Create connecttion to InfluxDB
    */
-  connectInfluxDB(){
+  connectInfluxDB() {
     this.influxDbClient = new InfluxDBClient(
       ENV_CONFIG.INFLUX_DB.BUCKET,
       ENV_CONFIG.INFLUX_DB.ORGANIZTION,
