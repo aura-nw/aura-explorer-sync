@@ -528,11 +528,15 @@ export class SyncTaskService {
               );
             }
 
+            let soulboundContracts;
             // Execute contract CW4973
-            const soulboundContracts = message?.filter(
-              (f: any) => f.msg?.take?.signature || f.msg?.unequip?.signature,
-            );
-            if (soulboundContracts?.length > 0) {
+            if (
+              message.msg?.take?.signature ||
+              message.msg?.unequip?.signature
+            ) {
+              soulboundContracts = message;
+            }
+            if (soulboundContracts) {
               this.contractQueue.add(
                 'sync-cw4973-nft-status',
                 {

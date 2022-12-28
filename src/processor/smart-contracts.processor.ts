@@ -427,28 +427,43 @@ export class SmartContractsProcessor {
       `============== Queue handleSyncCw4973NftStatus was run! ==============`,
     );
     try {
-      const soulboundContracts: any[] = job.data.soulboundContracts;
-      const takes = soulboundContracts.map(
-        (m: any) => m.msg?.take?.signature.signature,
-      );
-      const unequips = soulboundContracts.map(
-        (m: any) => m.msg?.unequip?.signature.signature,
-      );
+      const soulboundContracts: any = job.data.soulboundContracts;
+      const takes = soulboundContracts.msg?.take?.signature.signature;
+      const unequips = soulboundContracts.msg?.unequip?.signature.signature;
 
       const soulboundTokens = await this.soulboundTokenRepos.find({
-        where: { signature: In(takes.concat(unequips)) },
+        where: [{ signature: takes }, { signature: unequips }],
       });
       if (soulboundTokens) {
+        const receiverAddress = soulboundTokens.map((m) => m.receiver_address);
+        const soulboundTokenInfos = await this.soulboundTokenRepos.find({
+          where: {
+            receiver_address: In(receiverAddress),
+            status: SOULBOUND_TOKEN_STATUS.EQUIPPED,
+          },
+        });
         soulboundTokens.forEach((item) => {
-          const token = soulboundContracts.find(
-            (f: any) =>
-              f.msg?.take?.signature === item.signature ||
-              f.msg?.unequip?.signature === item.signature,
+          let token;
+          if (
+            item.signature ===
+              soulboundContracts.msg?.take?.signature.signature ||
+            item.signature ===
+              soulboundContracts.msg?.unequip?.signature.signature
+          ) {
+            token = soulboundContracts;
+          }
+
+          const numOfTokens = soulboundTokenInfos?.filter(
+            (f) => f.receiver_address === item.receiver_address,
           );
           if (token?.msg?.take) {
             item.status = SOULBOUND_TOKEN_STATUS.EQUIPPED;
+            if (numOfTokens?.length <= 5) {
+              item.picked = true;
+            }
           } else {
             item.status = SOULBOUND_TOKEN_STATUS.UNEQUIPPED;
+            item.picked = false;
           }
         });
         this.soulboundTokenRepos.update(soulboundTokens);
