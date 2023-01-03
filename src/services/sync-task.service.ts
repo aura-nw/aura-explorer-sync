@@ -513,21 +513,15 @@ export class SyncTaskService {
             const contractInstantiate = txData.tx_response.logs?.filter((f) =>
               f.events.find((x) => x.type == CONST_CHAR.INSTANTIATE),
             );
-            const burnOrMintMessages = message.msg?.mint || message.msg?.burn;
-
-            // Mint or Burn contract
-            if (burnOrMintMessages) {
-              const contractAddress = message.contract;
-
-              this.contractQueue.add(
-                'sync-execute-contracts',
-                {
-                  burnOrMintMessages,
-                  contractAddress,
-                },
-                { ...optionQueue, timeout: 10000 },
-              );
-            }
+            const contractAddress = message.contract;
+            this.contractQueue.add(
+              'sync-execute-contracts',
+              {
+                message,
+                contractAddress,
+              },
+              { ...optionQueue, timeout: 10000 },
+            );
 
             // Instantiate contract
             const instantiate = contractInstantiate?.length > 0 ? true : false;

@@ -108,20 +108,35 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
   }
 
   /**
-   * Get contract correct by addressß
+   * Get contract correct by address
    * @param contractAddress
    */
   async getSmartContractCorrect(contractAddress: string, type: string) {
     return await this.repos
       .createQueryBuilder('sm')
       .select(
-        `sm.contract_address, sm.token_name, sm.token_symbol, sm.image, sc.description, sm.code_id, scc.result, scc.\`type\``,
+        `sm.contract_address, sm.token_name, sm.token_symbol, sm.image, sm.description, sm.code_id, scc.result, scc.\`type\``,
       )
       .innerJoin(
         'smart_contract_codes',
         'scc',
-        `sc.code_id = scc.code_id AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}' AND scc.type = '${type}'`,
+        `sm.code_id = scc.code_id AND scc.result = '${CONTRACT_CODE_RESULT.CORRECT}' AND scc.type = '${type}'`,
       )
+      .where('sm.contract_address=:contractAddress', { contractAddress })
+      .getRawOne();
+  }
+
+  /**
+   * Get contractr info
+   * @param contractAddress
+   * @param type
+   * @returns
+   */
+  async getContractInfo(contractAddress: string) {
+    return await this.repos
+      .createQueryBuilder('sm')
+      .select(`sm.*, scc.result, scc.\`type\``)
+      .innerJoin('smart_contract_codes', 'scc', `sm.code_id = scc.code_id`)
       .where('sm.contract_address=:contractAddress', { contractAddress })
       .getRawOne();
   }
