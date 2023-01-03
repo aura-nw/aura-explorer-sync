@@ -178,7 +178,7 @@ export class SmartContractsProcessor {
 
   @Process('sync-execute-contracts')
   async handleExecuteContract(job: Job) {
-    const burnOrMintMessages = job.data.burnOrMintMessages;
+    const message = job.data.message;
     const contractAddress = job.data.contractAddress;
     this.logger.log(`${this.handleExecuteContract.name} was called!`);
 
@@ -188,34 +188,43 @@ export class SmartContractsProcessor {
         `Check constract address Mint or Burn: ${contractAddress}`,
       );
 
-      if (burnOrMintMessages?.token_id) {
-        if (contractAddress) {
+      // Get contract info
+      const contractInfo = await this.smartContractRepository.getContractInfo(
+        contractAddress,
+      );
+      if (contractInfo && contractInfo.type === CONTRACT_TYPE.CW721) {
+        const burnOrMintMessages = message.msg?.mint || message.msg?.burn;
+        if (burnOrMintMessages) {
           await this.updateNumTokenContract(contractAddress);
         }
       } else {
-        // Get CW20 contract info
-        const contractCorrect =
-          await this.smartContractRepository.getSmartContractCorrect(
+        // Update market info of contract
+        const marketing = message.msg?.update_marketing || undefined;
+
+        if (marketing) {
+          const urlRequest = `${this.indexerUrl}${util.format(
+            INDEXER_API.GET_SMART_CONTRACT_BT_CONTRACT_ADDRESS,
+            this.indexerChainId,
             contractAddress,
-            CONTRACT_TYPE.CW20,
-          );
-        if (
-          contractCorrect &&
-          contractCorrect?.result === CONTRACT_CODE_RESULT.CORRECT
-        ) {
-          // Get token info
-          const tokenInfo = new TokenMarkets();
-          tokenInfo.coin_id = tokenInfo.coin_id || '';
-          tokenInfo.contract_address = contractCorrect.contract_address;
-          tokenInfo.name = contractCorrect.token_name || '';
-          tokenInfo.symbol = contractCorrect.token_symbol || '';
-          tokenInfo.code_id = contractCorrect.code_id;
-          tokenInfo.image = contractCorrect.image || '';
-          tokenInfo.description = contractCorrect.description || '';
-          await this.tokenMarketsRepository.insertOnDuplicate(
-            [tokenInfo],
-            ['id'],
-          );
+          )}`;
+          const responses = await this._commonUtil.getDataAPI(urlRequest, '');
+          const marketingInfo =
+            responses?.data?.smart_contracts[0]?.marketing_info || undefined;
+          if (marketingInfo) {
+            contractInfo.description = marketingInfo?.description || '';
+            contractInfo.image = marketingInfo.logo?.url || '';
+          }
+
+          await this.smartContractRepository.update(contractInfo);
+
+          // Add data to token_markets market table
+          if (contractInfo?.result === CONTRACT_CODE_RESULT.CORRECT) {
+            const tokenInfo = SyncDataHelpers.makeTokenMarket(contractInfo);
+            await this.tokenMarketsRepository.insertOnDuplicate(
+              [tokenInfo],
+              ['id'],
+            );
+          }
         }
       }
     } catch (error) {
@@ -383,7 +392,7 @@ export class SmartContractsProcessor {
             (f) => f.contract_address === data.contract_address,
           );
           if (!tokenInfo) {
-            const tokenMarket = SyncDataHelpers.makeTokeMarket(contract);
+            const tokenMarket = SyncDataHelpers.makeTokenMarket(contract);
             tokenMarkets.push(tokenMarket);
           }
         }
