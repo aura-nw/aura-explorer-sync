@@ -427,12 +427,13 @@ export class SmartContractsProcessor {
       `============== Queue handleSyncCw4973NftStatus was run! ==============`,
     );
     try {
-      const soulboundContracts: any = job.data.soulboundContracts;
-      const takes = soulboundContracts.msg?.take?.signature.signature;
-      const unequips = soulboundContracts.msg?.unequip?.signature.signature;
+      const takeContracts: any = job.data.takeMessage;
+      const unequipContracts: any = job.data.unequipMessage;
+      const takes = takeContracts?.msg?.take?.signature.signature;
+      const unequips = unequipContracts?.msg?.unequip?.token_id;
 
       const soulboundTokens = await this.soulboundTokenRepos.find({
-        where: [{ signature: takes }, { signature: unequips }],
+        where: [{ signature: takes }, { token_id: unequips }],
       });
       if (soulboundTokens) {
         const receiverAddress = soulboundTokens.map((m) => m.receiver_address);
@@ -445,12 +446,13 @@ export class SmartContractsProcessor {
         soulboundTokens.forEach((item) => {
           let token;
           if (
-            item.signature ===
-              soulboundContracts.msg?.take?.signature.signature ||
-            item.signature ===
-              soulboundContracts.msg?.unequip?.signature.signature
+            item.signature === takeContracts?.msg?.take?.signature.signature
           ) {
-            token = soulboundContracts;
+            token = takeContracts;
+          }
+
+          if (item.token_id === unequipContracts?.msg?.unequip?.token_id) {
+            token = unequipContracts;
           }
 
           const numOfTokens = soulboundTokenInfos?.filter(
