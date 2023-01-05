@@ -440,7 +440,10 @@ export class SmartContractsProcessor {
         const soulboundTokenInfos = await this.soulboundTokenRepos.find({
           where: {
             receiver_address: In(receiverAddress),
-            status: SOULBOUND_TOKEN_STATUS.EQUIPPED,
+            status: In([
+              SOULBOUND_TOKEN_STATUS.EQUIPPED,
+              SOULBOUND_TOKEN_STATUS.UNEQUIPPED,
+            ]),
           },
         });
         soulboundTokens.forEach((item) => {
@@ -459,10 +462,13 @@ export class SmartContractsProcessor {
             (f) => f.receiver_address === item.receiver_address,
           );
           if (token?.msg?.take) {
-            item.status = SOULBOUND_TOKEN_STATUS.EQUIPPED;
-            if (numOfTokens?.length <= 5) {
+            if (
+              numOfTokens?.length <= 5 &&
+              item.status === SOULBOUND_TOKEN_STATUS.UNCLAIM
+            ) {
               item.picked = true;
             }
+            item.status = SOULBOUND_TOKEN_STATUS.EQUIPPED;
           } else {
             item.status = SOULBOUND_TOKEN_STATUS.UNEQUIPPED;
             item.picked = false;
