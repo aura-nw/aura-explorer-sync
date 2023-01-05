@@ -30,10 +30,10 @@ export class SoulboundToken extends BaseEntityIncrementId {
   })
   status: SOULBOUND_TOKEN_STATUS;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ type: 'text' })
   signature: string;
 
-  @Column({ name: 'pub_key', nullable: true, type: 'text' })
+  @Column({ name: 'pub_key', type: 'text' })
   pub_key: string;
 
   @Column({ default: false })
