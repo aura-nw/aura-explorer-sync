@@ -1,15 +1,16 @@
-import { Column, Entity, Index } from 'typeorm';
+import { Column, Entity, Index, Unique } from 'typeorm';
 import { SOULBOUND_TOKEN_STATUS } from '../common/constants/app.constant';
 import { BaseEntityIncrementId } from './base/base.entity';
 
 @Entity('soulbound_token')
+@Unique(['contract_address', 'token_id'])
 export class SoulboundToken extends BaseEntityIncrementId {
   @Column({ name: 'contract_address' })
   @Index({ unique: false })
   contract_address: string;
 
   @Column({ name: 'token_id' })
-  @Index({ unique: true })
+  @Index({ unique: false })
   token_id: string;
 
   @Column({ name: 'token_uri' })
