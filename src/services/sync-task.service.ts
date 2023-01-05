@@ -366,6 +366,7 @@ export class SyncTaskService {
     );
 
     try {
+      this.influxDbClient.initWriteApi();
       // fetching block from node
       const paramsBlock = `block?height=${syncBlock}`;
       const blockData = await this._commonUtil.getDataRPC(
@@ -377,6 +378,7 @@ export class SyncTaskService {
       blockData.block.header.time = this.influxDbClient.convertDate(
         blockData.block.header.time,
       );
+      const newBlock = SyncDataHelpers.makeBlockData(blockData);
 
       //Insert block error table
       if (!recallSync) {
@@ -420,6 +422,18 @@ export class SyncTaskService {
         }
       }
 
+      // Write block to influxdb
+      this.influxDbClient.writeBlock(
+        newBlock.height,
+        newBlock.block_hash,
+        newBlock.num_txs,
+        newBlock.chainid,
+        newBlock.timestamp,
+        newBlock.proposer,
+      );
+      await this.influxDbClient.flushData();
+
+      // Update current block
       await this.updateStatus(syncBlock);
 
       // Delete data on Block sync error table
@@ -438,6 +452,10 @@ export class SyncTaskService {
         `Sync Blocked & Transaction were error height: ${syncBlock}, ${error.name}: ${error.message}`,
       );
       this._logger.error(null, `${error.stack}`);
+
+      // Reconnect influxDb
+      this.reconnectInfluxdb(error);
+
       const idxSync = this.schedulesSync.indexOf(syncBlock);
       if (idxSync > -1) {
         this.schedulesSync.splice(idxSync, 1);
