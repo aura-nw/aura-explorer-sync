@@ -467,13 +467,20 @@ export class SmartContractsProcessor {
             token = unequipContracts;
           }
 
-          const numOfTokens = soulboundTokenInfos?.filter(
-            (f) => f.receiver_address === item.receiver_address,
-          );
           if (token?.msg?.take) {
+            const numOfTokens = soulboundTokenInfos?.filter(
+              (f) => f.receiver_address === item.receiver_address,
+            );
+
+            const numOfPicked = soulboundTokenInfos?.filter(
+              (f) =>
+                f.receiver_address === item.receiver_address &&
+                f.picked == true,
+            );
             if (
-              numOfTokens?.length <= 5 &&
-              item.status === SOULBOUND_TOKEN_STATUS.UNCLAIM
+              numOfPicked?.length == 0 ||
+              (numOfTokens?.length <= 5 &&
+                item.status === SOULBOUND_TOKEN_STATUS.UNCLAIM)
             ) {
               item.picked = true;
             }
