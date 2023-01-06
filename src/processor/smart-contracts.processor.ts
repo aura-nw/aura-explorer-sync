@@ -477,11 +477,7 @@ export class SmartContractsProcessor {
                 f.receiver_address === item.receiver_address &&
                 f.picked == true,
             );
-            if (
-              numOfPicked?.length == 0 ||
-              (numOfTokens?.length <= 5 &&
-                item.status === SOULBOUND_TOKEN_STATUS.UNCLAIM)
-            ) {
+            if (numOfPicked?.length == 0 || numOfTokens?.length <= 5) {
               item.picked = true;
             }
             item.status = SOULBOUND_TOKEN_STATUS.EQUIPPED;
