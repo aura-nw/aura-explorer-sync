@@ -541,6 +541,26 @@ export class SyncTaskService {
               { ...optionQueue, timeout: 10000 },
             );
 
+            let takeMessage;
+            let unequipMessage;
+            // Execute contract CW4973
+            if (message.msg?.take?.signature) {
+              takeMessage = message;
+            }
+            if (message.msg?.unequip?.token_id) {
+              unequipMessage = message;
+            }
+            if (takeMessage || unequipMessage) {
+              this.contractQueue.add(
+                'sync-cw4973-nft-status',
+                {
+                  takeMessage,
+                  unequipMessage,
+                },
+                { ...optionQueue },
+              );
+            }
+
             // Instantiate contract
             const instantiate = contractInstantiate?.length > 0 ? true : false;
             if (instantiate) {

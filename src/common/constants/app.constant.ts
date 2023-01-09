@@ -99,6 +99,7 @@ export enum SMART_CONTRACT_VERIFICATION {
 export enum CONTRACT_TYPE {
   CW20 = 'CW20',
   CW721 = 'CW721',
+  CW4973 = 'CW4973',
 }
 
 export enum CONTRACT_CODE_RESULT {
@@ -161,4 +162,10 @@ export enum MAINNET_UPLOAD_STATUS {
 
 export enum REDIS_KEY {
   COINGECKO_COINS = 'COINGECKO_COINS',
+}
+
+export enum SOULBOUND_TOKEN_STATUS {
+  UNCLAIM = 'Unclaimed',
+  EQUIPPED = 'Equipped',
+  UNEQUIPPED = 'Unequipped',
 }

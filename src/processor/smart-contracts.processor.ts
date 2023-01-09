@@ -18,6 +18,7 @@ import {
   MAINNET_UPLOAD_STATUS,
   REDIS_KEY,
   SMART_CONTRACT_VERIFICATION,
+  SOULBOUND_TOKEN_STATUS,
 } from '../common/constants/app.constant';
 import { SmartContract, TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -32,6 +33,7 @@ import { RedisUtil } from '../utils/redis.util';
 import { HttpService } from '@nestjs/axios';
 import { In } from 'typeorm';
 import { InfluxDBClient } from '../utils/influxdb-client';
+import { SoulboundTokenRepository } from '../repositories/soulbound-token.repository';
 
 @Processor('smart-contracts')
 export class SmartContractsProcessor {
@@ -52,6 +54,7 @@ export class SmartContractsProcessor {
     private deploymentRequestsRepository: DeploymentRequestsRepository,
     private redisUtil: RedisUtil,
     private httpService: HttpService,
+    private soulboundTokenRepos: SoulboundTokenRepository,
     private smartContractCodeRepository: SmartContractCodeRepository,
   ) {
     this.logger.log(
@@ -424,6 +427,78 @@ export class SmartContractsProcessor {
         `${this.syncSmartContractFromHeight.name} was called error: ${err.stack}`,
       );
       throw err;
+    }
+  }
+
+  @Process('sync-cw4973-nft-status')
+  async handleSyncCw4973NftStatus(job: Job) {
+    this.logger.log(
+      `============== Queue handleSyncCw4973NftStatus was run! ==============`,
+    );
+    try {
+      const takeContracts: any = job.data.takeMessage;
+      const unequipContracts: any = job.data.unequipMessage;
+      const takes = takeContracts?.msg?.take?.signature.signature;
+      const unequips = unequipContracts?.msg?.unequip?.token_id;
+
+      const soulboundTokens = await this.soulboundTokenRepos.find({
+        where: [{ signature: takes }, { token_id: unequips }],
+      });
+      if (soulboundTokens) {
+        const receiverAddress = soulboundTokens.map((m) => m.receiver_address);
+        const soulboundTokenInfos = await this.soulboundTokenRepos.find({
+          where: {
+            receiver_address: In(receiverAddress),
+            status: In([
+              SOULBOUND_TOKEN_STATUS.EQUIPPED,
+              SOULBOUND_TOKEN_STATUS.UNEQUIPPED,
+            ]),
+          },
+        });
+        soulboundTokens.forEach((item) => {
+          let token;
+          if (
+            item.signature === takeContracts?.msg?.take?.signature.signature
+          ) {
+            token = takeContracts;
+          }
+
+          if (item.token_id === unequipContracts?.msg?.unequip?.token_id) {
+            token = unequipContracts;
+          }
+
+          if (token?.msg?.take) {
+            const numOfTokens = soulboundTokenInfos?.filter(
+              (f) => f.receiver_address === item.receiver_address,
+            );
+
+            const numOfPicked = soulboundTokenInfos?.filter(
+              (f) =>
+                f.receiver_address === item.receiver_address &&
+                f.picked == true,
+            );
+            if (
+              numOfPicked?.length == 0 ||
+              (numOfTokens?.length <= 5 &&
+                item.status === SOULBOUND_TOKEN_STATUS.UNCLAIM)
+            ) {
+              item.picked = true;
+            }
+            item.status = SOULBOUND_TOKEN_STATUS.EQUIPPED;
+          } else {
+            item.status = SOULBOUND_TOKEN_STATUS.UNEQUIPPED;
+            item.picked = false;
+          }
+        });
+        this.soulboundTokenRepos.update(soulboundTokens);
+      }
+      this.logger.log(
+        `sync-cw4973-nft-status update complete: ${JSON.stringify(
+          soulboundTokens,
+        )}`,
+      );
+    } catch (err) {
+      this.logger.error(`sync-cw4973-nft-status has error: ${err.stack}`);
     }
   }
 

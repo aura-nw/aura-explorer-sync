@@ -165,15 +165,30 @@ export class CommonUtil {
           `{ "contract_info": {} }`,
         ).toString(base64Encode);
 
-        const tokenInfo = await this.getDataContractFromBase64Query(
-          api,
-          contractAddress,
-          base64RequestToken,
-        );
+        const base64Minter =
+          Buffer.from(`{ "minter": {} }`).toString(base64Encode);
+
+        const [tokenInfo, minter] = await Promise.all([
+          this.getDataContractFromBase64Query(
+            api,
+            contractAddress,
+            base64RequestToken,
+          ),
+          type === CONTRACT_TYPE.CW4973
+            ? this.getDataContractFromBase64Query(
+                api,
+                contractAddress,
+                base64Minter,
+              )
+            : null,
+        ]);
 
         if (tokenInfo?.data) {
           updatedSmartContract.token_name = tokenInfo.data.name;
           updatedSmartContract.token_symbol = tokenInfo.data.symbol;
+        }
+        if (minter?.data) {
+          smartContract.minter_address = minter.data.minter;
         }
       }
 
