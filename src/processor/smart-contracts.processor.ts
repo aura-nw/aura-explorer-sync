@@ -369,16 +369,6 @@ export class SmartContractsProcessor {
       for (let i = 0; i < smartContracts.length; i++) {
         const data = smartContracts[i];
         const contract = await this.makeInstantiateContractData(data);
-        if (
-          contract.token_symbol.length === 0 ||
-          contract.token_name.length === 0
-        ) {
-          const msg = data.msg;
-          if (msg) {
-            contract.token_symbol = msg.symbol;
-            contract.token_name = msg.name;
-          }
-        }
 
         // Create smart contract code data
         if (data?.contract_type?.status !== CONTRACT_CODE_STATUS.NOT_FOUND) {
@@ -580,6 +570,18 @@ export class SmartContractsProcessor {
     if (contractInfo) {
       smartContract.token_name = contractInfo?.name || '';
       smartContract.token_symbol = contractInfo?.symbol || '';
+    }
+
+    const msg = contract.msg;
+    if (msg) {
+      smartContract.minter_address = msg.minter;
+      if (
+        smartContract.token_symbol.length === 0 ||
+        smartContract.token_name.length === 0
+      ) {
+        smartContract.token_symbol = msg.symbol;
+        smartContract.token_name = msg.name;
+      }
     }
 
     if (this.nodeEnv === 'mainnet') {
