@@ -19,6 +19,9 @@ export class SoulboundToken extends BaseEntityIncrementId {
   @Column({ name: 'token_img', nullable: true })
   token_img: string;
 
+  @Column({ name: 'img_type', nullable: true })
+  img_type: string;
+
   @Column({ name: 'token_name', nullable: true })
   token_name: string;
 
