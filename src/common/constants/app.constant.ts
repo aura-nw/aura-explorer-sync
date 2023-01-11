@@ -169,3 +169,8 @@ export enum SOULBOUND_TOKEN_STATUS {
   EQUIPPED = 'Equipped',
   UNEQUIPPED = 'Unequipped',
 }
+
+export const SOULBOUND_PICKED_TOKEN = {
+  MIN: 0,
+  MAX: 5,
+};

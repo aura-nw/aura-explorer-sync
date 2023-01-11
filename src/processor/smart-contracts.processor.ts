@@ -19,6 +19,7 @@ import {
   REDIS_KEY,
   SMART_CONTRACT_VERIFICATION,
   SOULBOUND_TOKEN_STATUS,
+  SOULBOUND_PICKED_TOKEN,
 } from '../common/constants/app.constant';
 import { SmartContract, TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -468,8 +469,8 @@ export class SmartContractsProcessor {
                 f.picked == true,
             );
             if (
-              numOfPicked?.length == 0 ||
-              (numOfTokens?.length <= 5 &&
+              numOfPicked?.length == SOULBOUND_PICKED_TOKEN.MIN ||
+              (numOfTokens?.length < SOULBOUND_PICKED_TOKEN.MAX &&
                 item.status === SOULBOUND_TOKEN_STATUS.UNCLAIM)
             ) {
               item.picked = true;
