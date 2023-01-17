@@ -174,3 +174,12 @@ export const SOULBOUND_PICKED_TOKEN = {
   MIN: 0,
   MAX: 5,
 };
+
+export const QUEUES = {
+  SYNC_EXECUTE_CONTRACTS: 'sync-execute-contracts',
+  SYNC_CW4973_NFT_STATUS: 'sync-cw4973-nft-status',
+  SYNC_INSTANTIATE_CONTRACTS: 'sync-instantiate-contracts',
+  SYNC_PRICE_VOLUME: 'sync-price-volume',
+  SYNC_COIN_ID: 'sync-coin-id',
+  SYNC_CONTRACT_FROM_HEIGHT: 'sync-contract-from-height',
+};

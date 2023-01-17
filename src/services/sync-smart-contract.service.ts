@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { INDEXER_API } from '../common/constants/app.constant';
+import { INDEXER_API, QUEUES } from '../common/constants/app.constant';
 import { Cron, CronExpression, Interval } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from 'nest-schedule';
 import { InjectQueue } from '@nestjs/bull';
@@ -85,7 +85,7 @@ export class SyncSmartContractService {
    * @param data
    */
   pushDataToQueue(data: any) {
-    this.contractQueue.add('sync-contract-from-height', data, {
+    this.contractQueue.add(QUEUES.SYNC_CONTRACT_FROM_HEIGHT, data, {
       removeOnComplete: true,
       backoff: {
         delay: 10000,

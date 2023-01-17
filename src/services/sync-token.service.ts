@@ -3,7 +3,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Queue } from 'bull';
 
-import { COINGECKO_API, REDIS_KEY } from '../common/constants/app.constant';
+import {
+  COINGECKO_API,
+  QUEUES,
+  REDIS_KEY,
+} from '../common/constants/app.constant';
 
 import { TokenMarketsRepository } from '../repositories/token-markets.repository';
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
@@ -69,7 +73,7 @@ export class SyncTokenService {
         }
         if (tokensHavingCoinId.length > 0) {
           this.contractQueue.add(
-            'sync-price-volume',
+            QUEUES.SYNC_PRICE_VOLUME,
             {
               listTokens: tokensHavingCoinId,
             },
@@ -125,7 +129,7 @@ export class SyncTokenService {
 
       if (tokenNoCoinIds.length > 0) {
         this.contractQueue.add(
-          'sync-coin-id',
+          QUEUES.SYNC_COIN_ID ,
           {
             tokens: tokenNoCoinIds,
           },
