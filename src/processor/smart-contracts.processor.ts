@@ -518,7 +518,7 @@ export class SmartContractsProcessor {
     // Resart queue
     const queue = await job.queue;
     if (queue) {
-      if (queue.name === QUEUES.SYNC_INSTANTIATE_CONTRACTS) {
+      if (job.name === QUEUES.SYNC_INSTANTIATE_CONTRACTS) {
         await this.retryJobs(queue);
       }
     }
@@ -559,6 +559,7 @@ export class SmartContractsProcessor {
     smartContract.decimals = 0;
     smartContract.description = '';
     smartContract.image = '';
+    smartContract.num_tokens = Number(contract.num_tokens) || 0;
 
     const tokenInfo = contract.token_info;
     if (tokenInfo) {
