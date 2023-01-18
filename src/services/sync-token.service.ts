@@ -129,7 +129,7 @@ export class SyncTokenService {
 
       if (tokenNoCoinIds.length > 0) {
         this.contractQueue.add(
-          QUEUES.SYNC_COIN_ID ,
+          QUEUES.SYNC_COIN_ID,
           {
             tokens: tokenNoCoinIds,
           },

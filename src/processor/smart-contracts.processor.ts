@@ -559,6 +559,7 @@ export class SmartContractsProcessor {
     smartContract.decimals = 0;
     smartContract.description = '';
     smartContract.image = '';
+    smartContract.num_tokens = Number(contract.num_tokens) || 0;
 
     const tokenInfo = contract.token_info;
     if (tokenInfo) {
