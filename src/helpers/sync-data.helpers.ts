@@ -377,15 +377,15 @@ export class SyncDataHelpers {
    * @param smartContract
    * @returns
    */
-  static makeTokeMarket(smartContract: SmartContract) {
+  static makeTokenMarket(smartContract: SmartContract) {
     const tokemMarket = new TokenMarkets();
-    tokemMarket.contract_address = smartContract.contract_address;
+    tokemMarket.contract_address = smartContract.contract_address || '';
     tokemMarket.code_id = smartContract.code_id;
     tokemMarket.coin_id = '';
-    tokemMarket.symbol = smartContract.token_symbol;
-    tokemMarket.image = smartContract.image;
-    tokemMarket.name = smartContract.token_name;
-    tokemMarket.description = smartContract.description;
+    tokemMarket.symbol = smartContract.token_symbol || '';
+    tokemMarket.image = smartContract.image || '';
+    tokemMarket.name = smartContract.token_name || '';
+    tokemMarket.description = smartContract.description || '';
     return tokemMarket;
   }
 
