@@ -431,6 +431,9 @@ export class SmartContractsProcessor {
       const takes = takeContracts?.msg?.take?.signature.signature;
       const unequips = unequipContracts?.msg?.unequip?.token_id;
 
+      const contractAddress: any = job.data.contractAddress;
+      await this.updateNumTokenContract(contractAddress);
+
       const soulboundTokens = await this.soulboundTokenRepos.find({
         where: [{ signature: takes }, { token_id: unequips }],
       });

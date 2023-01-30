@@ -557,6 +557,7 @@ export class SyncTaskService {
                 {
                   takeMessage,
                   unequipMessage,
+                  contractAddress,
                 },
                 { ...optionQueue },
               );
