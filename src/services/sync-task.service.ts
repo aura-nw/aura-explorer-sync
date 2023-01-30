@@ -8,6 +8,7 @@ import {
   CONST_MSG_TYPE,
   CONST_PUBKEY_ADDR,
   NODE_API,
+  QUEUES,
 } from '../common/constants/app.constant';
 import { BlockSyncError, MissedBlock } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -533,7 +534,7 @@ export class SyncTaskService {
             );
             const contractAddress = message.contract;
             this.contractQueue.add(
-              'sync-execute-contracts',
+              QUEUES.SYNC_EXECUTE_CONTRACTS,
               {
                 message,
                 contractAddress,
@@ -552,10 +553,11 @@ export class SyncTaskService {
             }
             if (takeMessage || unequipMessage) {
               this.contractQueue.add(
-                'sync-cw4973-nft-status',
+                QUEUES.SYNC_CW4973_NFT_STATUS,
                 {
                   takeMessage,
                   unequipMessage,
+                  contractAddress,
                 },
                 { ...optionQueue },
               );
@@ -565,7 +567,7 @@ export class SyncTaskService {
             const instantiate = contractInstantiate?.length > 0 ? true : false;
             if (instantiate) {
               this.contractQueue.add(
-                'sync-instantiate-contracts',
+                QUEUES.SYNC_INSTANTIATE_CONTRACTS,
                 {
                   height,
                 },
@@ -575,7 +577,7 @@ export class SyncTaskService {
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
             const height = Number(txData.tx_response.height);
             this.contractQueue.add(
-              'sync-instantiate-contracts',
+              QUEUES.SYNC_INSTANTIATE_CONTRACTS,
               {
                 height,
               },

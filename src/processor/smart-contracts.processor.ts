@@ -7,7 +7,7 @@ import {
   Processor,
 } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
-import { Job } from 'bull';
+import { Job, Queue } from 'bull';
 import * as util from 'util';
 import {
   COINGECKO_API,
@@ -20,6 +20,7 @@ import {
   SMART_CONTRACT_VERIFICATION,
   SOULBOUND_TOKEN_STATUS,
   SOULBOUND_PICKED_TOKEN,
+  QUEUES,
 } from '../common/constants/app.constant';
 import { SmartContract, TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -73,7 +74,7 @@ export class SmartContractsProcessor {
     this.connectInfluxdb();
   }
 
-  @Process('sync-instantiate-contracts')
+  @Process(QUEUES.SYNC_INSTANTIATE_CONTRACTS)
   async handleInstantiateContract(job: Job) {
     this.logger.log(`Sync instantiate contracts by job Id ${job.id}`);
     const height = job.data.height;
@@ -180,7 +181,7 @@ export class SmartContractsProcessor {
     }
   }
 
-  @Process('sync-execute-contracts')
+  @Process(QUEUES.SYNC_EXECUTE_CONTRACTS)
   async handleExecuteContract(job: Job) {
     const message = job.data.message;
     const contractAddress = job.data.contractAddress;
@@ -197,10 +198,7 @@ export class SmartContractsProcessor {
         contractAddress,
       );
       if (contractInfo && contractInfo.type === CONTRACT_TYPE.CW721) {
-        const burnOrMintMessages = message.msg?.mint || message.msg?.burn;
-        if (burnOrMintMessages) {
-          await this.updateNumTokenContract(contractAddress);
-        }
+        await this.updateNumTokenContract(contractAddress);
       } else {
         // Update market info of contract
         const marketing = message.msg?.update_marketing || undefined;
@@ -262,7 +260,7 @@ export class SmartContractsProcessor {
     }
   }
 
-  @Process('sync-price-volume')
+  @Process(QUEUES.SYNC_PRICE_VOLUME)
   async handleSyncPriceVolume(job: Job) {
     try {
       const listTokens = job.data.listTokens;
@@ -315,7 +313,7 @@ export class SmartContractsProcessor {
     }
   }
 
-  @Process('sync-coin-id')
+  @Process(QUEUES.SYNC_COIN_ID)
   async handleSyncCoinId(job: Job) {
     try {
       this.logger.log(
@@ -349,7 +347,7 @@ export class SmartContractsProcessor {
     }
   }
 
-  @Process('sync-contract-from-height')
+  @Process(QUEUES.SYNC_CONTRACT_FROM_HEIGHT)
   async syncSmartContractFromHeight(job: Job) {
     this.logger.log(`${this.syncSmartContractFromHeight.name} was called!`);
     try {
@@ -420,8 +418,9 @@ export class SmartContractsProcessor {
       throw err;
     }
   }
+  SYNC_CONTRACT_FROM_HEIGHT;
 
-  @Process('sync-cw4973-nft-status')
+  @Process(QUEUES.SYNC_CW4973_NFT_STATUS)
   async handleSyncCw4973NftStatus(job: Job) {
     this.logger.log(
       `============== Queue handleSyncCw4973NftStatus was run! ==============`,
@@ -431,6 +430,9 @@ export class SmartContractsProcessor {
       const unequipContracts: any = job.data.unequipMessage;
       const takes = takeContracts?.msg?.take?.signature.signature;
       const unequips = unequipContracts?.msg?.unequip?.token_id;
+
+      const contractAddress: any = job.data.contractAddress;
+      await this.updateNumTokenContract(contractAddress);
 
       const soulboundTokens = await this.soulboundTokenRepos.find({
         where: [{ signature: takes }, { token_id: unequips }],
@@ -512,9 +514,17 @@ export class SmartContractsProcessor {
   }
 
   @OnQueueFailed()
-  onFailed(job: Job, error: Error) {
+  async onFailed(job: Job, error: Error) {
     this.logger.error(`Failed job ${job.id} of type ${job.name}`);
     this.logger.error(`Error: ${error}`);
+
+    // Resart queue
+    const queue = await job.queue;
+    if (queue) {
+      if (job.name === QUEUES.SYNC_INSTANTIATE_CONTRACTS) {
+        await this.retryJobs(queue);
+      }
+    }
   }
 
   /**
@@ -552,6 +562,7 @@ export class SmartContractsProcessor {
     smartContract.decimals = 0;
     smartContract.description = '';
     smartContract.image = '';
+    smartContract.num_tokens = Number(contract.num_tokens) || 0;
 
     const tokenInfo = contract.token_info;
     if (tokenInfo) {
@@ -681,5 +692,16 @@ export class SmartContractsProcessor {
         );
       }
     }
+  }
+
+  /**
+   * Restart job fail
+   * @param queue
+   */
+  async retryJobs(queue: Queue) {
+    const jobs = await queue.getFailed();
+    jobs.forEach(async (job) => {
+      await job.retry();
+    });
   }
 }
