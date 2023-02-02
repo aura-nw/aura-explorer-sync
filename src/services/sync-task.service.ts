@@ -538,6 +538,7 @@ export class SyncTaskService {
               {
                 message,
                 contractAddress,
+                height,
               },
               { ...optionQueue, timeout: 10000 },
             );
