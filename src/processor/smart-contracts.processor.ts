@@ -185,7 +185,6 @@ export class SmartContractsProcessor {
   async handleExecuteContract(job: Job) {
     const message = job.data.message;
     const contractAddress = job.data.contractAddress;
-    const height = job.data.height;
     this.logger.log(`${this.handleExecuteContract.name} was called!`);
 
     try {
@@ -200,7 +199,7 @@ export class SmartContractsProcessor {
       );
       if (contractInfo && contractInfo.type === CONTRACT_TYPE.CW20) {
         // Update market info of contract
-        const marketing = message.msg?.update_marketing || undefined;
+        const marketing = message?.msg?.update_marketing || undefined;
 
         if (marketing) {
           const urlRequest = `${this.indexerUrl}${util.format(
@@ -228,7 +227,10 @@ export class SmartContractsProcessor {
           }
         }
       } else {
-        await this.updateNumTokenContract(height);
+        const lstContract = job.data.contractArr;
+        if (lstContract.length > 0) {
+          await this.updateNumTokenContract(lstContract);
+        }
       }
     } catch (error) {
       this.logger.error(
@@ -432,9 +434,6 @@ export class SmartContractsProcessor {
       const takes = takeContracts?.msg?.take?.signature.signature;
       const unequips = unequipContracts?.msg?.unequip?.token_id;
 
-      const height: any = job.data.height;
-      await this.updateNumTokenContract(height);
-
       const soulboundTokens = await this.soulboundTokenRepos.find({
         where: [{ signature: takes }, { token_id: unequips }],
       });
@@ -539,7 +538,7 @@ export class SmartContractsProcessor {
     smartContract.id = 0;
     smartContract.height = contract.height;
     smartContract.code_id = codeIds.id;
-    smartContract.contract_name = contract.contract_name;
+    smartContract.contract_name = contract.contract_name || '';
     smartContract.contract_address = contract.contract_address;
     smartContract.creator_address = contract.creator_address;
     smartContract.contract_hash = contract.contract_hash;
@@ -666,20 +665,19 @@ export class SmartContractsProcessor {
 
   /**
    * Update num_tokens column
-   * @param height
+   * @param contractAddress
    */
-  async updateNumTokenContract(height: string) {
+  async updateNumTokenContract(contractAddress) {
     this.logger.log(
-      `Call contract lcd api to query num_tokens with parameter: height: ${height}`,
+      `Call contract lcd api to query num_tokens with parameter: contract_address: ${contractAddress}`,
     );
-
-    const urlRequest = `${this.indexerUrl}${util.format(
-      INDEXER_API.GET_SMART_CONTRACTS,
+    let urlRequest = `${this.indexerUrl}${util.format(
+      INDEXER_API.GET_SMART_CONTRACT_BT_LIST_CONTRACT_ADDRESS,
       this.indexerChainId,
-      100,
-      height,
-      height,
     )}`;
+    contractAddress?.forEach((item) => {
+      urlRequest += `&contract_addresses[]=${item}`;
+    });
 
     const responses = await this._commonUtil.getDataAPI(urlRequest, '');
     if (responses?.data?.smart_contracts.length > 0) {
@@ -704,7 +702,7 @@ export class SmartContractsProcessor {
       }
 
       this.logger.log(
-        `${this.handleExecuteContract.name} execute complete: height: ${height}`,
+        `${this.handleExecuteContract.name} execute complete: contract_address: ${contractAddress}`,
       );
     }
   }
