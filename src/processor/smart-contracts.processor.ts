@@ -667,7 +667,7 @@ export class SmartContractsProcessor {
    * Update num_tokens column
    * @param contractAddress
    */
-  async updateNumTokenContract(contractAddress) {
+  async updateNumTokenContract(contractAddress: []) {
     this.logger.log(
       `Call contract lcd api to query num_tokens with parameter: contract_address: ${contractAddress}`,
     );
@@ -693,7 +693,7 @@ export class SmartContractsProcessor {
       responses.data?.smart_contracts?.forEach((contract) => {
         smartContract?.forEach((item) => {
           if (contract.contract_address === item.contract_address) {
-            item.num_tokens = contract.num_tokens;
+            item.num_tokens = contract.num_tokens || 0;
           }
         });
       });
