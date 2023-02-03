@@ -434,9 +434,6 @@ export class SmartContractsProcessor {
       const takes = takeContracts?.msg?.take?.signature.signature;
       const unequips = unequipContracts?.msg?.unequip?.token_id;
 
-      const height: any = job.data.height;
-      await this.updateNumTokenContract(height);
-
       const soulboundTokens = await this.soulboundTokenRepos.find({
         where: [{ signature: takes }, { token_id: unequips }],
       });
