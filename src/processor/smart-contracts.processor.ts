@@ -538,9 +538,7 @@ export class SmartContractsProcessor {
     smartContract.id = 0;
     smartContract.height = contract.height;
     smartContract.code_id = codeIds.id;
-    smartContract.contract_name = contract.contract_name
-      ? contract.contract_name
-      : '';
+    smartContract.contract_name = contract.contract_name || '';
     smartContract.contract_address = contract.contract_address;
     smartContract.creator_address = contract.creator_address;
     smartContract.contract_hash = contract.contract_hash;
