@@ -529,6 +529,18 @@ export class SyncTaskService {
             }
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
             const height = Number(txData.tx_response.height);
+            const lstContract: any = [];
+            const logs = txData.tx_response.logs;
+            logs?.forEach((log) => {
+              log.events?.forEach((evt) => {
+                evt.attributes?.forEach((att) => {
+                  if (att.key === '_contract_address') {
+                    lstContract.push(att.value);
+                  }
+                });
+              });
+            });
+            const contractArr = [...new Set(lstContract)];
             const contractInstantiate = txData.tx_response.logs?.filter((f) =>
               f.events.find((x) => x.type == CONST_CHAR.INSTANTIATE),
             );
@@ -538,6 +550,7 @@ export class SyncTaskService {
               {
                 message,
                 contractAddress,
+                contractArr,
               },
               { ...optionQueue, timeout: 10000 },
             );

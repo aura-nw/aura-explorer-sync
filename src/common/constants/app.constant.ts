@@ -125,6 +125,7 @@ export enum INDEXER_API {
   GET_SMART_CONTRACTS = 'api/v1/smart-contracts?chainId=%s&limit=%s&fromHeight=%s&toHeight=%s',
   GET_SMART_CONTRACT_BY_NEXT_KEY = 'api/v1/smart-contracts?chainId=%s&limit=%s&nextKey=%s',
   GET_SMART_CONTRACT_BT_CONTRACT_ADDRESS = 'api/v1/smart-contracts?chainId=%s&contract_addresses[]=%s',
+  GET_SMART_CONTRACT_BT_LIST_CONTRACT_ADDRESS = 'api/v1/smart-contracts?chainId=%s',
 }
 
 export enum COINGECKO_API {

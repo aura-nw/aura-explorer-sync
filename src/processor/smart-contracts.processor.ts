@@ -197,9 +197,7 @@ export class SmartContractsProcessor {
       const contractInfo = await this.smartContractRepository.getContractInfo(
         contractAddress,
       );
-      if (contractInfo && contractInfo.type === CONTRACT_TYPE.CW721) {
-        await this.updateNumTokenContract(contractAddress);
-      } else {
+      if (contractInfo && contractInfo.type === CONTRACT_TYPE.CW20) {
         // Update market info of contract
         const marketing = message?.msg?.update_marketing || undefined;
 
@@ -227,6 +225,11 @@ export class SmartContractsProcessor {
               ['id'],
             );
           }
+        }
+      } else {
+        const lstContract = job.data.contractArr;
+        if (lstContract.length > 0) {
+          await this.updateNumTokenContract(lstContract);
         }
       }
     } catch (error) {
@@ -665,32 +668,45 @@ export class SmartContractsProcessor {
 
   /**
    * Update num_tokens column
-   * @param height
-   * @param message
+   * @param contractAddress
    */
-  async updateNumTokenContract(contractAddress: string) {
+  async updateNumTokenContract(contractAddress: []) {
     this.logger.log(
-      `Call contract lcd api to query num_tokens with parameter: contract_address: ${contractAddress}}`,
+      `Call contract lcd api to query num_tokens with parameter: contract_address: ${contractAddress}`,
     );
-
-    const urlRequest = `${this.indexerUrl}${util.format(
-      INDEXER_API.GET_SMART_CONTRACT_BT_CONTRACT_ADDRESS,
+    let urlRequest = `${this.indexerUrl}${util.format(
+      INDEXER_API.GET_SMART_CONTRACT_BT_LIST_CONTRACT_ADDRESS,
       this.indexerChainId,
-      contractAddress,
     )}`;
+    contractAddress?.forEach((item) => {
+      urlRequest += `&contract_addresses[]=${item}`;
+    });
 
     const responses = await this._commonUtil.getDataAPI(urlRequest, '');
-    if (responses?.data) {
-      const numTokens = responses.data?.smart_contracts[0]?.num_tokens || 0;
-      if (numTokens > 0) {
-        await this.smartContractRepository.updateNumtokens(
-          contractAddress,
-          numTokens || 0,
-        );
-        this.logger.log(
-          `${this.handleExecuteContract.name} execute complete: Contract address: ${contractAddress}, numTokens: ${numTokens}`,
-        );
+    if (responses?.data?.smart_contracts.length > 0) {
+      const contractAddressLst = responses.data?.smart_contracts?.map(
+        (i) => i.contract_address,
+      );
+
+      const smartContract = await this.smartContractRepository.find({
+        where: {
+          contract_address: In(contractAddressLst),
+        },
+      });
+      responses.data?.smart_contracts?.forEach((contract) => {
+        smartContract?.forEach((item) => {
+          if (contract.contract_address === item.contract_address) {
+            item.num_tokens = contract.num_tokens || 0;
+          }
+        });
+      });
+      if (smartContract.length > 0) {
+        await this.smartContractRepository.update(smartContract);
       }
+
+      this.logger.log(
+        `${this.handleExecuteContract.name} execute complete: contract_address: ${contractAddress}`,
+      );
     }
   }
 
