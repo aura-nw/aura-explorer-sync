@@ -8,6 +8,7 @@ import {
   CONST_MSG_TYPE,
   CONST_PUBKEY_ADDR,
   NODE_API,
+  QUEUES,
 } from '../common/constants/app.constant';
 import { BlockSyncError, MissedBlock } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -529,24 +530,57 @@ export class SyncTaskService {
             }
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
             const height = Number(txData.tx_response.height);
+            const lstContract: any = [];
+            const logs = txData.tx_response.logs;
+            logs?.forEach((log) => {
+              log.events?.forEach((evt) => {
+                evt.attributes?.forEach((att) => {
+                  if (att.key === '_contract_address') {
+                    lstContract.push(att.value);
+                  }
+                });
+              });
+            });
+            const contractArr = [...new Set(lstContract)];
             const contractInstantiate = txData.tx_response.logs?.filter((f) =>
               f.events.find((x) => x.type == CONST_CHAR.INSTANTIATE),
             );
             const contractAddress = message.contract;
             this.contractQueue.add(
-              'sync-execute-contracts',
+              QUEUES.SYNC_EXECUTE_CONTRACTS,
               {
                 message,
                 contractAddress,
+                contractArr,
               },
               { ...optionQueue, timeout: 10000 },
             );
 
+            let takeMessage;
+            let unequipMessage;
+            // Execute contract CW4973
+            if (message.msg?.take?.signature) {
+              takeMessage = message;
+            }
+            if (message.msg?.unequip?.token_id) {
+              unequipMessage = message;
+            }
+            if (takeMessage || unequipMessage) {
+              this.contractQueue.add(
+                QUEUES.SYNC_CW4973_NFT_STATUS,
+                {
+                  takeMessage,
+                  unequipMessage,
+                  contractAddress,
+                },
+                { ...optionQueue },
+              );
+            }
             // Instantiate contract
             const instantiate = contractInstantiate?.length > 0 ? true : false;
             if (instantiate) {
               this.contractQueue.add(
-                'sync-instantiate-contracts',
+                QUEUES.SYNC_INSTANTIATE_CONTRACTS,
                 {
                   height,
                 },
@@ -556,7 +590,7 @@ export class SyncTaskService {
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
             const height = Number(txData.tx_response.height);
             this.contractQueue.add(
-              'sync-instantiate-contracts',
+              QUEUES.SYNC_INSTANTIATE_CONTRACTS,
               {
                 height,
               },

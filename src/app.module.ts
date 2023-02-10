@@ -40,6 +40,8 @@ import { SyncTransactionService } from './services/sync-transaction.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { TokenMarketsRepository } from './repositories/token-markets.repository';
+import { SoulboundTokenRepository } from './repositories/soulbound-token.repository';
+import { SoulboundToken } from './entities/soulbound-token.entity';
 import { SyncSmartContractService } from './services/sync-smart-contract.service';
 
 const controllers = [];
@@ -58,6 +60,7 @@ const entities = [
   Cw20TokenOwner,
   TokenMarkets,
   Transaction,
+  SoulboundToken,
 ];
 
 const repositories = [
@@ -75,6 +78,7 @@ const repositories = [
   Cw20TokenOwnerRepository,
   TokenMarketsRepository,
   TransactionRepository,
+  SoulboundTokenRepository,
 ];
 
 const services = [

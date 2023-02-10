@@ -7,7 +7,7 @@ import {
   Processor,
 } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
-import { Job } from 'bull';
+import { Job, Queue } from 'bull';
 import * as util from 'util';
 import {
   COINGECKO_API,
@@ -18,6 +18,9 @@ import {
   MAINNET_UPLOAD_STATUS,
   REDIS_KEY,
   SMART_CONTRACT_VERIFICATION,
+  SOULBOUND_TOKEN_STATUS,
+  SOULBOUND_PICKED_TOKEN,
+  QUEUES,
 } from '../common/constants/app.constant';
 import { SmartContract, TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -32,6 +35,7 @@ import { RedisUtil } from '../utils/redis.util';
 import { HttpService } from '@nestjs/axios';
 import { In } from 'typeorm';
 import { InfluxDBClient } from '../utils/influxdb-client';
+import { SoulboundTokenRepository } from '../repositories/soulbound-token.repository';
 
 @Processor('smart-contracts')
 export class SmartContractsProcessor {
@@ -52,6 +56,7 @@ export class SmartContractsProcessor {
     private deploymentRequestsRepository: DeploymentRequestsRepository,
     private redisUtil: RedisUtil,
     private httpService: HttpService,
+    private soulboundTokenRepos: SoulboundTokenRepository,
     private smartContractCodeRepository: SmartContractCodeRepository,
   ) {
     this.logger.log(
@@ -69,7 +74,7 @@ export class SmartContractsProcessor {
     this.connectInfluxdb();
   }
 
-  @Process('sync-instantiate-contracts')
+  @Process(QUEUES.SYNC_INSTANTIATE_CONTRACTS)
   async handleInstantiateContract(job: Job) {
     this.logger.log(`Sync instantiate contracts by job Id ${job.id}`);
     const height = job.data.height;
@@ -176,7 +181,7 @@ export class SmartContractsProcessor {
     }
   }
 
-  @Process('sync-execute-contracts')
+  @Process(QUEUES.SYNC_EXECUTE_CONTRACTS)
   async handleExecuteContract(job: Job) {
     const message = job.data.message;
     const contractAddress = job.data.contractAddress;
@@ -192,14 +197,9 @@ export class SmartContractsProcessor {
       const contractInfo = await this.smartContractRepository.getContractInfo(
         contractAddress,
       );
-      if (contractInfo && contractInfo.type === CONTRACT_TYPE.CW721) {
-        const burnOrMintMessages = message.msg?.mint || message.msg?.burn;
-        if (burnOrMintMessages) {
-          await this.updateNumTokenContract(contractAddress);
-        }
-      } else {
+      if (contractInfo && contractInfo.type === CONTRACT_TYPE.CW20) {
         // Update market info of contract
-        const marketing = message.msg?.update_marketing || undefined;
+        const marketing = message?.msg?.update_marketing || undefined;
 
         if (marketing) {
           const urlRequest = `${this.indexerUrl}${util.format(
@@ -225,6 +225,11 @@ export class SmartContractsProcessor {
               ['id'],
             );
           }
+        }
+      } else {
+        const lstContract = job.data.contractArr;
+        if (lstContract.length > 0) {
+          await this.updateNumTokenContract(lstContract);
         }
       }
     } catch (error) {
@@ -258,7 +263,7 @@ export class SmartContractsProcessor {
     }
   }
 
-  @Process('sync-price-volume')
+  @Process(QUEUES.SYNC_PRICE_VOLUME)
   async handleSyncPriceVolume(job: Job) {
     try {
       const listTokens = job.data.listTokens;
@@ -311,7 +316,7 @@ export class SmartContractsProcessor {
     }
   }
 
-  @Process('sync-coin-id')
+  @Process(QUEUES.SYNC_COIN_ID)
   async handleSyncCoinId(job: Job) {
     try {
       this.logger.log(
@@ -345,7 +350,7 @@ export class SmartContractsProcessor {
     }
   }
 
-  @Process('sync-contract-from-height')
+  @Process(QUEUES.SYNC_CONTRACT_FROM_HEIGHT)
   async syncSmartContractFromHeight(job: Job) {
     this.logger.log(`${this.syncSmartContractFromHeight.name} was called!`);
     try {
@@ -366,16 +371,6 @@ export class SmartContractsProcessor {
       for (let i = 0; i < smartContracts.length; i++) {
         const data = smartContracts[i];
         const contract = await this.makeInstantiateContractData(data);
-        if (
-          contract.token_symbol.length === 0 ||
-          contract.token_name.length === 0
-        ) {
-          const msg = data.msg;
-          if (msg) {
-            contract.token_symbol = msg.symbol;
-            contract.token_name = msg.name;
-          }
-        }
 
         // Create smart contract code data
         if (data?.contract_type?.status !== CONTRACT_CODE_STATUS.NOT_FOUND) {
@@ -426,6 +421,79 @@ export class SmartContractsProcessor {
       throw err;
     }
   }
+  SYNC_CONTRACT_FROM_HEIGHT;
+
+  @Process(QUEUES.SYNC_CW4973_NFT_STATUS)
+  async handleSyncCw4973NftStatus(job: Job) {
+    this.logger.log(
+      `============== Queue handleSyncCw4973NftStatus was run! ==============`,
+    );
+    try {
+      const takeContracts: any = job.data.takeMessage;
+      const unequipContracts: any = job.data.unequipMessage;
+      const takes = takeContracts?.msg?.take?.signature.signature;
+      const unequips = unequipContracts?.msg?.unequip?.token_id;
+
+      const soulboundTokens = await this.soulboundTokenRepos.find({
+        where: [{ signature: takes }, { token_id: unequips }],
+      });
+      if (soulboundTokens) {
+        const receiverAddress = soulboundTokens.map((m) => m.receiver_address);
+        const soulboundTokenInfos = await this.soulboundTokenRepos.find({
+          where: {
+            receiver_address: In(receiverAddress),
+            status: In([
+              SOULBOUND_TOKEN_STATUS.EQUIPPED,
+              SOULBOUND_TOKEN_STATUS.UNEQUIPPED,
+            ]),
+          },
+        });
+        soulboundTokens.forEach((item) => {
+          let token;
+          if (
+            item.signature === takeContracts?.msg?.take?.signature.signature
+          ) {
+            token = takeContracts;
+          }
+
+          if (item.token_id === unequipContracts?.msg?.unequip?.token_id) {
+            token = unequipContracts;
+          }
+
+          if (token?.msg?.take) {
+            const numOfTokens = soulboundTokenInfos?.filter(
+              (f) => f.receiver_address === item.receiver_address,
+            );
+
+            const numOfPicked = soulboundTokenInfos?.filter(
+              (f) =>
+                f.receiver_address === item.receiver_address &&
+                f.picked == true,
+            );
+            if (
+              numOfPicked?.length == SOULBOUND_PICKED_TOKEN.MIN ||
+              (numOfTokens?.length < SOULBOUND_PICKED_TOKEN.MAX &&
+                item.status === SOULBOUND_TOKEN_STATUS.UNCLAIM)
+            ) {
+              item.picked = true;
+            }
+            item.status = SOULBOUND_TOKEN_STATUS.EQUIPPED;
+          } else {
+            item.status = SOULBOUND_TOKEN_STATUS.UNEQUIPPED;
+            item.picked = false;
+          }
+        });
+        this.soulboundTokenRepos.update(soulboundTokens);
+      }
+      this.logger.log(
+        `sync-cw4973-nft-status update complete: ${JSON.stringify(
+          soulboundTokens,
+        )}`,
+      );
+    } catch (err) {
+      this.logger.error(`sync-cw4973-nft-status has error: ${err.stack}`);
+    }
+  }
 
   @OnQueueActive()
   onActive(job: Job) {
@@ -446,9 +514,17 @@ export class SmartContractsProcessor {
   }
 
   @OnQueueFailed()
-  onFailed(job: Job, error: Error) {
+  async onFailed(job: Job, error: Error) {
     this.logger.error(`Failed job ${job.id} of type ${job.name}`);
     this.logger.error(`Error: ${error}`);
+
+    // Resart queue
+    const queue = await job.queue;
+    if (queue) {
+      if (job.name === QUEUES.SYNC_INSTANTIATE_CONTRACTS) {
+        await this.retryJobs(queue);
+      }
+    }
   }
 
   /**
@@ -462,7 +538,7 @@ export class SmartContractsProcessor {
     smartContract.id = 0;
     smartContract.height = contract.height;
     smartContract.code_id = codeIds.id;
-    smartContract.contract_name = contract.contract_name;
+    smartContract.contract_name = contract.contract_name || '';
     smartContract.contract_address = contract.contract_address;
     smartContract.creator_address = contract.creator_address;
     smartContract.contract_hash = contract.contract_hash;
@@ -486,6 +562,7 @@ export class SmartContractsProcessor {
     smartContract.decimals = 0;
     smartContract.description = '';
     smartContract.image = '';
+    smartContract.num_tokens = Number(contract.num_tokens) || 0;
 
     const tokenInfo = contract.token_info;
     if (tokenInfo) {
@@ -505,6 +582,18 @@ export class SmartContractsProcessor {
     if (contractInfo) {
       smartContract.token_name = contractInfo?.name || '';
       smartContract.token_symbol = contractInfo?.symbol || '';
+    }
+
+    const msg = contract.msg;
+    if (msg) {
+      smartContract.minter_address = msg.minter;
+      if (
+        smartContract.token_symbol.length === 0 ||
+        smartContract.token_name.length === 0
+      ) {
+        smartContract.token_symbol = msg.symbol;
+        smartContract.token_name = msg.name;
+      }
     }
 
     if (this.nodeEnv === 'mainnet') {
@@ -576,32 +665,56 @@ export class SmartContractsProcessor {
 
   /**
    * Update num_tokens column
-   * @param height
-   * @param message
+   * @param contractAddress
    */
-  async updateNumTokenContract(contractAddress: string) {
+  async updateNumTokenContract(contractAddress: []) {
     this.logger.log(
-      `Call contract lcd api to query num_tokens with parameter: contract_address: ${contractAddress}}`,
+      `Call contract lcd api to query num_tokens with parameter: contract_address: ${contractAddress}`,
     );
-
-    const urlRequest = `${this.indexerUrl}${util.format(
-      INDEXER_API.GET_SMART_CONTRACT_BT_CONTRACT_ADDRESS,
+    let urlRequest = `${this.indexerUrl}${util.format(
+      INDEXER_API.GET_SMART_CONTRACT_BT_LIST_CONTRACT_ADDRESS,
       this.indexerChainId,
-      contractAddress,
     )}`;
+    contractAddress?.forEach((item) => {
+      urlRequest += `&contract_addresses[]=${item}`;
+    });
 
     const responses = await this._commonUtil.getDataAPI(urlRequest, '');
-    if (responses?.data) {
-      const numTokens = responses.data?.smart_contracts[0]?.num_tokens || 0;
-      if (numTokens > 0) {
-        await this.smartContractRepository.updateNumtokens(
-          contractAddress,
-          numTokens || 0,
-        );
-        this.logger.log(
-          `${this.handleExecuteContract.name} execute complete: Contract address: ${contractAddress}, numTokens: ${numTokens}`,
-        );
+    if (responses?.data?.smart_contracts.length > 0) {
+      const contractAddressLst = responses.data?.smart_contracts?.map(
+        (i) => i.contract_address,
+      );
+
+      const smartContract = await this.smartContractRepository.find({
+        where: {
+          contract_address: In(contractAddressLst),
+        },
+      });
+      responses.data?.smart_contracts?.forEach((contract) => {
+        smartContract?.forEach((item) => {
+          if (contract.contract_address === item.contract_address) {
+            item.num_tokens = contract.num_tokens || 0;
+          }
+        });
+      });
+      if (smartContract.length > 0) {
+        await this.smartContractRepository.update(smartContract);
       }
+
+      this.logger.log(
+        `${this.handleExecuteContract.name} execute complete: contract_address: ${contractAddress}`,
+      );
     }
+  }
+
+  /**
+   * Restart job fail
+   * @param queue
+   */
+  async retryJobs(queue: Queue) {
+    const jobs = await queue.getFailed();
+    jobs.forEach(async (job) => {
+      await job.retry();
+    });
   }
 }

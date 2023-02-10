@@ -99,6 +99,7 @@ export enum SMART_CONTRACT_VERIFICATION {
 export enum CONTRACT_TYPE {
   CW20 = 'CW20',
   CW721 = 'CW721',
+  CW4973 = 'CW4973',
 }
 
 export enum CONTRACT_CODE_RESULT {
@@ -124,6 +125,7 @@ export enum INDEXER_API {
   GET_SMART_CONTRACTS = 'api/v1/smart-contracts?chainId=%s&limit=%s&fromHeight=%s&toHeight=%s',
   GET_SMART_CONTRACT_BY_NEXT_KEY = 'api/v1/smart-contracts?chainId=%s&limit=%s&nextKey=%s',
   GET_SMART_CONTRACT_BT_CONTRACT_ADDRESS = 'api/v1/smart-contracts?chainId=%s&contract_addresses[]=%s',
+  GET_SMART_CONTRACT_BT_LIST_CONTRACT_ADDRESS = 'api/v1/smart-contracts?chainId=%s',
 }
 
 export enum COINGECKO_API {
@@ -162,3 +164,23 @@ export enum MAINNET_UPLOAD_STATUS {
 export enum REDIS_KEY {
   COINGECKO_COINS = 'COINGECKO_COINS',
 }
+
+export enum SOULBOUND_TOKEN_STATUS {
+  UNCLAIM = 'Unclaimed',
+  EQUIPPED = 'Equipped',
+  UNEQUIPPED = 'Unequipped',
+}
+
+export const SOULBOUND_PICKED_TOKEN = {
+  MIN: 0,
+  MAX: 5,
+};
+
+export const QUEUES = {
+  SYNC_EXECUTE_CONTRACTS: 'sync-execute-contracts',
+  SYNC_CW4973_NFT_STATUS: 'sync-cw4973-nft-status',
+  SYNC_INSTANTIATE_CONTRACTS: 'sync-instantiate-contracts',
+  SYNC_PRICE_VOLUME: 'sync-price-volume',
+  SYNC_COIN_ID: 'sync-coin-id',
+  SYNC_CONTRACT_FROM_HEIGHT: 'sync-contract-from-height',
+};
