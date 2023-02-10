@@ -445,7 +445,6 @@ export class SmartContractsProcessor {
         const receiverAddress = soulboundTokens.map((m) => m.receiver_address);
         const soulboundTokenInfos = await this.soulboundTokenRepos.find({
           where: {
-            contract_address: contractAddress,
             receiver_address: In(receiverAddress),
           },
         });
