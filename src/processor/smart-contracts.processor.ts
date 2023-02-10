@@ -433,14 +433,19 @@ export class SmartContractsProcessor {
       const unequipContracts: any = job.data.unequipMessage;
       const takes = takeContracts?.msg?.take?.signature.signature;
       const unequips = unequipContracts?.msg?.unequip?.token_id;
+      const contractAddress = job.data.contractAddress;
 
       const soulboundTokens = await this.soulboundTokenRepos.find({
-        where: [{ signature: takes }, { token_id: unequips }],
+        where: [
+          { signature: takes, contract_address: contractAddress },
+          { token_id: unequips, contract_address: contractAddress },
+        ],
       });
       if (soulboundTokens) {
         const receiverAddress = soulboundTokens.map((m) => m.receiver_address);
         const soulboundTokenInfos = await this.soulboundTokenRepos.find({
           where: {
+            contract_address: contractAddress,
             receiver_address: In(receiverAddress),
             status: In([
               SOULBOUND_TOKEN_STATUS.EQUIPPED,
