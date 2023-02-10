@@ -433,19 +433,19 @@ export class SmartContractsProcessor {
       const unequipContracts: any = job.data.unequipMessage;
       const takes = takeContracts?.msg?.take?.signature.signature;
       const unequips = unequipContracts?.msg?.unequip?.token_id;
+      const contractAddress = job.data.contractAddress;
 
       const soulboundTokens = await this.soulboundTokenRepos.find({
-        where: [{ signature: takes }, { token_id: unequips }],
+        where: [
+          { signature: takes, contract_address: contractAddress },
+          { token_id: unequips, contract_address: contractAddress },
+        ],
       });
       if (soulboundTokens) {
         const receiverAddress = soulboundTokens.map((m) => m.receiver_address);
         const soulboundTokenInfos = await this.soulboundTokenRepos.find({
           where: {
             receiver_address: In(receiverAddress),
-            status: In([
-              SOULBOUND_TOKEN_STATUS.EQUIPPED,
-              SOULBOUND_TOKEN_STATUS.UNEQUIPPED,
-            ]),
           },
         });
         soulboundTokens.forEach((item) => {
@@ -462,7 +462,10 @@ export class SmartContractsProcessor {
 
           if (token?.msg?.take) {
             const numOfTokens = soulboundTokenInfos?.filter(
-              (f) => f.receiver_address === item.receiver_address,
+              (f) =>
+                f.receiver_address === item.receiver_address &&
+                (f.status === SOULBOUND_TOKEN_STATUS.EQUIPPED ||
+                  f.status === SOULBOUND_TOKEN_STATUS.UNEQUIPPED),
             );
 
             const numOfPicked = soulboundTokenInfos?.filter(
@@ -470,8 +473,15 @@ export class SmartContractsProcessor {
                 f.receiver_address === item.receiver_address &&
                 f.picked == true,
             );
+            const numOfUnClaimed = soulboundTokenInfos?.filter(
+              (f) =>
+                f.receiver_address === item.receiver_address &&
+                (f.status === SOULBOUND_TOKEN_STATUS.UNCLAIM ||
+                  f.status === SOULBOUND_TOKEN_STATUS.UNEQUIPPED),
+            );
             if (
-              numOfPicked?.length == SOULBOUND_PICKED_TOKEN.MIN ||
+              (numOfPicked?.length == SOULBOUND_PICKED_TOKEN.MIN &&
+                numOfUnClaimed?.length == 1) ||
               (numOfTokens?.length < SOULBOUND_PICKED_TOKEN.MAX &&
                 item.status === SOULBOUND_TOKEN_STATUS.UNCLAIM)
             ) {
