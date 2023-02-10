@@ -447,10 +447,6 @@ export class SmartContractsProcessor {
           where: {
             contract_address: contractAddress,
             receiver_address: In(receiverAddress),
-            status: In([
-              SOULBOUND_TOKEN_STATUS.EQUIPPED,
-              SOULBOUND_TOKEN_STATUS.UNEQUIPPED,
-            ]),
           },
         });
         soulboundTokens.forEach((item) => {
@@ -467,7 +463,10 @@ export class SmartContractsProcessor {
 
           if (token?.msg?.take) {
             const numOfTokens = soulboundTokenInfos?.filter(
-              (f) => f.receiver_address === item.receiver_address,
+              (f) =>
+                f.receiver_address === item.receiver_address &&
+                (f.status === SOULBOUND_TOKEN_STATUS.EQUIPPED ||
+                  f.status === SOULBOUND_TOKEN_STATUS.UNEQUIPPED),
             );
 
             const numOfPicked = soulboundTokenInfos?.filter(
