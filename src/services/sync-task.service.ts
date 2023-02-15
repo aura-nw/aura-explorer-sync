@@ -168,7 +168,7 @@ export class SyncTaskService {
     }
   }
 
-  @Interval(3000)
+  @Interval(5000)
   async syncValidator() {
     // check status
     if (this.isSyncValidator) {
@@ -280,6 +280,7 @@ export class SyncTaskService {
           this.isSyncValidator = false;
         } catch (error) {
           this.isSyncValidator = false;
+
           this._logger.error(`${error.name}: ${error.message}`);
           this._logger.error(`${error.stack}`);
         }
@@ -575,7 +576,6 @@ export class SyncTaskService {
                 { ...optionQueue },
               );
             }
-
             // Instantiate contract
             const instantiate = contractInstantiate?.length > 0 ? true : false;
             if (instantiate) {
