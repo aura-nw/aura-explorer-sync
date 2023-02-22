@@ -344,6 +344,7 @@ export class SyncDataHelpers {
       .attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
     smartContractCode.code_id = codeIds.length > 0 ? codeIds[0].value : 0;
     smartContractCode.creator = message.sender;
+    smartContractCode.tx_hash = txData.tx_response.txhash;
 
     return smartContractCode;
   }
