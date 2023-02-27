@@ -43,6 +43,7 @@ import { TokenMarketsRepository } from './repositories/token-markets.repository'
 import { SoulboundTokenRepository } from './repositories/soulbound-token.repository';
 import { SoulboundToken } from './entities/soulbound-token.entity';
 import { SyncSmartContractService } from './services/sync-smart-contract.service';
+import { ValidatorProcessor } from './processor/validator.processor';
 
 const controllers = [];
 const entities = [
@@ -89,7 +90,7 @@ const services = [
   SyncSmartContractService,
 ];
 
-const processors = [SmartContractsProcessor];
+const processors = [SmartContractsProcessor, ValidatorProcessor];
 
 @Module({
   imports: [
@@ -112,9 +113,14 @@ const processors = [SmartContractsProcessor];
         removeOnComplete: true,
       },
     }),
-    BullModule.registerQueue({
-      name: 'smart-contracts',
-    }),
+    BullModule.registerQueue(
+      {
+        name: 'smart-contracts',
+      },
+      {
+        name: 'validator',
+      },
+    ),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
     TypeOrmModule.forFeature([...entities]),

@@ -13,7 +13,6 @@ import {
 import { BlockSyncError, MissedBlock } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { BlockSyncErrorRepository } from '../repositories/block-sync-error.repository';
-import { BlockRepository } from '../repositories/block.repository';
 import { DelegationRepository } from '../repositories/delegation.repository';
 import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
 import { MissedBlockRepository } from '../repositories/missed-block.repository';
@@ -26,6 +25,7 @@ import { InfluxDBClient } from '../utils/influxdb-client';
 import { InjectQueue } from '@nestjs/bull';
 import { BackoffOptions, CronRepeatOptions, JobOptions, Queue } from 'bull';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
+import { TRANSACTION_TYPE } from '../common/constants/transaction-type.enum';
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -57,6 +57,7 @@ export class SyncTaskService {
     private smartContractCodeRepository: SmartContractCodeRepository,
     @InjectSchedule() private readonly schedule: Schedule,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
+    @InjectQueue('validator') private readonly validatorQueue: Queue,
   ) {
     this._logger.log(
       '============== Constructor Sync Task Service ==============',
@@ -168,6 +169,10 @@ export class SyncTaskService {
     }
   }
 
+  /**
+   * @todo Move to queque and remove after compare
+   * @returns
+   */
   @Interval(3000)
   async syncValidator() {
     // check status
@@ -470,9 +475,16 @@ export class SyncTaskService {
    */
   async syncDataWithTransactions(listTransactions) {
     const proposalVotes = [];
-    const delegations = [];
-    const delegatorRewards = [];
     const smartContractCodes = [];
+    const msgTypes: any[] = [
+      TRANSACTION_TYPE.DELEGATE,
+      TRANSACTION_TYPE.UNDELEGATE,
+      TRANSACTION_TYPE.REDELEGATE,
+      TRANSACTION_TYPE.GET_REWARD,
+      TRANSACTION_TYPE.CREATE_VALIDATOR,
+      TRANSACTION_TYPE.JAILED,
+      TRANSACTION_TYPE.UNJAIL,
+    ];
     const optionQueue: JobOptions = {
       removeOnComplete: true,
       // repeat: this.everyRepeatOptions,
@@ -495,38 +507,6 @@ export class SyncTaskService {
           if (txType === CONST_MSG_TYPE.MSG_VOTE) {
             const proposalVote = SyncDataHelpers.makeVoteData(txData, message);
             proposalVotes.push(proposalVote);
-          } else if (txType === CONST_MSG_TYPE.MSG_DELEGATE) {
-            const [delegation, reward] = SyncDataHelpers.makeDelegateData(
-              txData,
-              message,
-              i,
-            );
-            delegations.push(delegation);
-            delegatorRewards.push(reward);
-          } else if (txType === CONST_MSG_TYPE.MSG_UNDELEGATE) {
-            const [delegation, reward] = SyncDataHelpers.makeUndelegateData(
-              txData,
-              message,
-              i,
-            );
-            delegations.push(delegation);
-            delegatorRewards.push(reward);
-          } else if (txType === CONST_MSG_TYPE.MSG_REDELEGATE) {
-            const [delegation1, delegation2, reward1, reward2] =
-              SyncDataHelpers.makeRedelegationData(txData, message, i);
-            delegations.push(delegation1);
-            delegations.push(delegation2);
-            delegatorRewards.push(reward1);
-            delegatorRewards.push(reward2);
-          } else if (txType === CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD) {
-            const reward = SyncDataHelpers.makeWithDrawDelegationData(
-              txData,
-              message,
-              i,
-            );
-            if (reward.amount) {
-              delegatorRewards.push(reward);
-            }
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
             const height = Number(txData.tx_response.height);
             const lstContract: any = [];
@@ -596,32 +576,25 @@ export class SyncTaskService {
               },
               { ...optionQueue, delay: 7000 },
             );
-          } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
-            const delegation = SyncDataHelpers.makeDelegationData(
-              txData,
-              message,
+          } else if (msgTypes.indexOf(txType) > -1) {
+            this.validatorQueue.add(
+              QUEUES.SYNC_VALIDATOR,
+              { txData, msg: message, txType, index: 1 },
+              { ...optionQueue },
             );
-            delegations.push(delegation);
           } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
             const smartContractCode = SyncDataHelpers.makeStoreCodeData(
               txData,
               message,
             );
             smartContractCodes.push(smartContractCode);
+          } else {
           }
         }
       }
     }
     if (proposalVotes.length > 0) {
       await this.proposalVoteRepository.insertOnDuplicate(proposalVotes, [
-        'id',
-      ]);
-    }
-    if (delegations.length > 0) {
-      await this.delegationRepository.insertOnDuplicate(delegations, ['id']);
-    }
-    if (delegatorRewards.length > 0) {
-      await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, [
         'id',
       ]);
     }
