@@ -25,6 +25,7 @@ import { InfluxDBClient } from '../utils/influxdb-client';
 import { InjectQueue } from '@nestjs/bull';
 import { BackoffOptions, CronRepeatOptions, JobOptions, Queue } from 'bull';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
+import { TRANSACTION_TYPE } from '../common/constants/transaction-type.enum';
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -474,15 +475,15 @@ export class SyncTaskService {
    */
   async syncDataWithTransactions(listTransactions) {
     const proposalVotes = [];
-    const delegations = [];
-    const delegatorRewards = [];
     const smartContractCodes = [];
-    const msgTypes = [
-      CONST_MSG_TYPE.MSG_DELEGATE,
-      CONST_MSG_TYPE.MSG_UNDELEGATE,
-      CONST_MSG_TYPE.MSG_REDELEGATE,
-      CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD,
-      CONST_MSG_TYPE.MSG_CREATE_VALIDATOR,
+    const msgTypes: any[] = [
+      TRANSACTION_TYPE.DELEGATE,
+      TRANSACTION_TYPE.UNDELEGATE,
+      TRANSACTION_TYPE.REDELEGATE,
+      TRANSACTION_TYPE.GET_REWARD,
+      TRANSACTION_TYPE.CREATE_VALIDATOR,
+      TRANSACTION_TYPE.JAILED,
+      TRANSACTION_TYPE.UNJAIL,
     ];
     const optionQueue: JobOptions = {
       removeOnComplete: true,
@@ -577,6 +578,7 @@ export class SyncTaskService {
             );
           } else if (msgTypes.indexOf(txType) > -1) {
             this.validatorQueue.add(
+              QUEUES.SYNC_VALIDATOR,
               { txData, msg: message, txType, index: 1 },
               { ...optionQueue },
             );
@@ -593,15 +595,6 @@ export class SyncTaskService {
     }
     if (proposalVotes.length > 0) {
       await this.proposalVoteRepository.insertOnDuplicate(proposalVotes, [
-        'id',
-      ]);
-    }
-    if (delegations.length > 0) {
-      // @todo refactor code
-      await this.delegationRepository.insertOnDuplicate(delegations, ['id']);
-    }
-    if (delegatorRewards.length > 0) {
-      await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, [
         'id',
       ]);
     }

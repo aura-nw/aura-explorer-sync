@@ -4,11 +4,11 @@ import { bech32 } from 'bech32';
 import { Job, Queue } from 'bull';
 import {
   CONST_CHAR,
-  CONST_MSG_TYPE,
   CONST_PUBKEY_ADDR,
   NODE_API,
   QUEUES,
 } from '../common/constants/app.constant';
+import { TRANSACTION_TYPE } from '../common/constants/transaction-type.enum';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { DelegationRepository } from '../repositories/delegation.repository';
 import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
@@ -43,21 +43,25 @@ export class ValidatorProcessor {
     );
     const { txData, msg, txType, index } = job.data;
     switch (txType) {
-      case CONST_MSG_TYPE.MSG_DELEGATE:
+      case TRANSACTION_TYPE.DELEGATE:
         await this.processDelegate(txData, msg, index);
         break;
-      case CONST_MSG_TYPE.MSG_UNDELEGATE:
+      case TRANSACTION_TYPE.UNDELEGATE:
         await this.processUndelegate(txData, msg, index);
         break;
-      case CONST_MSG_TYPE.MSG_REDELEGATE:
-        await this.processUndelegate(txData, msg, index);
+      case TRANSACTION_TYPE.REDELEGATE:
+        await this.processRedelegation(txData, msg, index);
         break;
-      case CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD:
+      case TRANSACTION_TYPE.GET_REWARD:
         await this.processWithDrawDelegation(txData, msg, index);
         break;
-      case CONST_MSG_TYPE.MSG_CREATE_VALIDATOR:
+      case TRANSACTION_TYPE.CREATE_VALIDATOR:
         await this.processValidator(msg.operator_address);
         await this.processDelegation(txData, msg);
+        break;
+      case TRANSACTION_TYPE.JAILED:
+      case TRANSACTION_TYPE.UNJAIL:
+        await this.processValidator(msg.operator_address);
         break;
     }
   }
@@ -215,6 +219,18 @@ export class ValidatorProcessor {
   }
 
   async processWithDrawDelegation(txData: any, message: any, index: number) {
+    this.logger.log(`${this.processWithDrawDelegation.name} was called!}`);
+    const reward = SyncDataHelpers.makeWithDrawDelegationData(
+      txData,
+      message,
+      index,
+    );
+    if (reward.amount) {
+      await this.insertDelegatorReward(reward);
+    }
+  }
+
+  async processValidatorStatus(txData: any, message: any, index: number) {
     this.logger.log(`${this.processWithDrawDelegation.name} was called!}`);
     const reward = SyncDataHelpers.makeWithDrawDelegationData(
       txData,
