@@ -15,4 +15,7 @@ export class SmartContractCode extends BaseEntityIncrementId {
 
   @Column({ name: 'creator' })
   creator: string;
+
+  @Column({ name: 'tx_hash' })
+  tx_hash: string;
 }
