@@ -183,4 +183,5 @@ export const QUEUES = {
   SYNC_PRICE_VOLUME: 'sync-price-volume',
   SYNC_COIN_ID: 'sync-coin-id',
   SYNC_CONTRACT_FROM_HEIGHT: 'sync-contract-from-height',
+  SYNC_VALIDATOR: 'sync-validator',
 };

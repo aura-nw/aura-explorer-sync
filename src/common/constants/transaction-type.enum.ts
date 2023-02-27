@@ -19,6 +19,7 @@ export enum TRANSACTION_TYPE {
   DEPOSIT_WITHIN_BATCH = 'MsgDepositWithinBatch',
   EDIT_VALIDATOR = 'MsgEditValidator',
   CREATE_VALIDATOR = 'MsgCreateValidator',
+  JAILED = 'MsgJailed',
   UNJAIL = 'MsgUnjail',
   STORE_CODE = 'MsgStoreCode',
   INSTANTIATE_CONTRACT = 'MsgInstantiateContract',
