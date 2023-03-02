@@ -56,12 +56,12 @@ export class ValidatorProcessor {
         await this.processWithDrawDelegation(txData, msg, index);
         break;
       case TRANSACTION_TYPE.CREATE_VALIDATOR:
-        await this.processValidator(msg.operator_address);
+        await this.processValidator(msg.validator_address);
         await this.processDelegation(txData, msg);
         break;
       case TRANSACTION_TYPE.JAILED:
       case TRANSACTION_TYPE.UNJAIL:
-        await this.processValidator(msg.operator_address);
+        await this.processValidator(msg.validator_address);
         break;
     }
   }
