@@ -1,24 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CronExpression, Interval } from '@nestjs/schedule';
-import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
-  CONST_PUBKEY_ADDR,
-  NODE_API,
   QUEUES,
 } from '../common/constants/app.constant';
-import { BlockSyncError, MissedBlock } from '../entities';
+import { BlockSyncError } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { BlockSyncErrorRepository } from '../repositories/block-sync-error.repository';
-import { DelegationRepository } from '../repositories/delegation.repository';
-import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
 import { MissedBlockRepository } from '../repositories/missed-block.repository';
 import { ProposalVoteRepository } from '../repositories/proposal-vote.repository';
 import { SyncStatusRepository } from '../repositories/sync-status.repository';
-import { ValidatorRepository } from '../repositories/validator.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
@@ -32,8 +26,7 @@ export class SyncTaskService {
   private rpc;
   private api;
   private influxDbClient: InfluxDBClient;
-  private isSyncValidator = false;
-  private isSyncMissBlock = false;
+  // private isSyncMissBlock = false;
   private threads = 0;
   private schedulesSync: Array<number> = [];
   private smartContractService;
@@ -47,13 +40,10 @@ export class SyncTaskService {
 
   constructor(
     private _commonUtil: CommonUtil,
-    private validatorRepository: ValidatorRepository,
     private missedBlockRepository: MissedBlockRepository,
     private blockSyncErrorRepository: BlockSyncErrorRepository,
     private statusRepository: SyncStatusRepository,
     private proposalVoteRepository: ProposalVoteRepository,
-    private delegationRepository: DelegationRepository,
-    private delegatorRewardRepository: DelegatorRewardRepository,
     private smartContractCodeRepository: SmartContractCodeRepository,
     @InjectSchedule() private readonly schedule: Schedule,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
