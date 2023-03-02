@@ -230,18 +230,6 @@ export class ValidatorProcessor {
     }
   }
 
-  async processValidatorStatus(txData: any, message: any, index: number) {
-    this.logger.log(`${this.processWithDrawDelegation.name} was called!}`);
-    const reward = SyncDataHelpers.makeWithDrawDelegationData(
-      txData,
-      message,
-      index,
-    );
-    if (reward.amount) {
-      await this.insertDelegatorReward(reward);
-    }
-  }
-
   /**
    * Insert data to delegations table
    * @param delegation

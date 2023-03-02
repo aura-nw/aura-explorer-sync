@@ -446,8 +446,8 @@ export class SyncTaskService {
           } else if (msgTypes.indexOf(txType) > -1) {
             this.validatorQueue.add(
               QUEUES.SYNC_VALIDATOR,
-              { txData, msg: message, txType, index: 1 },
-              { ...optionQueue },
+              { txData, msg: message, txType, index: i },
+              { ...optionQueue, removeOnFail: true },
             );
           } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
             const smartContractCode = SyncDataHelpers.makeStoreCodeData(
