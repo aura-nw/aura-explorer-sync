@@ -669,6 +669,7 @@ export class SmartContractsProcessor {
           smartContract.mainnet_upload_status =
             MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
           smartContract.reference_code_id = exactContract.code_id || '';
+
         }
         if (sameContractCodeId.length > 0) {
           const sameContract = sameContractCodeId[0];
