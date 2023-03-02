@@ -41,28 +41,30 @@ export class ValidatorProcessor {
         job.data,
       )}`,
     );
-    const { txData, msg, txType, index } = job.data;
-    switch (txType) {
-      case TRANSACTION_TYPE.DELEGATE:
-        await this.processDelegate(txData, msg, index);
-        break;
-      case TRANSACTION_TYPE.UNDELEGATE:
-        await this.processUndelegate(txData, msg, index);
-        break;
-      case TRANSACTION_TYPE.REDELEGATE:
-        await this.processRedelegation(txData, msg, index);
-        break;
-      case TRANSACTION_TYPE.GET_REWARD:
-        await this.processWithDrawDelegation(txData, msg, index);
-        break;
-      case TRANSACTION_TYPE.CREATE_VALIDATOR:
-        await this.processValidator(msg.validator_address);
-        await this.processDelegation(txData, msg);
-        break;
-      case TRANSACTION_TYPE.JAILED:
-      case TRANSACTION_TYPE.UNJAIL:
-        await this.processValidator(msg.validator_address);
-        break;
+    try {
+      const { txData, msg, txType } = job.data;
+      await this.processValidator(msg.validator_address);
+      switch (txType) {
+        case TRANSACTION_TYPE.DELEGATE:
+          await this.processDelegate(txData, msg);
+          break;
+        case TRANSACTION_TYPE.UNDELEGATE:
+          await this.processUndelegate(txData, msg);
+          break;
+        case TRANSACTION_TYPE.REDELEGATE:
+          await this.processRedelegation(txData, msg);
+          break;
+        case TRANSACTION_TYPE.GET_REWARD:
+          await this.processWithDrawDelegation(txData, msg);
+          break;
+        case TRANSACTION_TYPE.CREATE_VALIDATOR:
+          await this.processDelegation(txData, msg);
+          break;
+      }
+    } catch (error) {
+      this.logger.error(`${error.name}: ${error.message}`);
+      this.logger.error(`${error.stack}`);
+      throw error;
     }
   }
 
@@ -70,6 +72,7 @@ export class ValidatorProcessor {
     this.logger.log(
       `${this.processValidator.name} was called with paramter: ${operatorAddress}`,
     );
+    let validatorInfo = null;
     // get validators
     const paramsValidator = `${NODE_API.VALIDATOR}/${operatorAddress}`;
     // get staking pool
@@ -86,16 +89,16 @@ export class ValidatorProcessor {
         this.commonUtil.getDataAPI(this.api, paramsSigning),
       ]);
     if (validatorData) {
+      validatorInfo = validatorData.validator;
       // get account address
-      const operator_address = validatorData.operator_address;
-      const decodeAcc = bech32.decode(operator_address, 1023);
+      const decodeAcc = bech32.decode(operatorAddress, 1023);
       const wordsByte = bech32.fromWords(decodeAcc.words);
       const account_address = bech32.encode(
         CONST_PUBKEY_ADDR.AURA,
         bech32.toWords(wordsByte),
       );
       // get validator detail
-      const validatorUrl = `staking/validators/${validatorData.operator_address}`;
+      const validatorUrl = `staking/validators/${operatorAddress}`;
       const validatorResponse = await this.commonUtil.getDataAPI(
         this.api,
         validatorUrl,
@@ -105,22 +108,22 @@ export class ValidatorProcessor {
         // create validator
         const status = Number(validatorResponse.result?.status) || 0;
         const validatorAddr = this.commonUtil.getAddressFromPubkey(
-          validatorData.consensus_pubkey.key,
+          validatorInfo.consensus_pubkey.key,
         );
 
         // Makinf Validator entity to insert data
         const newValidator = SyncDataHelpers.makeValidatorData(
-          validatorData,
+          validatorInfo,
           account_address,
           status,
           validatorAddr,
         );
 
         const percentPower =
-          (validatorData.tokens / poolData.pool.bonded_tokens) * 100;
+          (validatorInfo.tokens / poolData.pool.bonded_tokens) * 100;
         newValidator.percent_power = percentPower.toFixed(2);
         const pubkey = this.commonUtil.getAddressFromPubkey(
-          validatorData.consensus_pubkey.key,
+          validatorInfo.consensus_pubkey.key,
         );
         const address = this.commonUtil.hexToBech32(
           pubkey,
@@ -143,7 +146,7 @@ export class ValidatorProcessor {
         newValidator.percent_self_bonded = '0.00';
         try {
           // get delegations
-          const paramDelegation = `cosmos/staking/v1beta1/validators/${validatorData.operator_address}/delegations/${account_address}`;
+          const paramDelegation = `cosmos/staking/v1beta1/validators/${operatorAddress}/delegations/${account_address}`;
           const delegationData = await this.commonUtil.getDataAPI(
             this.api,
             paramDelegation,
@@ -153,7 +156,7 @@ export class ValidatorProcessor {
               delegationData.delegation_response.balance.amount;
             const percentSelfBonded =
               (delegationData.delegation_response.balance.amount /
-                validatorData.tokens) *
+                validatorInfo.tokens) *
               100;
             newValidator.percent_self_bonded =
               percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
@@ -165,6 +168,7 @@ export class ValidatorProcessor {
       } catch (error) {
         this.logger.error(`${error.name}: ${error.message}`);
         this.logger.error(`${error.stack}`);
+        throw error;
       }
     }
   }
@@ -172,61 +176,44 @@ export class ValidatorProcessor {
   async processDelegation(txData: any, message: any) {
     this.logger.log(`${this.processDelegation.name} was called!}`);
     const delegation = SyncDataHelpers.makeDelegationData(txData, message);
-    await this.insertDelegation(delegation);
+    await this.insertDelegation([delegation]);
   }
 
-  async processDelegatorReward(txData: any, message: any, index: number) {
-    this.logger.log(`${this.processDelegatorReward.name} was called!}`);
-    const [delegation, reward] = SyncDataHelpers.makeDelegateData(
-      txData,
-      message,
-      index,
-    );
-    await this.insertDelegation(delegation);
-    await this.insertDelegatorReward(reward);
-  }
-
-  async processDelegate(txData: any, message: any, index: number) {
+  async processDelegate(txData: any, message: any) {
     this.logger.log(`${this.processDelegate.name} was called!}`);
     const [delegation, reward] = SyncDataHelpers.makeDelegateData(
       txData,
       message,
-      index,
     );
-    await this.insertDelegation(delegation);
-    await this.insertDelegatorReward(reward);
+    await this.insertDelegation([delegation]);
+    await this.insertDelegatorReward([reward]);
   }
 
-  async processUndelegate(txData: any, message: any, index: number) {
+  async processUndelegate(txData: any, message: any) {
     this.logger.log(`${this.processUndelegate.name} was called!}`);
     const [delegation, reward] = SyncDataHelpers.makeUndelegateData(
       txData,
       message,
-      index,
     );
-    await this.insertDelegation(delegation);
-    await this.insertDelegatorReward(reward);
+    await this.insertDelegation([delegation]);
+    await this.insertDelegatorReward([reward]);
   }
 
-  async processRedelegation(txData: any, message: any, index: number) {
+  async processRedelegation(txData: any, message: any) {
     this.logger.log(`${this.processRedelegation.name} was called!}`);
     const [delegation1, delegation2, reward1, reward2] =
-      SyncDataHelpers.makeRedelegationData(txData, message, index);
+      SyncDataHelpers.makeRedelegationData(txData, message);
     const delegations = [delegation1, delegation2];
     const rewards = [reward1, reward2];
     await this.insertDelegation(delegations);
     await this.insertDelegatorReward(rewards);
   }
 
-  async processWithDrawDelegation(txData: any, message: any, index: number) {
+  async processWithDrawDelegation(txData: any, message: any) {
     this.logger.log(`${this.processWithDrawDelegation.name} was called!}`);
-    const reward = SyncDataHelpers.makeWithDrawDelegationData(
-      txData,
-      message,
-      index,
-    );
+    const reward = SyncDataHelpers.makeWithDrawDelegationData(txData, message);
     if (reward.amount) {
-      await this.insertDelegatorReward(reward);
+      await this.insertDelegatorReward([reward]);
     }
   }
 
