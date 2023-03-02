@@ -637,14 +637,22 @@ export class SmartContractsProcessor {
       smartContract.request_id = request.request_id;
     } else {
       if (smartContract.contract_hash !== '') {
-        const [exactContract, sameContractCodeId] = await Promise.all([
-          this.smartContractRepository.findExactContractByHash(
-            smartContract.contract_hash,
-          ),
-          this.smartContractRepository.findByCondition({
-            code_id: smartContract.code_id,
-          }),
-        ]);
+        const [exactSmartContract, exactContractCode, sameContractCodeId] =
+          await Promise.all([
+            this.smartContractRepository.findExactContractByHash(
+              smartContract.contract_hash,
+            ),
+            this.smartContractCodeRepository.findExactContractByHash(
+              smartContract.contract_hash,
+            ),
+            this.smartContractRepository.findByCondition({
+              code_id: smartContract.code_id,
+            }),
+          ]);
+
+        const exactContract = exactContractCode
+          ? exactContractCode
+          : exactSmartContract;
         if (exactContract) {
           smartContract.contract_verification =
             SMART_CONTRACT_VERIFICATION.VERIFIED;
@@ -659,6 +667,7 @@ export class SmartContractsProcessor {
           smartContract.verified_at = new Date();
           smartContract.mainnet_upload_status =
             MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
+          smartContract.reference_code_id = exactContract.code_id;
         }
         if (sameContractCodeId.length > 0) {
           const sameContract = sameContractCodeId[0];
