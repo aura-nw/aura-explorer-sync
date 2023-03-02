@@ -656,18 +656,20 @@ export class SmartContractsProcessor {
         if (exactContract) {
           smartContract.contract_verification =
             SMART_CONTRACT_VERIFICATION.VERIFIED;
-          smartContract.contract_match = exactContract.contract_address;
-          smartContract.url = exactContract.url;
-          smartContract.compiler_version = exactContract.compiler_version;
+          smartContract.contract_match = exactContract.contract_address || '';
+          smartContract.url = exactContract.url || '';
+          smartContract.compiler_version = exactContract.compiler_version || '';
           smartContract.instantiate_msg_schema =
-            exactContract.instantiate_msg_schema;
-          smartContract.query_msg_schema = exactContract.query_msg_schema;
-          smartContract.execute_msg_schema = exactContract.execute_msg_schema;
-          smartContract.s3_location = exactContract.s3_location;
+            exactContract.instantiate_msg_schema || '';
+          smartContract.query_msg_schema = exactContract.query_msg_schema || '';
+          smartContract.execute_msg_schema =
+            exactContract.execute_msg_schema || '';
+          smartContract.s3_location = exactContract.s3_location || '';
           smartContract.verified_at = new Date();
           smartContract.mainnet_upload_status =
             MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
-          smartContract.reference_code_id = exactContract.code_id;
+          smartContract.reference_code_id = exactContract.code_id || '';
+
         }
         if (sameContractCodeId.length > 0) {
           const sameContract = sameContractCodeId[0];
