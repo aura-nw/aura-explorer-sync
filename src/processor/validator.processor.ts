@@ -67,7 +67,7 @@ export class ValidatorProcessor {
           await this.processDelegation(txData, msg);
           break;
       }
-      await this.processValidator(msg.validator_address);
+      await this.processValidator(addresses);
     } catch (error) {
       this.logger.error(`${error.name}: ${error.message}`);
       this.logger.error(`${error.stack}`);
@@ -81,8 +81,9 @@ export class ValidatorProcessor {
     );
     const validators = [];
     try {
-      for (const operatorAddress in operatorAddresses) {
+      for (const index in operatorAddresses) {
         let validatorInfo = null;
+        const operatorAddress = operatorAddresses[index];
         // get validators
         const paramsValidator = `${NODE_API.VALIDATOR}/${operatorAddress}`;
         // get staking pool
