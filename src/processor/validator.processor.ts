@@ -265,7 +265,7 @@ export class ValidatorProcessor {
     // Resart queue
     const queue = await job.queue;
     if (queue) {
-      if (job.name === QUEUES.SYNC_INSTANTIATE_CONTRACTS) {
+      if (job.name === QUEUES.SYNC_VALIDATOR) {
         await this.retryJobs(queue);
       }
     }
