@@ -81,8 +81,9 @@ export class ValidatorProcessor {
     );
     const validators = [];
     try {
-      for (const operatorAddress in operatorAddresses) {
+      for (const index in operatorAddresses) {
         let validatorInfo = null;
+        const operatorAddress = operatorAddresses[index];
         // get validators
         const paramsValidator = `${NODE_API.VALIDATOR}/${operatorAddress}`;
         // get staking pool
