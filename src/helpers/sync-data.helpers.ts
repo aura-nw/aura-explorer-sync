@@ -232,6 +232,7 @@ export class SyncDataHelpers {
 
     if (events && events?.length > 0) {
       const claimEvent = events.find((i) => i.type === 'transfer');
+      console.log(events[0].type);
       if (claimEvent) {
         const attributes = claimEvent.attributes;
         reward.amount = Number(
