@@ -572,6 +572,7 @@ export class SyncTaskService {
             const smartContractCode = SyncDataHelpers.makeStoreCodeData(
               txData,
               message,
+              i,
             );
             smartContractCodes.push(smartContractCode);
           }
