@@ -326,12 +326,12 @@ export class SyncDataHelpers {
     return tokenDto;
   }
 
-  static makeStoreCodeData(txData: any, message: any) {
+  static makeStoreCodeData(txData: any, message: any, index: number) {
     const smartContractCode = new SmartContractCode();
-    const codeIds = txData.tx_response.logs[0].events
+    const codeIds = txData.tx_response.logs[index]?.events
       .find((x) => x.type == CONST_CHAR.STORE_CODE)
       .attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
-    smartContractCode.code_id = codeIds.length > 0 ? codeIds[0].value : 0;
+    smartContractCode.code_id = codeIds?.length > 0 ? codeIds[0].value : 0;
     smartContractCode.creator = message.sender;
     smartContractCode.tx_hash = txData.tx_response.txhash;
 
