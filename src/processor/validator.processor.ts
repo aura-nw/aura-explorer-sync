@@ -67,7 +67,7 @@ export class ValidatorProcessor {
           await this.processDelegation(txData, msg);
           break;
       }
-      await this.processValidator(msg.validator_address);
+      await this.processValidator(addresses);
     } catch (error) {
       this.logger.error(`${error.name}: ${error.message}`);
       this.logger.error(`${error.stack}`);
