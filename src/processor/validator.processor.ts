@@ -43,24 +43,31 @@ export class ValidatorProcessor {
     );
     try {
       const { txData, msg, txType } = job.data;
-      await this.processValidator(msg.validator_address);
+      const addresses: string[] = [];
       switch (txType) {
         case TRANSACTION_TYPE.DELEGATE:
+          addresses.push(msg.validator_address);
           await this.processDelegate(txData, msg);
           break;
         case TRANSACTION_TYPE.UNDELEGATE:
+          addresses.push(msg.validator_address);
           await this.processUndelegate(txData, msg);
           break;
         case TRANSACTION_TYPE.REDELEGATE:
+          addresses.push(msg.validator_dst_address);
+          addresses.push(msg.validator_src_address);
           await this.processRedelegation(txData, msg);
           break;
         case TRANSACTION_TYPE.GET_REWARD:
+          addresses.push(msg.validator_address);
           await this.processWithDrawDelegation(txData, msg);
           break;
         case TRANSACTION_TYPE.CREATE_VALIDATOR:
+          addresses.push(msg.validator_address);
           await this.processDelegation(txData, msg);
           break;
       }
+      await this.processValidator(addresses);
     } catch (error) {
       this.logger.error(`${error.name}: ${error.message}`);
       this.logger.error(`${error.stack}`);
@@ -68,108 +75,116 @@ export class ValidatorProcessor {
     }
   }
 
-  async processValidator(operatorAddress: string) {
+  async processValidator(operatorAddresses: string[]) {
     this.logger.log(
-      `${this.processValidator.name} was called with paramter: ${operatorAddress}`,
+      `${this.processValidator.name} was called with paramter: ${operatorAddresses}`,
     );
-    let validatorInfo = null;
-    // get validators
-    const paramsValidator = `${NODE_API.VALIDATOR}/${operatorAddress}`;
-    // get staking pool
-    const paramspool = NODE_API.STAKING_POOL;
-    // get slashing param
-    const paramsSlashing = NODE_API.SLASHING_PARAM;
-    // get slashing signing info
-    const paramsSigning = NODE_API.SIGNING_INFOS;
-    const [validatorData, poolData, slashingData, signingData] =
-      await Promise.all([
-        this.commonUtil.getDataAPI(this.api, paramsValidator),
-        this.commonUtil.getDataAPI(this.api, paramspool),
-        this.commonUtil.getDataAPI(this.api, paramsSlashing),
-        this.commonUtil.getDataAPI(this.api, paramsSigning),
-      ]);
-    if (validatorData) {
-      validatorInfo = validatorData.validator;
-      // get account address
-      const decodeAcc = bech32.decode(operatorAddress, 1023);
-      const wordsByte = bech32.fromWords(decodeAcc.words);
-      const account_address = bech32.encode(
-        CONST_PUBKEY_ADDR.AURA,
-        bech32.toWords(wordsByte),
-      );
-      // get validator detail
-      const validatorUrl = `staking/validators/${operatorAddress}`;
-      const validatorResponse = await this.commonUtil.getDataAPI(
-        this.api,
-        validatorUrl,
-      );
-
-      try {
-        // create validator
-        const status = Number(validatorResponse.result?.status) || 0;
-        const validatorAddr = this.commonUtil.getAddressFromPubkey(
-          validatorInfo.consensus_pubkey.key,
-        );
-
-        // Makinf Validator entity to insert data
-        const newValidator = SyncDataHelpers.makeValidatorData(
-          validatorInfo,
-          account_address,
-          status,
-          validatorAddr,
-        );
-
-        const percentPower =
-          (validatorInfo.tokens / poolData.pool.bonded_tokens) * 100;
-        newValidator.percent_power = percentPower.toFixed(2);
-        const pubkey = this.commonUtil.getAddressFromPubkey(
-          validatorInfo.consensus_pubkey.key,
-        );
-        const address = this.commonUtil.hexToBech32(
-          pubkey,
-          CONST_PUBKEY_ADDR.AURAVALCONS,
-        );
-        const signingInfo = signingData.info.filter(
-          (e) => e.address === address,
-        );
-        if (signingInfo.length > 0) {
-          const signedBlocksWindow = slashingData.params.signed_blocks_window;
-          const missedBlocksCounter = signingInfo[0].missed_blocks_counter;
-          const upTime =
-            ((Number(signedBlocksWindow) - Number(missedBlocksCounter)) /
-              Number(signedBlocksWindow)) *
-            100;
-
-          newValidator.up_time = String(upTime.toFixed(2)) + CONST_CHAR.PERCENT;
-        }
-        newValidator.self_bonded = 0;
-        newValidator.percent_self_bonded = '0.00';
-        try {
-          // get delegations
-          const paramDelegation = `cosmos/staking/v1beta1/validators/${operatorAddress}/delegations/${account_address}`;
-          const delegationData = await this.commonUtil.getDataAPI(
-            this.api,
-            paramDelegation,
+    const validators = [];
+    try {
+      for (const index in operatorAddresses) {
+        let validatorInfo = null;
+        const operatorAddress = operatorAddresses[index];
+        // get validators
+        const paramsValidator = `${NODE_API.VALIDATOR}/${operatorAddress}`;
+        // get staking pool
+        const paramspool = NODE_API.STAKING_POOL;
+        // get slashing param
+        const paramsSlashing = NODE_API.SLASHING_PARAM;
+        // get slashing signing info
+        const paramsSigning = NODE_API.SIGNING_INFOS;
+        const [validatorData, poolData, slashingData, signingData] =
+          await Promise.all([
+            this.commonUtil.getDataAPI(this.api, paramsValidator),
+            this.commonUtil.getDataAPI(this.api, paramspool),
+            this.commonUtil.getDataAPI(this.api, paramsSlashing),
+            this.commonUtil.getDataAPI(this.api, paramsSigning),
+          ]);
+        if (validatorData) {
+          validatorInfo = validatorData.validator;
+          // get account address
+          const decodeAcc = bech32.decode(operatorAddress, 1023);
+          const wordsByte = bech32.fromWords(decodeAcc.words);
+          const account_address = bech32.encode(
+            CONST_PUBKEY_ADDR.AURA,
+            bech32.toWords(wordsByte),
           );
-          if (delegationData && delegationData.delegation_response) {
-            newValidator.self_bonded =
-              delegationData.delegation_response.balance.amount;
-            const percentSelfBonded =
-              (delegationData.delegation_response.balance.amount /
-                validatorInfo.tokens) *
+          // get validator detail
+          const validatorUrl = `staking/validators/${operatorAddress}`;
+          const validatorResponse = await this.commonUtil.getDataAPI(
+            this.api,
+            validatorUrl,
+          );
+
+          // create validator
+          const status = Number(validatorResponse.result?.status) || 0;
+          const validatorAddr = this.commonUtil.getAddressFromPubkey(
+            validatorInfo.consensus_pubkey.key,
+          );
+
+          // Makinf Validator entity to insert data
+          const newValidator = SyncDataHelpers.makeValidatorData(
+            validatorInfo,
+            account_address,
+            status,
+            validatorAddr,
+          );
+
+          const percentPower =
+            (validatorInfo.tokens / poolData.pool.bonded_tokens) * 100;
+          newValidator.percent_power = percentPower.toFixed(2);
+          const pubkey = this.commonUtil.getAddressFromPubkey(
+            validatorInfo.consensus_pubkey.key,
+          );
+          const address = this.commonUtil.hexToBech32(
+            pubkey,
+            CONST_PUBKEY_ADDR.AURAVALCONS,
+          );
+          const signingInfo = signingData.info.filter(
+            (e) => e.address === address,
+          );
+          if (signingInfo.length > 0) {
+            const signedBlocksWindow = slashingData.params.signed_blocks_window;
+            const missedBlocksCounter = signingInfo[0].missed_blocks_counter;
+            const upTime =
+              ((Number(signedBlocksWindow) - Number(missedBlocksCounter)) /
+                Number(signedBlocksWindow)) *
               100;
-            newValidator.percent_self_bonded =
-              percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
+
+            newValidator.up_time =
+              String(upTime.toFixed(2)) + CONST_CHAR.PERCENT;
           }
-        } catch (error) {
-          this.logger.error(null, `Not exist delegations`);
+          newValidator.self_bonded = 0;
+          newValidator.percent_self_bonded = '0.00';
+          try {
+            // get delegations
+            const paramDelegation = `cosmos/staking/v1beta1/validators/${operatorAddress}/delegations/${account_address}`;
+            const delegationData = await this.commonUtil.getDataAPI(
+              this.api,
+              paramDelegation,
+            );
+            if (delegationData && delegationData.delegation_response) {
+              newValidator.self_bonded =
+                delegationData.delegation_response.balance.amount;
+              const percentSelfBonded =
+                (delegationData.delegation_response.balance.amount /
+                  validatorInfo.tokens) *
+                100;
+              newValidator.percent_self_bonded =
+                percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
+            }
+          } catch (error) {
+            this.logger.error(null, `Not exist delegations`);
+          }
+          validators.push(newValidator);
         }
-        await this.validatorRepository.update(newValidator);
-      } catch (error) {
-        this.logger.error(`${error.name}: ${error.message}`);
-        this.logger.error(`${error.stack}`);
-        throw error;
       }
+      if (validators.length > 0) {
+        await this.validatorRepository.update(validators);
+      }
+    } catch (error) {
+      this.logger.error(`${error.name}: ${error.message}`);
+      this.logger.error(`${error.stack}`);
+      throw error;
     }
   }
 
@@ -250,7 +265,7 @@ export class ValidatorProcessor {
     // Resart queue
     const queue = await job.queue;
     if (queue) {
-      if (job.name === QUEUES.SYNC_INSTANTIATE_CONTRACTS) {
+      if (job.name === QUEUES.SYNC_VALIDATOR) {
         await this.retryJobs(queue);
       }
     }
