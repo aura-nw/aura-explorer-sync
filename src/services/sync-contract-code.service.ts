@@ -153,10 +153,10 @@ export class SyncContractCodeService {
   async syncMissingSmartContractCode() {
     this._logger.log(`${this.syncMissingSmartContractCode.name} was called!`);
     if (this.syncMissingContractCode) {
-      this._logger.log(
-        `${this.syncMissingSmartContractCode.name} call smart-contracts-code api to get data!`,
-      );
       if (this.contractNextKey !== null) {
+        this._logger.log(
+          `${this.syncMissingSmartContractCode.name} call lcd smart-contracts-code api to get data!`,
+        );
         this.contractNextKey = await this.syncContractCodeFromLcd(
           this.contractNextKey,
         );
@@ -168,17 +168,16 @@ export class SyncContractCodeService {
 
   /**
    * Get data from Indexer(Heroscope)
-   * @param limit
-   * @param offset
-   * @param fromHeight
-   * @param toHeight
+   * @param nextKey
    * @returns
    */
   async syncContractCodeFromLcd(nextKey = null) {
+    // Generate request URL
     const urlRequest = `${this.api}${util.format(
       NODE_API.CONTRACT_CODE,
       encodeURIComponent(nextKey),
     )}`;
+    // Call lcd to get data
     const responses = await this._commonUtil.getDataAPI(urlRequest, '');
 
     const codeInfos = responses?.code_infos;
@@ -202,8 +201,15 @@ export class SyncContractCodeService {
         smartContractCodes.push(smartContractCode);
       });
       if (smartContractCodes.length > 0) {
-        // update data
-        await this.smartContractCodeRepository.insert(smartContractCodes);
+        try {
+          // insert data
+          await this.smartContractCodeRepository.insert(smartContractCodes);
+        } catch (error) {
+          this._logger.error(
+            `Insert Contract Code was error, ${error?.code}: ${error?.stack}`,
+          );
+          throw error;
+        }
       }
     }
     return responses?.pagination?.next_key;
