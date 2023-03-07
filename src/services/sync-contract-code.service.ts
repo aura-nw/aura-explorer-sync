@@ -23,7 +23,7 @@ export class SyncContractCodeService {
   private indexerChainId;
   private isSyncContractCode = false;
   private api;
-  private syncMissingContractCode = true;
+  private syncMissingContractCode;
   private contractNextKey = '';
 
   constructor(
@@ -38,6 +38,9 @@ export class SyncContractCodeService {
     );
     this.indexerUrl = this.configService.get('INDEXER_URL');
     this.indexerChainId = this.configService.get('INDEXER_CHAIN_ID');
+    this.syncMissingContractCode = this.configService.get(
+      'SYNC_MISSING_CONTRACT_CODE',
+    );
     this.api = ENV_CONFIG.NODE.API;
   }
 
@@ -152,7 +155,7 @@ export class SyncContractCodeService {
   @Cron(CronExpression.EVERY_5_SECONDS)
   async syncMissingSmartContractCode() {
     this._logger.log(`${this.syncMissingSmartContractCode.name} was called!`);
-    if (this.syncMissingContractCode) {
+    if (this.syncMissingContractCode === 'true') {
       if (this.contractNextKey !== null) {
         this._logger.log(
           `${this.syncMissingSmartContractCode.name} call lcd smart-contracts-code api to get data!`,
@@ -160,8 +163,6 @@ export class SyncContractCodeService {
         this.contractNextKey = await this.syncContractCodeFromLcd(
           this.contractNextKey,
         );
-      } else {
-        this.syncMissingContractCode = false;
       }
     }
   }
