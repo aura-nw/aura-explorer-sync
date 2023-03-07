@@ -1,5 +1,7 @@
+import { InjectQueue } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression, Interval } from '@nestjs/schedule';
+import { Queue } from 'bull';
 import { In } from 'typeorm';
 import * as util from 'util';
 import {
@@ -8,6 +10,7 @@ import {
   CONTRACT_TYPE,
   INDEXER_API,
   NODE_API,
+  QUEUES,
 } from '../common/constants/app.constant';
 import { SmartContract, SmartContractCode, TokenMarkets } from '../entities';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
@@ -32,6 +35,7 @@ export class SyncContractCodeService {
     private smartContractCodeRepository: SmartContractCodeRepository,
     private smartContractRepository: SmartContractRepository,
     private tokenMarketsRepository: TokenMarketsRepository,
+    @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
   ) {
     this._logger.log(
       '============== Constructor Sync Contract Code Service ==============',
@@ -202,17 +206,23 @@ export class SyncContractCodeService {
         smartContractCodes.push(smartContractCode);
       });
       if (smartContractCodes.length > 0) {
-        try {
-          // insert data
-          await this.smartContractCodeRepository.insert(smartContractCodes);
-        } catch (error) {
-          this._logger.error(
-            `Insert Contract Code was error, ${error?.code}: ${error?.stack}`,
-          );
-          throw error;
-        }
+        this.pushDataToQueue(smartContractCodes);
       }
     }
     return responses?.pagination?.next_key;
+  }
+
+  /**
+   * Push data to queue
+   * @param data
+   */
+  pushDataToQueue(data: any) {
+    this.contractQueue.add(QUEUES.SYNC_CONTRACT_CODE, data, {
+      removeOnComplete: true,
+      backoff: {
+        delay: 10000,
+        type: 'fixed',
+      },
+    });
   }
 }
