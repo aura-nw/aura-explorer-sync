@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Interval } from '@nestjs/schedule';
+import { Cron, CronExpression, Interval } from '@nestjs/schedule';
 import { In } from 'typeorm';
 import * as util from 'util';
 import {
@@ -7,6 +7,7 @@ import {
   CONTRACT_CODE_STATUS,
   CONTRACT_TYPE,
   INDEXER_API,
+  NODE_API,
 } from '../common/constants/app.constant';
 import { SmartContract, SmartContractCode, TokenMarkets } from '../entities';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
@@ -22,6 +23,8 @@ export class SyncContractCodeService {
   private indexerChainId;
   private isSyncContractCode = false;
   private api;
+  private syncMissingContractCode = true;
+  private contractNextKey = '';
 
   constructor(
     private configService: ConfigService,
@@ -141,5 +144,68 @@ export class SyncContractCodeService {
         await this.tokenMarketsRepository.update(tokenMarkets);
       }
     }
+  }
+
+  /***
+   * Create queue sync contract
+   */
+  @Cron(CronExpression.EVERY_5_SECONDS)
+  async syncMissingSmartContractCode() {
+    this._logger.log(`${this.syncMissingSmartContractCode.name} was called!`);
+    if (this.syncMissingContractCode) {
+      this._logger.log(
+        `${this.syncMissingSmartContractCode.name} call smart-contracts-code api to get data!`,
+      );
+      if (this.contractNextKey !== null) {
+        this.contractNextKey = await this.syncContractCodeFromLcd(
+          this.contractNextKey,
+        );
+      } else {
+        this.syncMissingContractCode = false;
+      }
+    }
+  }
+
+  /**
+   * Get data from Indexer(Heroscope)
+   * @param limit
+   * @param offset
+   * @param fromHeight
+   * @param toHeight
+   * @returns
+   */
+  async syncContractCodeFromLcd(nextKey = null) {
+    const urlRequest = `${this.api}${util.format(
+      NODE_API.CONTRACT_CODE,
+      encodeURIComponent(nextKey),
+    )}`;
+    const responses = await this._commonUtil.getDataAPI(urlRequest, '');
+
+    const codeInfos = responses?.code_infos;
+    if (codeInfos) {
+      const codeIdTargets = codeInfos.map((m) => m.code_id);
+      // Get contract code from db
+      const contractCode = await this.smartContractCodeRepository.find({
+        code_id: In(codeIdTargets),
+      });
+      const codeIdReuslts = contractCode.map((m) => m.code_id);
+      // Find contract missing at DB
+      const codeIdMissing = codeInfos.filter(
+        (item) => !codeIdReuslts.includes(Number(item.code_id)),
+      );
+      const smartContractCodes = [];
+      codeIdMissing.forEach((item) => {
+        const smartContractCode = new SmartContractCode();
+        smartContractCode.code_id = item.code_id;
+        smartContractCode.creator = item.creator;
+        smartContractCode.tx_hash = item.data_hash;
+        smartContractCodes.push(smartContractCode);
+      });
+      if (smartContractCodes.length > 0) {
+        // update data
+        await this.smartContractCodeRepository.insert(smartContractCodes);
+      }
+    }
+    return responses?.pagination?.next_key;
   }
 }

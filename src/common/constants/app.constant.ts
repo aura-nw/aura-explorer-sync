@@ -25,6 +25,7 @@ export enum NODE_API {
   SIGNING_INFOS = `cosmos/slashing/v1beta1/signing_infos`,
   LATEST_BLOCK = `blocks/latest`,
   CONTRACT_INFO = `cosmwasm/wasm/v1/contract/%s/smart/%s`,
+  CONTRACT_CODE = `cosmwasm/wasm/v1/code?pagination.key=%s`,
 }
 
 export enum CONST_PUBKEY_ADDR {
