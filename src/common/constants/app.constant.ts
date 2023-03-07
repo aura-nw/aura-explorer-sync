@@ -25,6 +25,7 @@ export enum NODE_API {
   SIGNING_INFOS = `cosmos/slashing/v1beta1/signing_infos`,
   LATEST_BLOCK = `blocks/latest`,
   CONTRACT_INFO = `cosmwasm/wasm/v1/contract/%s/smart/%s`,
+  CONTRACT_CODE = `cosmwasm/wasm/v1/code?pagination.key=%s`,
 }
 
 export enum CONST_PUBKEY_ADDR {
@@ -184,4 +185,5 @@ export const QUEUES = {
   SYNC_COIN_ID: 'sync-coin-id',
   SYNC_CONTRACT_FROM_HEIGHT: 'sync-contract-from-height',
   SYNC_VALIDATOR: 'sync-validator',
+  SYNC_CONTRACT_CODE: 'sync-contract-code',
 };

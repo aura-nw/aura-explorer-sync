@@ -32,7 +32,6 @@ export class SyncTaskService {
   private smartContractService;
 
   isCompleteWrite = false;
-  maxHeight = ENV_CONFIG.BLOCK_START;
   private nodeEnv = ENV_CONFIG.NODE_ENV;
   private everyRepeatOptions: CronRepeatOptions = {
     cron: CronExpression.EVERY_30_SECONDS,

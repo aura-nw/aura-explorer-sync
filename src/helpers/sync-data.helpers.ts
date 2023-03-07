@@ -235,12 +235,11 @@ export class SyncDataHelpers {
       console.log(events[0].type);
       if (claimEvent) {
         const attributes = claimEvent.attributes;
-        reward.amount = Number(
-          attributes[2].value.replace(
-            ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
-            '',
-          ),
-        );
+        const amount = attributes.find((f) => f.key === 'amount');
+        reward.amount =
+          Number(
+            amount?.value.replace(ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM, ''),
+          ) || 0;
       }
     }
     reward.tx_hash = txData.tx_response.txhash;
