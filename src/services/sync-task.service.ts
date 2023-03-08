@@ -540,7 +540,6 @@ export class SyncTaskService {
                 { ...optionQueue },
               );
             }
-
             // Instantiate contract
             const instantiate = contractInstantiate?.length > 0 ? true : false;
             if (instantiate) {
