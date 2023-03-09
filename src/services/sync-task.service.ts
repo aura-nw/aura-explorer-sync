@@ -522,6 +522,7 @@ export class SyncTaskService {
 
             let takeMessage;
             let unequipMessage;
+            const receiverAddress = message.sender;
             // Execute contract CW4973
             if (message.msg?.take?.signature) {
               takeMessage = message;
@@ -536,6 +537,7 @@ export class SyncTaskService {
                   takeMessage,
                   unequipMessage,
                   contractAddress,
+                  receiverAddress,
                 },
                 { ...optionQueue },
               );

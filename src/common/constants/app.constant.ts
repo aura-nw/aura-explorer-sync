@@ -187,3 +187,7 @@ export const QUEUES = {
   SYNC_VALIDATOR: 'sync-validator',
   SYNC_CONTRACT_CODE: 'sync-contract-code',
 };
+
+export enum CW4973_CONTRACT {
+  AGREEMENT = 'Agreement(string chain_id,address active,address passive,string tokenURI)',
+}
