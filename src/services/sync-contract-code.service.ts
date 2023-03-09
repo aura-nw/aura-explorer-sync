@@ -94,7 +94,7 @@ export class SyncContractCodeService {
               default:
                 item.result = CONTRACT_CODE_RESULT.TBD;
             }
-            contractCodes.push(item);
+            contractCodes.push({ id: item.id, result: item.result });
           }
         }
         // update data
