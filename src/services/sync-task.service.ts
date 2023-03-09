@@ -5,6 +5,7 @@ import { InjectSchedule, Schedule } from 'nest-schedule';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
+  NODE_API,
   QUEUES,
 } from '../common/constants/app.constant';
 import { BlockSyncError } from '../entities';
@@ -20,6 +21,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { BackoffOptions, CronRepeatOptions, JobOptions, Queue } from 'bull';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
 import { TRANSACTION_TYPE } from '../common/constants/transaction-type.enum';
+import * as util from 'util';
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -573,6 +575,37 @@ export class SyncTaskService {
               message,
               i,
             );
+            // Generate request URL
+            const urlRequest = `${this.api}${util.format(
+              NODE_API.CONTRACT_CODE_DETAIL,
+              smartContractCode.code_id,
+            )}`;
+            // Call lcd to get data
+            const responses = await this._commonUtil.getDataAPI(urlRequest, '');
+            const dataHash = responses?.code_info?.data_hash;
+            // sync contract code verification info with same data hash
+            if (dataHash) {
+              const contractCode =
+                await this.smartContractCodeRepository.findOne({
+                  contract_hash: dataHash.toLowerCase(),
+                });
+              if (contractCode) {
+                smartContractCode.contract_verification =
+                  contractCode.contract_verification;
+                smartContractCode.compiler_version =
+                  contractCode.compiler_version;
+                smartContractCode.contract_hash = contractCode.contract_hash;
+                smartContractCode.execute_msg_schema =
+                  contractCode.execute_msg_schema;
+                smartContractCode.instantiate_msg_schema =
+                  contractCode.instantiate_msg_schema;
+                smartContractCode.query_msg_schema =
+                  contractCode.query_msg_schema;
+                smartContractCode.s3_location = contractCode.s3_location;
+                smartContractCode.verified_at = new Date();
+                smartContractCode.url = contractCode.url;
+              }
+            }
             smartContractCodes.push(smartContractCode);
           }
         }
