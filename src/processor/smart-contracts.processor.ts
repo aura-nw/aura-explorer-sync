@@ -464,7 +464,9 @@ export class SmartContractsProcessor {
             });
 
           let contentType;
-          const imgUrl = !!ipfs.animation_url ? ipfs.animation_url : ipfs.image;
+          const imgUrl = !!ipfs?.animation_url
+            ? ipfs?.animation_url
+            : ipfs?.image;
           if (imgUrl) {
             contentType = await lastValueFrom(
               this.httpService
