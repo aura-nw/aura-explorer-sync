@@ -26,6 +26,7 @@ export enum NODE_API {
   LATEST_BLOCK = `blocks/latest`,
   CONTRACT_INFO = `cosmwasm/wasm/v1/contract/%s/smart/%s`,
   CONTRACT_CODE = `cosmwasm/wasm/v1/code?pagination.key=%s`,
+  CONTRACT_CODE_DETAIL = `cosmwasm/wasm/v1/code/%s`,
 }
 
 export enum CONST_PUBKEY_ADDR {
