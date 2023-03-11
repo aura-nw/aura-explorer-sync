@@ -279,78 +279,6 @@ export class SyncTaskService {
   //   }
   // }
 
-  // @Interval(3000)
-  // async syncMissedBlock() {
-  //   // check status
-  //   if (this.isSyncMissBlock) {
-  //     this._logger.log('Already syncing validator... wait', null);
-  //     return;
-  //   } else {
-  //     this._logger.log('fetching data validator...', null);
-  //   }
-
-  //   try {
-  //     // get blocks latest
-  //     const paramsBlockLatest = NODE_API.LATEST_BLOCK;
-  //     const blockLatestData = await this._commonUtil.getDataAPI(
-  //       this.api,
-  //       paramsBlockLatest,
-  //     );
-
-  //     if (blockLatestData) {
-  //       this.isSyncMissBlock = true;
-
-  //       const heightLatest = blockLatestData.block.header.height;
-  //       // get block by height
-  //       const paramsBlock = `blocks/${heightLatest}`;
-  //       // get validatorsets
-  //       const paramsValidatorsets = `cosmos/base/tendermint/v1beta1/validatorsets/${heightLatest}`;
-
-  //       const [blockData, validatorsetsData] = await Promise.all([
-  //         this._commonUtil.getDataAPI(this.api, paramsBlock),
-  //         this._commonUtil.getDataAPI(this.api, paramsValidatorsets),
-  //       ]);
-
-  //       if (validatorsetsData) {
-  //         for (const key in validatorsetsData.validators) {
-  //           const data = validatorsetsData.validators[key];
-  //           const address = this._commonUtil.getAddressFromPubkey(
-  //             data.pub_key.key,
-  //           );
-
-  //           if (blockData) {
-  //             const signingInfo = blockData.block.last_commit.signatures.filter(
-  //               (e) => e.validator_address === address,
-  //             );
-  //             if (signingInfo.length <= 0) {
-  //               // create missed block
-  //               const newMissedBlock = new MissedBlock();
-  //               newMissedBlock.height = blockData.block.header.height;
-  //               newMissedBlock.validator_address = address;
-  //               newMissedBlock.timestamp = blockData.block.header.time;
-
-  //               // insert into table missed-block
-  //               try {
-  //                 await this.missedBlockRepository.upsert(
-  //                   [newMissedBlock],
-  //                   ['height'],
-  //                 );
-  //               } catch (error) {
-  //                 this._logger.error(null, `Missed is already existed!`);
-  //               }
-  //             }
-  //           }
-  //         }
-  //       }
-  //     }
-  //     this.isSyncMissBlock = false;
-  //   } catch (error) {
-  //     this.isSyncMissBlock = false;
-  //     this._logger.error(null, `${error.name}: ${error.message}`);
-  //     this._logger.error(null, `${error.stack}`);
-  //   }
-  // }
-
   async handleSyncData(syncBlock: number, recallSync = false): Promise<any> {
     this._logger.log(
       null,
@@ -524,6 +452,7 @@ export class SyncTaskService {
 
             let takeMessage;
             let unequipMessage;
+            const receiverAddress = message.sender;
             // Execute contract CW4973
             if (message.msg?.take?.signature) {
               takeMessage = message;
@@ -538,6 +467,7 @@ export class SyncTaskService {
                   takeMessage,
                   unequipMessage,
                   contractAddress,
+                  receiverAddress,
                 },
                 { ...optionQueue },
               );
