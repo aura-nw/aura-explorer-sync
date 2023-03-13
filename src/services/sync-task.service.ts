@@ -402,6 +402,7 @@ export class SyncTaskService {
     ];
     const optionQueue: JobOptions = {
       removeOnComplete: true,
+      attempts: 5,
       // repeat: this.everyRepeatOptions,
       backoff: { type: 'fixed', delay: 3000 } as BackoffOptions,
     };
