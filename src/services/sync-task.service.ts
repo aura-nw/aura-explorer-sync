@@ -1,45 +1,39 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CronExpression, Interval } from '@nestjs/schedule';
-import { bech32 } from 'bech32';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
-  CONST_PUBKEY_ADDR,
   NODE_API,
   QUEUES,
 } from '../common/constants/app.constant';
-import { BlockSyncError, MissedBlock } from '../entities';
+import { BlockSyncError } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { BlockSyncErrorRepository } from '../repositories/block-sync-error.repository';
-import { BlockRepository } from '../repositories/block.repository';
-import { DelegationRepository } from '../repositories/delegation.repository';
-import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
 import { MissedBlockRepository } from '../repositories/missed-block.repository';
 import { ProposalVoteRepository } from '../repositories/proposal-vote.repository';
 import { SyncStatusRepository } from '../repositories/sync-status.repository';
-import { ValidatorRepository } from '../repositories/validator.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { InfluxDBClient } from '../utils/influxdb-client';
 import { InjectQueue } from '@nestjs/bull';
 import { BackoffOptions, CronRepeatOptions, JobOptions, Queue } from 'bull';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
+import { TRANSACTION_TYPE } from '../common/constants/transaction-type.enum';
+import * as util from 'util';
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
   private rpc;
   private api;
   private influxDbClient: InfluxDBClient;
-  private isSyncValidator = false;
-  private isSyncMissBlock = false;
+  // private isSyncMissBlock = false;
   private threads = 0;
   private schedulesSync: Array<number> = [];
   private smartContractService;
 
   isCompleteWrite = false;
-  maxHeight = ENV_CONFIG.BLOCK_START;
   private nodeEnv = ENV_CONFIG.NODE_ENV;
   private everyRepeatOptions: CronRepeatOptions = {
     cron: CronExpression.EVERY_30_SECONDS,
@@ -47,16 +41,14 @@ export class SyncTaskService {
 
   constructor(
     private _commonUtil: CommonUtil,
-    private validatorRepository: ValidatorRepository,
     private missedBlockRepository: MissedBlockRepository,
     private blockSyncErrorRepository: BlockSyncErrorRepository,
     private statusRepository: SyncStatusRepository,
     private proposalVoteRepository: ProposalVoteRepository,
-    private delegationRepository: DelegationRepository,
-    private delegatorRewardRepository: DelegatorRewardRepository,
     private smartContractCodeRepository: SmartContractCodeRepository,
     @InjectSchedule() private readonly schedule: Schedule,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
+    @InjectQueue('validator') private readonly validatorQueue: Queue,
   ) {
     this._logger.log(
       '============== Constructor Sync Task Service ==============',
@@ -168,197 +160,124 @@ export class SyncTaskService {
     }
   }
 
-  @Interval(5000)
-  async syncValidator() {
-    // check status
-    if (this.isSyncValidator) {
-      this._logger.log('Already syncing validator... wait');
-      return;
-    } else {
-      this._logger.log('Fetching data validator...');
-    }
+  // @Interval(3000)
+  // async syncValidator() {
+  //   // check status
+  //   if (this.isSyncValidator) {
+  //     this._logger.log('Already syncing validator... wait');
+  //     return;
+  //   } else {
+  //     this._logger.log('Fetching data validator...');
+  //   }
 
-    // get validators
-    const paramsValidator = NODE_API.VALIDATOR;
-    // get staking pool
-    const paramspool = NODE_API.STAKING_POOL;
-    // get slashing param
-    const paramsSlashing = NODE_API.SLASHING_PARAM;
-    // get slashing signing info
-    const paramsSigning = NODE_API.SIGNING_INFOS;
+  //   // get validators
+  //   const paramsValidator = NODE_API.VALIDATOR;
+  //   // get staking pool
+  //   const paramspool = NODE_API.STAKING_POOL;
+  //   // get slashing param
+  //   const paramsSlashing = NODE_API.SLASHING_PARAM;
+  //   // get slashing signing info
+  //   const paramsSigning = NODE_API.SIGNING_INFOS;
 
-    const [validatorData, poolData, slashingData, signingData] =
-      await Promise.all([
-        this._commonUtil.getDataAPI(this.api, paramsValidator),
-        this._commonUtil.getDataAPI(this.api, paramspool),
-        this._commonUtil.getDataAPI(this.api, paramsSlashing),
-        this._commonUtil.getDataAPI(this.api, paramsSigning),
-      ]);
+  //   const [validatorData, poolData, slashingData, signingData] =
+  //     await Promise.all([
+  //       this._commonUtil.getDataAPI(this.api, paramsValidator),
+  //       this._commonUtil.getDataAPI(this.api, paramspool),
+  //       this._commonUtil.getDataAPI(this.api, paramsSlashing),
+  //       this._commonUtil.getDataAPI(this.api, paramsSigning),
+  //     ]);
 
-    if (validatorData) {
-      this.isSyncValidator = true;
-      for (const key in validatorData.validators) {
-        const data = validatorData.validators[key];
-        // get account address
-        const operator_address = data.operator_address;
-        const decodeAcc = bech32.decode(operator_address, 1023);
-        const wordsByte = bech32.fromWords(decodeAcc.words);
-        const account_address = bech32.encode(
-          CONST_PUBKEY_ADDR.AURA,
-          bech32.toWords(wordsByte),
-        );
-        // get validator detail
-        const validatorUrl = `staking/validators/${data.operator_address}`;
-        const validatorResponse = await this._commonUtil.getDataAPI(
-          this.api,
-          validatorUrl,
-        );
+  //   if (validatorData) {
+  //     this.isSyncValidator = true;
+  //     for (const key in validatorData.validators) {
+  //       const data = validatorData.validators[key];
+  //       // get account address
+  //       const operator_address = data.operator_address;
+  //       const decodeAcc = bech32.decode(operator_address, 1023);
+  //       const wordsByte = bech32.fromWords(decodeAcc.words);
+  //       const account_address = bech32.encode(
+  //         CONST_PUBKEY_ADDR.AURA,
+  //         bech32.toWords(wordsByte),
+  //       );
+  //       // get validator detail
+  //       const validatorUrl = `staking/validators/${data.operator_address}`;
+  //       const validatorResponse = await this._commonUtil.getDataAPI(
+  //         this.api,
+  //         validatorUrl,
+  //       );
 
-        try {
-          // create validator
-          const status = Number(validatorResponse.result?.status) || 0;
-          const validatorAddr = this._commonUtil.getAddressFromPubkey(
-            data.consensus_pubkey.key,
-          );
+  //       try {
+  //         // create validator
+  //         const status = Number(validatorResponse.result?.status) || 0;
+  //         const validatorAddr = this._commonUtil.getAddressFromPubkey(
+  //           data.consensus_pubkey.key,
+  //         );
 
-          // Makinf Validator entity to insert data
-          const newValidator = SyncDataHelpers.makeValidatorData(
-            data,
-            account_address,
-            status,
-            validatorAddr,
-          );
+  //         // Makinf Validator entity to insert data
+  //         const newValidator = SyncDataHelpers.makeValidatorData(
+  //           data,
+  //           account_address,
+  //           status,
+  //           validatorAddr,
+  //         );
 
-          const percentPower =
-            (data.tokens / poolData.pool.bonded_tokens) * 100;
-          newValidator.percent_power = percentPower.toFixed(2);
-          const pubkey = this._commonUtil.getAddressFromPubkey(
-            data.consensus_pubkey.key,
-          );
-          const address = this._commonUtil.hexToBech32(
-            pubkey,
-            CONST_PUBKEY_ADDR.AURAVALCONS,
-          );
-          const signingInfo = signingData.info.filter(
-            (e) => e.address === address,
-          );
-          if (signingInfo.length > 0) {
-            const signedBlocksWindow = slashingData.params.signed_blocks_window;
-            const missedBlocksCounter = signingInfo[0].missed_blocks_counter;
-            const upTime =
-              ((Number(signedBlocksWindow) - Number(missedBlocksCounter)) /
-                Number(signedBlocksWindow)) *
-              100;
+  //         const percentPower =
+  //           (data.tokens / poolData.pool.bonded_tokens) * 100;
+  //         newValidator.percent_power = percentPower.toFixed(2);
+  //         const pubkey = this._commonUtil.getAddressFromPubkey(
+  //           data.consensus_pubkey.key,
+  //         );
+  //         const address = this._commonUtil.hexToBech32(
+  //           pubkey,
+  //           CONST_PUBKEY_ADDR.AURAVALCONS,
+  //         );
+  //         const signingInfo = signingData.info.filter(
+  //           (e) => e.address === address,
+  //         );
+  //         if (signingInfo.length > 0) {
+  //           const signedBlocksWindow = slashingData.params.signed_blocks_window;
+  //           const missedBlocksCounter = signingInfo[0].missed_blocks_counter;
+  //           const upTime =
+  //             ((Number(signedBlocksWindow) - Number(missedBlocksCounter)) /
+  //               Number(signedBlocksWindow)) *
+  //             100;
 
-            newValidator.up_time =
-              String(upTime.toFixed(2)) + CONST_CHAR.PERCENT;
-          }
-          newValidator.self_bonded = 0;
-          newValidator.percent_self_bonded = '0.00';
-          try {
-            // get delegations
-            const paramDelegation = `cosmos/staking/v1beta1/validators/${data.operator_address}/delegations/${account_address}`;
-            const delegationData = await this._commonUtil.getDataAPI(
-              this.api,
-              paramDelegation,
-            );
-            if (delegationData && delegationData.delegation_response) {
-              newValidator.self_bonded =
-                delegationData.delegation_response.balance.amount;
-              const percentSelfBonded =
-                (delegationData.delegation_response.balance.amount /
-                  data.tokens) *
-                100;
-              newValidator.percent_self_bonded =
-                percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
-            }
-          } catch (error) {
-            this._logger.error(null, `Not exist delegations`);
-          }
-          await this.validatorRepository.update(newValidator);
+  //           newValidator.up_time =
+  //             String(upTime.toFixed(2)) + CONST_CHAR.PERCENT;
+  //         }
+  //         newValidator.self_bonded = 0;
+  //         newValidator.percent_self_bonded = '0.00';
+  //         try {
+  //           // get delegations
+  //           const paramDelegation = `cosmos/staking/v1beta1/validators/${data.operator_address}/delegations/${account_address}`;
+  //           const delegationData = await this._commonUtil.getDataAPI(
+  //             this.api,
+  //             paramDelegation,
+  //           );
+  //           if (delegationData && delegationData.delegation_response) {
+  //             newValidator.self_bonded =
+  //               delegationData.delegation_response.balance.amount;
+  //             const percentSelfBonded =
+  //               (delegationData.delegation_response.balance.amount /
+  //                 data.tokens) *
+  //               100;
+  //             newValidator.percent_self_bonded =
+  //               percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
+  //           }
+  //         } catch (error) {
+  //           this._logger.error(null, `Not exist delegations`);
+  //         }
+  //         await this.validatorRepository.update(newValidator);
 
-          this.isSyncValidator = false;
-        } catch (error) {
-          this.isSyncValidator = false;
-
-          this._logger.error(`${error.name}: ${error.message}`);
-          this._logger.error(`${error.stack}`);
-        }
-      }
-    }
-  }
-
-  @Interval(3000)
-  async syncMissedBlock() {
-    // check status
-    if (this.isSyncMissBlock) {
-      this._logger.log('Already syncing validator... wait', null);
-      return;
-    } else {
-      this._logger.log('fetching data validator...', null);
-    }
-
-    try {
-      // get blocks latest
-      const paramsBlockLatest = NODE_API.LATEST_BLOCK;
-      const blockLatestData = await this._commonUtil.getDataAPI(
-        this.api,
-        paramsBlockLatest,
-      );
-
-      if (blockLatestData) {
-        this.isSyncMissBlock = true;
-
-        const heightLatest = blockLatestData.block.header.height;
-        // get block by height
-        const paramsBlock = `blocks/${heightLatest}`;
-        // get validatorsets
-        const paramsValidatorsets = `cosmos/base/tendermint/v1beta1/validatorsets/${heightLatest}`;
-
-        const [blockData, validatorsetsData] = await Promise.all([
-          this._commonUtil.getDataAPI(this.api, paramsBlock),
-          this._commonUtil.getDataAPI(this.api, paramsValidatorsets),
-        ]);
-
-        if (validatorsetsData) {
-          for (const key in validatorsetsData.validators) {
-            const data = validatorsetsData.validators[key];
-            const address = this._commonUtil.getAddressFromPubkey(
-              data.pub_key.key,
-            );
-
-            if (blockData) {
-              const signingInfo = blockData.block.last_commit.signatures.filter(
-                (e) => e.validator_address === address,
-              );
-              if (signingInfo.length <= 0) {
-                // create missed block
-                const newMissedBlock = new MissedBlock();
-                newMissedBlock.height = blockData.block.header.height;
-                newMissedBlock.validator_address = address;
-                newMissedBlock.timestamp = blockData.block.header.time;
-
-                // insert into table missed-block
-                try {
-                  await this.missedBlockRepository.upsert(
-                    [newMissedBlock],
-                    ['height'],
-                  );
-                } catch (error) {
-                  this._logger.error(null, `Missed is already existed!`);
-                }
-              }
-            }
-          }
-        }
-      }
-      this.isSyncMissBlock = false;
-    } catch (error) {
-      this.isSyncMissBlock = false;
-      this._logger.error(null, `${error.name}: ${error.message}`);
-      this._logger.error(null, `${error.stack}`);
-    }
-  }
+  //         this.isSyncValidator = false;
+  //       } catch (error) {
+  //         this.isSyncValidator = false;
+  //         this._logger.error(`${error.name}: ${error.message}`);
+  //         this._logger.error(`${error.stack}`);
+  //       }
+  //     }
+  //   }
+  // }
 
   async handleSyncData(syncBlock: number, recallSync = false): Promise<any> {
     this._logger.log(
@@ -471,9 +390,16 @@ export class SyncTaskService {
    */
   async syncDataWithTransactions(listTransactions) {
     const proposalVotes = [];
-    const delegations = [];
-    const delegatorRewards = [];
     const smartContractCodes = [];
+    const msgTypes: any[] = [
+      TRANSACTION_TYPE.DELEGATE,
+      TRANSACTION_TYPE.UNDELEGATE,
+      TRANSACTION_TYPE.REDELEGATE,
+      TRANSACTION_TYPE.GET_REWARD,
+      TRANSACTION_TYPE.CREATE_VALIDATOR,
+      TRANSACTION_TYPE.JAILED,
+      TRANSACTION_TYPE.UNJAIL,
+    ];
     const optionQueue: JobOptions = {
       removeOnComplete: true,
       // repeat: this.everyRepeatOptions,
@@ -496,38 +422,6 @@ export class SyncTaskService {
           if (txType === CONST_MSG_TYPE.MSG_VOTE) {
             const proposalVote = SyncDataHelpers.makeVoteData(txData, message);
             proposalVotes.push(proposalVote);
-          } else if (txType === CONST_MSG_TYPE.MSG_DELEGATE) {
-            const [delegation, reward] = SyncDataHelpers.makeDelegateData(
-              txData,
-              message,
-              i,
-            );
-            delegations.push(delegation);
-            delegatorRewards.push(reward);
-          } else if (txType === CONST_MSG_TYPE.MSG_UNDELEGATE) {
-            const [delegation, reward] = SyncDataHelpers.makeUndelegateData(
-              txData,
-              message,
-              i,
-            );
-            delegations.push(delegation);
-            delegatorRewards.push(reward);
-          } else if (txType === CONST_MSG_TYPE.MSG_REDELEGATE) {
-            const [delegation1, delegation2, reward1, reward2] =
-              SyncDataHelpers.makeRedelegationData(txData, message, i);
-            delegations.push(delegation1);
-            delegations.push(delegation2);
-            delegatorRewards.push(reward1);
-            delegatorRewards.push(reward2);
-          } else if (txType === CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD) {
-            const reward = SyncDataHelpers.makeWithDrawDelegationData(
-              txData,
-              message,
-              i,
-            );
-            if (reward.amount) {
-              delegatorRewards.push(reward);
-            }
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
             const height = Number(txData.tx_response.height);
             const lstContract: any = [];
@@ -558,6 +452,7 @@ export class SyncTaskService {
 
             let takeMessage;
             let unequipMessage;
+            const receiverAddress = message.sender;
             // Execute contract CW4973
             if (message.msg?.take?.signature) {
               takeMessage = message;
@@ -572,6 +467,7 @@ export class SyncTaskService {
                   takeMessage,
                   unequipMessage,
                   contractAddress,
+                  receiverAddress,
                 },
                 { ...optionQueue },
               );
@@ -596,17 +492,49 @@ export class SyncTaskService {
               },
               { ...optionQueue, delay: 7000 },
             );
-          } else if (txType === CONST_MSG_TYPE.MSG_CREATE_VALIDATOR) {
-            const delegation = SyncDataHelpers.makeDelegationData(
-              txData,
-              message,
+          } else if (msgTypes.indexOf(txType) > -1) {
+            this.validatorQueue.add(
+              QUEUES.SYNC_VALIDATOR,
+              { txData, msg: message, txType, index: i },
+              { ...optionQueue },
             );
-            delegations.push(delegation);
           } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
             const smartContractCode = SyncDataHelpers.makeStoreCodeData(
               txData,
               message,
+              i,
             );
+            // Generate request URL
+            const urlRequest = `${this.api}${util.format(
+              NODE_API.CONTRACT_CODE_DETAIL,
+              smartContractCode.code_id,
+            )}`;
+            // Call lcd to get data
+            const responses = await this._commonUtil.getDataAPI(urlRequest, '');
+            const dataHash = responses?.code_info?.data_hash;
+            // sync contract code verification info with same data hash
+            if (dataHash) {
+              const contractCode =
+                await this.smartContractCodeRepository.findOne({
+                  contract_hash: dataHash.toLowerCase(),
+                });
+              if (contractCode) {
+                smartContractCode.contract_verification =
+                  contractCode.contract_verification;
+                smartContractCode.compiler_version =
+                  contractCode.compiler_version;
+                smartContractCode.contract_hash = contractCode.contract_hash;
+                smartContractCode.execute_msg_schema =
+                  contractCode.execute_msg_schema;
+                smartContractCode.instantiate_msg_schema =
+                  contractCode.instantiate_msg_schema;
+                smartContractCode.query_msg_schema =
+                  contractCode.query_msg_schema;
+                smartContractCode.s3_location = contractCode.s3_location;
+                smartContractCode.verified_at = new Date();
+                smartContractCode.url = contractCode.url;
+              }
+            }
             smartContractCodes.push(smartContractCode);
           }
         }
@@ -614,14 +542,6 @@ export class SyncTaskService {
     }
     if (proposalVotes.length > 0) {
       await this.proposalVoteRepository.insertOnDuplicate(proposalVotes, [
-        'id',
-      ]);
-    }
-    if (delegations.length > 0) {
-      await this.delegationRepository.insertOnDuplicate(delegations, ['id']);
-    }
-    if (delegatorRewards.length > 0) {
-      await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, [
         'id',
       ]);
     }

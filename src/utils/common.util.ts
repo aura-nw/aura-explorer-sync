@@ -10,11 +10,13 @@ import { bech32 } from 'bech32';
 import {
   CONST_CHAR,
   CONTRACT_TYPE,
+  CW4973_CONTRACT,
   NODE_API,
 } from '../common/constants/app.constant';
 import axios from 'axios';
 import * as util from 'util';
 import { SmartContract } from '../entities';
+import { sha256 } from 'js-sha256';
 
 @Injectable()
 export class CommonUtil {
@@ -199,6 +201,79 @@ export class CommonUtil {
         err.stack,
       );
       return null;
+    }
+  }
+
+  /**
+   * Create token Id
+   * @param chainID
+   * @param active
+   * @param passive
+   * @param uri
+   * @returns
+   */
+  createTokenId(
+    chainID: string,
+    active: string,
+    passive: string,
+    uri: string,
+  ): string {
+    try {
+      const message: string = this.createMessageToSign(
+        chainID,
+        active,
+        passive,
+        uri,
+      );
+      return sha256(message);
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  /**
+   * Create message sign
+   * @param chainID
+   * @param active
+   * @param passive
+   * @param uri
+   * @returns
+   */
+  private createMessageToSign(
+    chainID: string,
+    active: string,
+    passive: string,
+    uri: string,
+  ) {
+    const message =
+      CW4973_CONTRACT.AGREEMENT + chainID + active + passive + uri;
+    const doc: any = {
+      account_number: '0',
+      chain_id: '',
+      fee: {
+        amount: [],
+        gas: '0',
+      },
+      memo: '',
+      msgs: [
+        {
+          type: 'sign/MsgSignData',
+          value: {
+            data: Buffer.from(message, 'utf8').toString('base64'),
+            signer: String(passive),
+          },
+        },
+      ],
+      sequence: '0',
+    };
+    return JSON.stringify(doc);
+  }
+
+  transform(value: string): string {
+    if (!value.includes('https://ipfs.io/')) {
+      return 'https://ipfs.io/' + value.replace('://', '/');
+    } else {
+      return value;
     }
   }
 }

@@ -36,6 +36,8 @@ import { HttpService } from '@nestjs/axios';
 import { In } from 'typeorm';
 import { InfluxDBClient } from '../utils/influxdb-client';
 import { SoulboundTokenRepository } from '../repositories/soulbound-token.repository';
+import { SoulboundToken } from '../entities/soulbound-token.entity';
+import { lastValueFrom, timeout, retry } from 'rxjs';
 
 @Processor('smart-contracts')
 export class SmartContractsProcessor {
@@ -434,6 +436,66 @@ export class SmartContractsProcessor {
       const takes = takeContracts?.msg?.take?.signature.signature;
       const unequips = unequipContracts?.msg?.unequip?.token_id;
       const contractAddress = job.data.contractAddress;
+      const tokenUri = takeContracts?.msg?.take?.uri;
+      const receiverAddress = job.data.receiverAddress;
+
+      if (takeContracts) {
+        const tokenId = this._commonUtil.createTokenId(
+          this.indexerChainId,
+          receiverAddress,
+          takeContracts?.msg?.take?.from,
+          tokenUri,
+        );
+
+        const newSBTToken = await this.soulboundTokenRepos.findOne({
+          where: { contract_address: contractAddress, token_id: tokenId },
+        });
+
+        if (!newSBTToken) {
+          const entity = new SoulboundToken();
+          const ipfs = await lastValueFrom(
+            this.httpService
+              .get(this._commonUtil.transform(tokenUri))
+              .pipe(timeout(8000), retry(5)),
+          )
+            .then((rs) => rs.data)
+            .catch(() => {
+              return null;
+            });
+
+          let contentType;
+          const imgUrl = !!ipfs?.animation_url
+            ? ipfs?.animation_url
+            : ipfs?.image;
+          if (imgUrl) {
+            contentType = await lastValueFrom(
+              this.httpService
+                .get(this._commonUtil.transform(imgUrl))
+                .pipe(timeout(18000), retry(5)),
+            )
+              .then((rs) => rs?.headers['content-type'])
+              .catch(() => {
+                return null;
+              });
+          }
+
+          entity.contract_address = contractAddress;
+          entity.receiver_address = receiverAddress;
+          entity.token_uri = tokenUri;
+          entity.signature = takeContracts?.msg?.take?.signature.signature;
+          entity.pub_key = takeContracts?.msg?.take?.signature.pub_key;
+          entity.token_img = ipfs?.image;
+          entity.token_name = ipfs?.name;
+          entity.img_type = contentType;
+          entity.animation_url = ipfs?.animation_url;
+          entity.token_id = tokenId;
+          try {
+            await this.soulboundTokenRepos.insert(entity);
+          } catch (err) {
+            this.logger.error(`sync-cw4973-nft-status has error: ${err.stack}`);
+          }
+        }
+      }
 
       const soulboundTokens = await this.soulboundTokenRepos.find({
         where: [
@@ -502,6 +564,23 @@ export class SmartContractsProcessor {
       );
     } catch (err) {
       this.logger.error(`sync-cw4973-nft-status has error: ${err.stack}`);
+    }
+  }
+
+  @Process(QUEUES.SYNC_CONTRACT_CODE)
+  async synceMissingSmartContractCode(job: Job) {
+    this.logger.log(
+      `============== Queue synceMissingSmartContractCode was run! ==============`,
+    );
+    const smartContractCodes = job.data;
+    try {
+      // insert data
+      await this.smartContractCodeRepository.insert(smartContractCodes);
+    } catch (error) {
+      this.logger.error(
+        `synceMissingSmartContractCode was error, ${error?.code}: ${error?.stack}`,
+      );
+      throw error;
     }
   }
 
@@ -637,28 +716,38 @@ export class SmartContractsProcessor {
       smartContract.request_id = request.request_id;
     } else {
       if (smartContract.contract_hash !== '') {
-        const [exactContract, sameContractCodeId] = await Promise.all([
-          this.smartContractRepository.findExactContractByHash(
-            smartContract.contract_hash,
-          ),
-          this.smartContractRepository.findByCondition({
-            code_id: smartContract.code_id,
-          }),
-        ]);
+        const [exactSmartContract, exactContractCode, sameContractCodeId] =
+          await Promise.all([
+            this.smartContractRepository.findExactContractByHash(
+              smartContract.contract_hash,
+            ),
+            this.smartContractCodeRepository.findExactContractByHash(
+              smartContract.contract_hash,
+            ),
+            this.smartContractRepository.findByCondition({
+              code_id: smartContract.code_id,
+            }),
+          ]);
+
+        const exactContract = exactContractCode
+          ? exactContractCode
+          : exactSmartContract;
         if (exactContract) {
           smartContract.contract_verification =
             SMART_CONTRACT_VERIFICATION.VERIFIED;
-          smartContract.contract_match = exactContract.contract_address;
-          smartContract.url = exactContract.url;
-          smartContract.compiler_version = exactContract.compiler_version;
+          smartContract.contract_match = exactContract.contract_address || '';
+          smartContract.url = exactContract.url || '';
+          smartContract.compiler_version = exactContract.compiler_version || '';
           smartContract.instantiate_msg_schema =
-            exactContract.instantiate_msg_schema;
-          smartContract.query_msg_schema = exactContract.query_msg_schema;
-          smartContract.execute_msg_schema = exactContract.execute_msg_schema;
-          smartContract.s3_location = exactContract.s3_location;
+            exactContract.instantiate_msg_schema || '';
+          smartContract.query_msg_schema = exactContract.query_msg_schema || '';
+          smartContract.execute_msg_schema =
+            exactContract.execute_msg_schema || '';
+          smartContract.s3_location = exactContract.s3_location || '';
           smartContract.verified_at = new Date();
           smartContract.mainnet_upload_status =
             MAINNET_UPLOAD_STATUS.NOT_REGISTERED;
+          smartContract.reference_code_id = exactContract.code_id || '';
         }
         if (sameContractCodeId.length > 0) {
           const sameContract = sameContractCodeId[0];

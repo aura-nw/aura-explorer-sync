@@ -1,5 +1,7 @@
+import { InjectQueue } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
-import { Interval } from '@nestjs/schedule';
+import { Cron, CronExpression, Interval } from '@nestjs/schedule';
+import { Queue } from 'bull';
 import { In } from 'typeorm';
 import * as util from 'util';
 import {
@@ -7,6 +9,8 @@ import {
   CONTRACT_CODE_STATUS,
   CONTRACT_TYPE,
   INDEXER_API,
+  NODE_API,
+  QUEUES,
 } from '../common/constants/app.constant';
 import { SmartContract, SmartContractCode, TokenMarkets } from '../entities';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
@@ -22,6 +26,8 @@ export class SyncContractCodeService {
   private indexerChainId;
   private isSyncContractCode = false;
   private api;
+  private syncMissingContractCode;
+  private contractNextKey = '';
 
   constructor(
     private configService: ConfigService,
@@ -29,12 +35,14 @@ export class SyncContractCodeService {
     private smartContractCodeRepository: SmartContractCodeRepository,
     private smartContractRepository: SmartContractRepository,
     private tokenMarketsRepository: TokenMarketsRepository,
+    @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
   ) {
     this._logger.log(
       '============== Constructor Sync Contract Code Service ==============',
     );
     this.indexerUrl = this.configService.get('INDEXER_URL');
     this.indexerChainId = this.configService.get('INDEXER_CHAIN_ID');
+    this.syncMissingContractCode = ENV_CONFIG.SYNC_MISSING_CONTRACT_CODE;
     this.api = ENV_CONFIG.NODE.API;
   }
 
@@ -86,7 +94,11 @@ export class SyncContractCodeService {
               default:
                 item.result = CONTRACT_CODE_RESULT.TBD;
             }
-            contractCodes.push(item);
+            contractCodes.push({
+              id: item.id,
+              type: item.type,
+              result: item.result,
+            });
           }
         }
         // update data
@@ -141,5 +153,78 @@ export class SyncContractCodeService {
         await this.tokenMarketsRepository.update(tokenMarkets);
       }
     }
+  }
+
+  /***
+   * Create queue sync contract
+   */
+  @Cron(CronExpression.EVERY_5_SECONDS)
+  async syncMissingSmartContractCode() {
+    this._logger.log(`${this.syncMissingSmartContractCode.name} was called!`);
+    if (this.syncMissingContractCode) {
+      if (this.contractNextKey !== null) {
+        this._logger.log(
+          `${this.syncMissingSmartContractCode.name} call lcd smart-contracts-code api to get data!`,
+        );
+        this.contractNextKey = await this.syncContractCodeFromLcd(
+          this.contractNextKey,
+        );
+      }
+    }
+  }
+
+  /**
+   * Get data from Indexer(Heroscope)
+   * @param nextKey
+   * @returns
+   */
+  async syncContractCodeFromLcd(nextKey = null) {
+    // Generate request URL
+    const urlRequest = `${this.api}${util.format(
+      NODE_API.CONTRACT_CODE,
+      encodeURIComponent(nextKey),
+    )}`;
+    // Call lcd to get data
+    const responses = await this._commonUtil.getDataAPI(urlRequest, '');
+
+    const codeInfos = responses?.code_infos;
+    if (codeInfos) {
+      const codeIdTargets = codeInfos.map((m) => m.code_id);
+      // Get contract code from db
+      const contractCode = await this.smartContractCodeRepository.find({
+        code_id: In(codeIdTargets),
+      });
+      const codeIdReuslts = contractCode.map((m) => m.code_id);
+      // Find contract missing at DB
+      const codeIdMissing = codeInfos.filter(
+        (item) => !codeIdReuslts.includes(Number(item.code_id)),
+      );
+      const smartContractCodes = [];
+      codeIdMissing.forEach((item) => {
+        const smartContractCode = new SmartContractCode();
+        smartContractCode.code_id = item.code_id;
+        smartContractCode.creator = item.creator;
+        smartContractCode.tx_hash = item.data_hash;
+        smartContractCodes.push(smartContractCode);
+      });
+      if (smartContractCodes.length > 0) {
+        this.pushDataToQueue(smartContractCodes);
+      }
+    }
+    return responses?.pagination?.next_key;
+  }
+
+  /**
+   * Push data to queue
+   * @param data
+   */
+  pushDataToQueue(data: any) {
+    this.contractQueue.add(QUEUES.SYNC_CONTRACT_CODE, data, {
+      removeOnComplete: true,
+      backoff: {
+        delay: 10000,
+        type: 'fixed',
+      },
+    });
   }
 }

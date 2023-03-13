@@ -45,9 +45,6 @@ export class ConfigService {
       SYNC_TRANSACTIONS_CLEAN_UP_DAY: Number(
         process.env.SYNC_TRANSACTIONS_CLEAN_UP_DAY || 8,
       ),
-      BLOCK_START: Number(process.env.BLOCK_START) || 0,
-      SYNC_DATA_INFLUXD:
-        process.env.SYNC_DATA_INFLUXD === 'true' ? true : false,
       REDIS: {
         HOST: process.env.REDIS_HOST,
         PORT: Number(process.env.REDIS_PORT) || 6379,
@@ -89,6 +86,8 @@ export class ConfigService {
           process.env.SYNC_SMART_CONTRACT_SYNC_DATA === 'true' ? true : false,
       },
       NODE_ENV: process.env.NODE_ENV,
+      SYNC_MISSING_CONTRACT_CODE:
+        process.env.SYNC_MISSING_CONTRACT_CODE === 'true' ? true : false,
     };
   }
 

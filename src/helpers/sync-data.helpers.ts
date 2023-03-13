@@ -95,7 +95,7 @@ export class SyncDataHelpers {
     return [txType, txRawLogData, txContractAddress];
   }
 
-  static makeRedelegationData(txData: any, message: any, index: number) {
+  static makeRedelegationData(txData: any, message: any) {
     const delegation1 = new Delegation();
     delegation1.tx_hash = txData.tx_response.txhash;
     delegation1.delegator_address = message.delegator_address;
@@ -114,13 +114,10 @@ export class SyncDataHelpers {
     //save data to delegator_rewards table
     let amount1 = 0;
     let amount2 = 0;
-    if (
-      txData.tx_response.logs &&
-      txData.tx_response.logs.length > 0 &&
-      txData.tx_response.logs[index].events &&
-      txData.tx_response.logs[index].events.length > 0
-    ) {
-      const events = txData.tx_response.logs[index].events;
+
+    const events = SyncDataHelpers.processEvent(txData);
+
+    if (events && events?.length > 0) {
       const claimEvent = events.find((i) => i.type === 'transfer');
       if (claimEvent) {
         const attributes = claimEvent.attributes;
@@ -153,18 +150,15 @@ export class SyncDataHelpers {
     return [delegation1, delegation2, reward1, reward2];
   }
 
-  static makeWithDrawDelegationData(txData: any, message: any, index: number) {
+  static makeWithDrawDelegationData(txData: any, message: any) {
     const reward = new DelegatorReward();
     reward.delegator_address = message.delegator_address;
     reward.validator_address = message.validator_address;
     reward.amount = 0;
-    if (
-      txData.tx_response.logs &&
-      txData.tx_response.logs.length > 0 &&
-      txData.tx_response.logs[index].events &&
-      txData.tx_response.logs[index].events.length > 0
-    ) {
-      const events = txData.tx_response.logs[index].events;
+
+    const events = SyncDataHelpers.processEvent(txData);
+
+    if (events && events?.length > 0) {
       const rewardEvent = events.find((i) => i.type === 'withdraw_rewards');
       const attributes = rewardEvent.attributes;
       const amount = attributes[0].value;
@@ -177,7 +171,7 @@ export class SyncDataHelpers {
     return reward;
   }
 
-  static makeUndelegateData(txData: any, message: any, index: number) {
+  static makeUndelegateData(txData: any, message: any) {
     const delegation = new Delegation();
     delegation.tx_hash = txData.tx_response.txhash;
     delegation.delegator_address = message.delegator_address;
@@ -190,13 +184,10 @@ export class SyncDataHelpers {
     reward.delegator_address = message.delegator_address;
     reward.validator_address = message.validator_address;
     reward.amount = 0;
-    if (
-      txData.tx_response.logs &&
-      txData.tx_response.logs.length > 0 &&
-      txData.tx_response.logs[index].events &&
-      txData.tx_response.logs[index].events.length > 0
-    ) {
-      const events = txData.tx_response.logs[index].events;
+
+    const events = SyncDataHelpers.processEvent(txData);
+
+    if (events && events?.length > 0) {
       const claimEvent = events.find((i) => i.type === 'transfer');
       if (claimEvent) {
         const attributes = claimEvent.attributes;
@@ -223,7 +214,7 @@ export class SyncDataHelpers {
     return [delegation, reward];
   }
 
-  static makeDelegateData(txData: any, message: any, index: number) {
+  static makeDelegateData(txData: any, message: any) {
     const delegation = new Delegation();
     delegation.tx_hash = txData.tx_response.txhash;
     delegation.delegator_address = message.delegator_address;
@@ -236,22 +227,19 @@ export class SyncDataHelpers {
     reward.delegator_address = message.delegator_address;
     reward.validator_address = message.validator_address;
     reward.amount = 0;
-    if (
-      txData.tx_response.logs &&
-      txData.tx_response.logs.length > 0 &&
-      txData.tx_response.logs[index].events &&
-      txData.tx_response.logs[index].events.length > 0
-    ) {
-      const events = txData.tx_response.logs[index].events;
+
+    const events = SyncDataHelpers.processEvent(txData);
+
+    if (events && events?.length > 0) {
       const claimEvent = events.find((i) => i.type === 'transfer');
+      console.log(events[0].type);
       if (claimEvent) {
         const attributes = claimEvent.attributes;
-        reward.amount = Number(
-          attributes[2].value.replace(
-            ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
-            '',
-          ),
-        );
+        const amount = attributes.find((f) => f.key === 'amount');
+        reward.amount =
+          Number(
+            amount?.value.replace(ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM, ''),
+          ) || 0;
       }
     }
     reward.tx_hash = txData.tx_response.txhash;
@@ -337,13 +325,14 @@ export class SyncDataHelpers {
     return tokenDto;
   }
 
-  static makeStoreCodeData(txData: any, message: any) {
+  static makeStoreCodeData(txData: any, message: any, index: number) {
     const smartContractCode = new SmartContractCode();
-    const codeIds = txData.tx_response.logs[0].events
+    const codeIds = txData.tx_response.logs[index]?.events
       .find((x) => x.type == CONST_CHAR.STORE_CODE)
       .attributes.filter((x) => x.key == CONST_CHAR.CODE_ID);
-    smartContractCode.code_id = codeIds.length > 0 ? codeIds[0].value : 0;
+    smartContractCode.code_id = codeIds?.length > 0 ? codeIds[0].value : 0;
     smartContractCode.creator = message.sender;
+    smartContractCode.tx_hash = txData.tx_response.txhash;
 
     return smartContractCode;
   }
@@ -419,5 +408,15 @@ export class SyncDataHelpers {
         smartContractCode.type = '';
     }
     return smartContractCode;
+  }
+
+  static processEvent(txData: any) {
+    const events = [];
+    txData?.tx_response?.logs
+      .filter((f) => f.events.length > 0)
+      ?.forEach((item) => {
+        events.push(...item.events);
+      });
+    return events;
   }
 }
