@@ -13,6 +13,8 @@ import {
   QUEUES,
 } from '../common/constants/app.constant';
 import { SmartContract, SmartContractCode, TokenMarkets } from '../entities';
+import { QueueInfo } from '../entities/queue-info.entity';
+import { QueueInfoRepository } from '../repositories/queue-info.repository';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
 import { TokenMarketsRepository } from '../repositories/token-markets.repository';
@@ -35,6 +37,7 @@ export class SyncContractCodeService {
     private smartContractCodeRepository: SmartContractCodeRepository,
     private smartContractRepository: SmartContractRepository,
     private tokenMarketsRepository: TokenMarketsRepository,
+    private queueInfoRepository: QueueInfoRepository,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
   ) {
     this._logger.log(
@@ -218,13 +221,23 @@ export class SyncContractCodeService {
    * Push data to queue
    * @param data
    */
-  pushDataToQueue(data: any) {
-    this.contractQueue.add(QUEUES.SYNC_CONTRACT_CODE, data, {
-      removeOnComplete: true,
-      backoff: {
-        delay: 10000,
-        type: 'fixed',
+  async pushDataToQueue(data: any) {
+    const queueInfo = {
+      job_data: data,
+      type: QUEUES.SYNC_CONTRACT_CODE,
+      status: false,
+    };
+    const queueData = await this.queueInfoRepository.insert(queueInfo);
+    this.contractQueue.add(
+      QUEUES.SYNC_CONTRACT_CODE,
+      { data, queueData },
+      {
+        removeOnComplete: true,
+        backoff: {
+          delay: 10000,
+          type: 'fixed',
+        },
       },
-    });
+    );
   }
 }

@@ -38,6 +38,7 @@ import { InfluxDBClient } from '../utils/influxdb-client';
 import { SoulboundTokenRepository } from '../repositories/soulbound-token.repository';
 import { SoulboundToken } from '../entities/soulbound-token.entity';
 import { lastValueFrom, timeout, retry } from 'rxjs';
+import { QueueInfoRepository } from '../repositories/queue-info.repository';
 
 @Processor('smart-contracts')
 export class SmartContractsProcessor {
@@ -60,6 +61,7 @@ export class SmartContractsProcessor {
     private httpService: HttpService,
     private soulboundTokenRepos: SoulboundTokenRepository,
     private smartContractCodeRepository: SmartContractCodeRepository,
+    private queueInfoRepository: QueueInfoRepository,
   ) {
     this.logger.log(
       '============== Constructor Smart Contracts Processor Service ==============',
@@ -356,7 +358,10 @@ export class SmartContractsProcessor {
   async syncSmartContractFromHeight(job: Job) {
     this.logger.log(`${this.syncSmartContractFromHeight.name} was called!`);
     try {
-      const smartContracts = job.data;
+      const smartContracts = job.data.data;
+      const queueData = job.data.queueData;
+      queueData.status = true;
+      await this.queueInfoRepository.update(queueData);
       const contracts = [];
       const tokenMarkets = [];
       const smartContractCodes = [];
@@ -572,7 +577,10 @@ export class SmartContractsProcessor {
     this.logger.log(
       `============== Queue synceMissingSmartContractCode was run! ==============`,
     );
-    const smartContractCodes = job.data;
+    const smartContractCodes = job.data.data;
+    const queueData = job.data.queueData;
+    queueData.status = true;
+    await this.queueInfoRepository.update(queueData);
     try {
       // insert data
       await this.smartContractCodeRepository.insert(smartContractCodes);

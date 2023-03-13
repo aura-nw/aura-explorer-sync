@@ -7,6 +7,7 @@ import { Queue } from 'bull';
 import { ConfigService, ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import * as util from 'util';
+import { QueueInfoRepository } from '../repositories/queue-info.repository';
 
 @Injectable()
 export class SyncSmartContractService {
@@ -24,6 +25,7 @@ export class SyncSmartContractService {
   constructor(
     private configService: ConfigService,
     private _commonUtil: CommonUtil,
+    private queueInfoRepository: QueueInfoRepository,
     @InjectSchedule() private readonly schedule: Schedule,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
   ) {
@@ -84,14 +86,24 @@ export class SyncSmartContractService {
    * Push data to queue
    * @param data
    */
-  pushDataToQueue(data: any) {
-    this.contractQueue.add(QUEUES.SYNC_CONTRACT_FROM_HEIGHT, data, {
-      removeOnComplete: true,
-      backoff: {
-        delay: 10000,
-        type: 'fixed',
+  async pushDataToQueue(data: any) {
+    const queueInfo = {
+      job_data: data,
+      type: QUEUES.SYNC_CONTRACT_FROM_HEIGHT,
+      status: false,
+    };
+    const queueData = await this.queueInfoRepository.insert(queueInfo);
+    this.contractQueue.add(
+      QUEUES.SYNC_CONTRACT_FROM_HEIGHT,
+      { data, queueData },
+      {
+        removeOnComplete: true,
+        backoff: {
+          delay: 10000,
+          type: 'fixed',
+        },
       },
-    });
+    );
   }
 
   /**
