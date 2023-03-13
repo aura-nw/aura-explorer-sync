@@ -278,7 +278,10 @@ export class ValidatorProcessor {
   async retryJobs(queue: Queue) {
     const jobs = await queue.getFailed();
     jobs.forEach(async (job) => {
-      await job.retry();
+      const failed = await job.isFailed;
+      if (failed) {
+        await job.retry();
+      }
     });
   }
 }
