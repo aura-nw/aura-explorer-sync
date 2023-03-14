@@ -403,6 +403,7 @@ export class SyncTaskService {
     ];
     const optionQueue: JobOptions = {
       removeOnComplete: true,
+      attempts: 5,
       // repeat: this.everyRepeatOptions,
       backoff: { type: 'fixed', delay: 3000 } as BackoffOptions,
     };
@@ -473,7 +474,6 @@ export class SyncTaskService {
                 { ...optionQueue },
               );
             }
-
             // Instantiate contract
             const instantiate = contractInstantiate?.length > 0 ? true : false;
             if (instantiate) {
