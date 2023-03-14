@@ -7,6 +7,7 @@ import {
   CONST_MSG_TYPE,
   NODE_API,
   QUEUES,
+  SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
 import { BlockSyncError } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -519,12 +520,16 @@ export class SyncTaskService {
                 await this.smartContractCodeRepository.findOne({
                   contract_hash: dataHash.toLowerCase(),
                 });
-              if (contractCode) {
+              smartContractCode.contract_hash = dataHash.toLowerCase();
+              if (
+                !!contractCode &&
+                contractCode.contract_verification ===
+                  SMART_CONTRACT_VERIFICATION.VERIFIED
+              ) {
                 smartContractCode.contract_verification =
                   contractCode.contract_verification;
                 smartContractCode.compiler_version =
                   contractCode.compiler_version;
-                smartContractCode.contract_hash = contractCode.contract_hash;
                 smartContractCode.execute_msg_schema =
                   contractCode.execute_msg_schema;
                 smartContractCode.instantiate_msg_schema =
