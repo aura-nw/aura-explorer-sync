@@ -44,6 +44,8 @@ import { SoulboundTokenRepository } from './repositories/soulbound-token.reposit
 import { SoulboundToken } from './entities/soulbound-token.entity';
 import { SyncSmartContractService } from './services/sync-smart-contract.service';
 import { ValidatorProcessor } from './processor/validator.processor';
+import { QueueInfoRepository } from './repositories/queue-info.repository';
+import { QueueInfo } from './entities/queue-info.entity';
 
 const controllers = [];
 const entities = [
@@ -62,6 +64,7 @@ const entities = [
   TokenMarkets,
   Transaction,
   SoulboundToken,
+  QueueInfo,
 ];
 
 const repositories = [
@@ -80,6 +83,7 @@ const repositories = [
   TokenMarketsRepository,
   TransactionRepository,
   SoulboundTokenRepository,
+  QueueInfoRepository,
 ];
 
 const services = [

@@ -16,4 +16,16 @@ export class QueueInfoRepository extends BaseRepository<QueueInfo> {
       '============== Constructor Queue Info Repository ==============',
     );
   }
+
+  public async updateQueueStatus(jobId, jobName, status) {
+    return await this.repos
+      .createQueryBuilder()
+      .update(QueueInfo)
+      .set({
+        status: status,
+      })
+      .where('job_id = :jobId', { jobId })
+      .andWhere('job_name = :jobName', { jobName })
+      .execute();
+  }
 }

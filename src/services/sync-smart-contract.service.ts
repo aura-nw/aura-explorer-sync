@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { INDEXER_API, QUEUES } from '../common/constants/app.constant';
+import { INDEXER_API, QUEUES, QUEUES_PROCESSOR, QUEUES_STATUS } from '../common/constants/app.constant';
 import { Cron, CronExpression, Interval } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from 'nest-schedule';
 import { InjectQueue } from '@nestjs/bull';
@@ -87,15 +87,9 @@ export class SyncSmartContractService {
    * @param data
    */
   async pushDataToQueue(data: any) {
-    const queueInfo = {
-      job_data: data,
-      type: QUEUES.SYNC_CONTRACT_FROM_HEIGHT,
-      status: false,
-    };
-    const queueData = await this.queueInfoRepository.insert(queueInfo);
-    this.contractQueue.add(
+    const job = await this.contractQueue.add(
       QUEUES.SYNC_CONTRACT_FROM_HEIGHT,
-      { data, queueData },
+      data,
       {
         removeOnComplete: true,
         backoff: {
@@ -104,6 +98,15 @@ export class SyncSmartContractService {
         },
       },
     );
+    const queueInfo = {
+      job_id: job?.id,
+      height: data?.height,
+      job_data: JSON.stringify(data),
+      job_name: QUEUES.SYNC_CONTRACT_FROM_HEIGHT,
+      status: QUEUES_STATUS.PENDING,
+      processor: QUEUES_PROCESSOR.SMART_CONTRACTS,
+    };
+    await this.queueInfoRepository.insert(queueInfo);
   }
 
   /**

@@ -11,6 +11,8 @@ import {
   INDEXER_API,
   NODE_API,
   QUEUES,
+  QUEUES_PROCESSOR,
+  QUEUES_STATUS,
 } from '../common/constants/app.constant';
 import { SmartContract, SmartContractCode, TokenMarkets } from '../entities';
 import { QueueInfo } from '../entities/queue-info.entity';
@@ -222,22 +224,20 @@ export class SyncContractCodeService {
    * @param data
    */
   async pushDataToQueue(data: any) {
-    const queueInfo = {
-      job_data: data,
-      type: QUEUES.SYNC_CONTRACT_CODE,
-      status: false,
-    };
-    const queueData = await this.queueInfoRepository.insert(queueInfo);
-    this.contractQueue.add(
-      QUEUES.SYNC_CONTRACT_CODE,
-      { data, queueData },
-      {
-        removeOnComplete: true,
-        backoff: {
-          delay: 10000,
-          type: 'fixed',
-        },
+    const job = await this.contractQueue.add(QUEUES.SYNC_CONTRACT_CODE, data, {
+      removeOnComplete: true,
+      backoff: {
+        delay: 10000,
+        type: 'fixed',
       },
-    );
+    });
+    const queueInfo = {
+      job_id: job?.id,
+      job_data: JSON.stringify(data),
+      job_name: QUEUES.SYNC_CONTRACT_CODE,
+      status: QUEUES_STATUS.PENDING,
+      processor: QUEUES_PROCESSOR.SMART_CONTRACTS,
+    };
+    await this.queueInfoRepository.insert(queueInfo);
   }
 }

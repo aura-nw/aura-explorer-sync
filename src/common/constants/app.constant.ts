@@ -178,6 +178,17 @@ export const SOULBOUND_PICKED_TOKEN = {
   MAX: 5,
 };
 
+export const QUEUES_PROCESSOR = {
+  SMART_CONTRACTS: 'smart-contracts',
+  VALIDATOR: 'validator',
+};
+
+export const QUEUES_STATUS = {
+  PENDING: 'PENDING',
+  SUCCESS: 'SUCCESS',
+  FAIL: 'FAIL',
+};
+
 export const QUEUES = {
   SYNC_EXECUTE_CONTRACTS: 'sync-execute-contracts',
   SYNC_CW4973_NFT_STATUS: 'sync-cw4973-nft-status',

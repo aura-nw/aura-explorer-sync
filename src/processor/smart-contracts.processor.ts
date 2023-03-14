@@ -21,6 +21,7 @@ import {
   SOULBOUND_TOKEN_STATUS,
   SOULBOUND_PICKED_TOKEN,
   QUEUES,
+  QUEUES_STATUS,
 } from '../common/constants/app.constant';
 import { SmartContract, TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -358,10 +359,7 @@ export class SmartContractsProcessor {
   async syncSmartContractFromHeight(job: Job) {
     this.logger.log(`${this.syncSmartContractFromHeight.name} was called!`);
     try {
-      const smartContracts = job.data.data;
-      const queueData = job.data.queueData;
-      queueData.status = true;
-      await this.queueInfoRepository.update(queueData);
+      const smartContracts = job.data;
       const contracts = [];
       const tokenMarkets = [];
       const smartContractCodes = [];
@@ -421,6 +419,7 @@ export class SmartContractsProcessor {
           ['id'],
         );
       }
+      await this.updateQueueStatus(job, QUEUES_STATUS.SUCCESS);
     } catch (err) {
       this.logger.error(
         `${this.syncSmartContractFromHeight.name} was called error: ${err.stack}`,
@@ -428,7 +427,6 @@ export class SmartContractsProcessor {
       throw err;
     }
   }
-  SYNC_CONTRACT_FROM_HEIGHT;
 
   @Process(QUEUES.SYNC_CW4973_NFT_STATUS)
   async handleSyncCw4973NftStatus(job: Job) {
@@ -577,13 +575,11 @@ export class SmartContractsProcessor {
     this.logger.log(
       `============== Queue synceMissingSmartContractCode was run! ==============`,
     );
-    const smartContractCodes = job.data.data;
-    const queueData = job.data.queueData;
-    queueData.status = true;
-    await this.queueInfoRepository.update(queueData);
+    const smartContractCodes = job.data;
     try {
       // insert data
       await this.smartContractCodeRepository.insert(smartContractCodes);
+      this.updateQueueStatus(job, QUEUES_STATUS.SUCCESS);
     } catch (error) {
       this.logger.error(
         `synceMissingSmartContractCode was error, ${error?.code}: ${error?.stack}`,
@@ -614,7 +610,7 @@ export class SmartContractsProcessor {
   async onFailed(job: Job, error: Error) {
     this.logger.error(`Failed job ${job.id} of type ${job.name}`);
     this.logger.error(`Error: ${error}`);
-
+    this.updateQueueStatus(job, QUEUES_STATUS.FAIL);
     // Resart queue
     const queue = await job.queue;
     if (queue) {
@@ -768,6 +764,15 @@ export class SmartContractsProcessor {
       }
     }
     return smartContract;
+  }
+
+  /**
+   * Update queue status
+   * @param id
+   * @param status
+   */
+  async updateQueueStatus(job, status) {
+    await this.queueInfoRepository.updateQueueStatus(job.id, job.name, status);
   }
 
   /**
