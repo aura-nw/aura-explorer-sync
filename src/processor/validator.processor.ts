@@ -1,5 +1,11 @@
-import { OnQueueError, OnQueueFailed, Process, Processor } from '@nestjs/bull';
-import { Logger } from '@nestjs/common';
+import {
+  OnQueueCompleted,
+  OnQueueError,
+  OnQueueFailed,
+  Process,
+  Processor,
+} from '@nestjs/bull';
+import { Logger, Scope } from '@nestjs/common';
 import { bech32 } from 'bech32';
 import { Job, Queue } from 'bull';
 import {
@@ -7,11 +13,13 @@ import {
   CONST_PUBKEY_ADDR,
   NODE_API,
   QUEUES,
+  QUEUES_STATUS,
 } from '../common/constants/app.constant';
 import { TRANSACTION_TYPE } from '../common/constants/transaction-type.enum';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { DelegationRepository } from '../repositories/delegation.repository';
 import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
+import { QueueInfoRepository } from '../repositories/queue-info.repository';
 import { ValidatorRepository } from '../repositories/validator.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
@@ -26,6 +34,7 @@ export class ValidatorProcessor {
     private validatorRepository: ValidatorRepository,
     private delegationRepository: DelegationRepository,
     private delegatorRewardRepository: DelegatorRewardRepository,
+    private queueInfoRepository: QueueInfoRepository,
   ) {
     this.logger.log(
       '============== Constructor Validator Processor Service ==============',
@@ -250,6 +259,17 @@ export class ValidatorProcessor {
     ]);
   }
 
+  @OnQueueCompleted()
+  async onComplete(job: Job, result: any) {
+    this.logger.log(`Completed job ${job.id} of type ${job.name}`);
+    this.logger.log(`Result: ${result}`);
+    await this.queueInfoRepository.updateQueueStatus(
+      job.id,
+      job.name,
+      QUEUES_STATUS.SUCCESS,
+    );
+  }
+
   @OnQueueError()
   onError(job: Job, error: Error) {
     this.logger.error(`Job: ${job}`);
@@ -261,24 +281,10 @@ export class ValidatorProcessor {
   async onFailed(job: Job, error: Error) {
     this.logger.error(`Failed job ${job.id} of type ${job.name}`);
     this.logger.error(`Error: ${error}`);
-
-    // Resart queue
-    const queue = await job.queue;
-    if (queue) {
-      if (job.name === QUEUES.SYNC_VALIDATOR) {
-        await this.retryJobs(queue);
-      }
-    }
-  }
-
-  /**
-   * Restart job fail
-   * @param queue
-   */
-  async retryJobs(queue: Queue) {
-    const jobs = await queue.getFailed();
-    jobs.forEach(async (job) => {
-      await job.retry();
-    });
+    await this.queueInfoRepository.updateQueueStatus(
+      job.id,
+      job.name,
+      QUEUES_STATUS.FAILED,
+    );
   }
 }

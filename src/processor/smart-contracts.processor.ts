@@ -6,7 +6,7 @@ import {
   Process,
   Processor,
 } from '@nestjs/bull';
-import { Logger } from '@nestjs/common';
+import { Logger, Scope } from '@nestjs/common';
 import { Job, Queue } from 'bull';
 import * as util from 'util';
 import {
@@ -419,7 +419,6 @@ export class SmartContractsProcessor {
           ['id'],
         );
       }
-      await this.updateQueueStatus(job, QUEUES_STATUS.SUCCESS);
     } catch (err) {
       this.logger.error(
         `${this.syncSmartContractFromHeight.name} was called error: ${err.stack}`,
@@ -579,7 +578,6 @@ export class SmartContractsProcessor {
     try {
       // insert data
       await this.smartContractCodeRepository.insert(smartContractCodes);
-      this.updateQueueStatus(job, QUEUES_STATUS.SUCCESS);
     } catch (error) {
       this.logger.error(
         `synceMissingSmartContractCode was error, ${error?.code}: ${error?.stack}`,
@@ -597,6 +595,11 @@ export class SmartContractsProcessor {
   async onComplete(job: Job, result: any) {
     this.logger.log(`Completed job ${job.id} of type ${job.name}`);
     this.logger.log(`Result: ${result}`);
+    await this.queueInfoRepository.updateQueueStatus(
+      job.id,
+      job.name,
+      QUEUES_STATUS.SUCCESS,
+    );
   }
 
   @OnQueueError()
@@ -610,14 +613,11 @@ export class SmartContractsProcessor {
   async onFailed(job: Job, error: Error) {
     this.logger.error(`Failed job ${job.id} of type ${job.name}`);
     this.logger.error(`Error: ${error}`);
-    this.updateQueueStatus(job, QUEUES_STATUS.FAIL);
-    // Resart queue
-    const queue = await job.queue;
-    if (queue) {
-      if (job.name === QUEUES.SYNC_INSTANTIATE_CONTRACTS) {
-        await this.retryJobs(queue);
-      }
-    }
+    await this.queueInfoRepository.updateQueueStatus(
+      job.id,
+      job.name,
+      QUEUES_STATUS.FAILED,
+    );
   }
 
   /**
@@ -767,15 +767,6 @@ export class SmartContractsProcessor {
   }
 
   /**
-   * Update queue status
-   * @param id
-   * @param status
-   */
-  async updateQueueStatus(job, status) {
-    await this.queueInfoRepository.updateQueueStatus(job.id, job.name, status);
-  }
-
-  /**
    * Update num_tokens column
    * @param contractAddress
    */
@@ -817,16 +808,5 @@ export class SmartContractsProcessor {
         `${this.handleExecuteContract.name} execute complete: contract_address: ${contractAddress}`,
       );
     }
-  }
-
-  /**
-   * Restart job fail
-   * @param queue
-   */
-  async retryJobs(queue: Queue) {
-    const jobs = await queue.getFailed();
-    jobs.forEach(async (job) => {
-      await job.retry();
-    });
   }
 }

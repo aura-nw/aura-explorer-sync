@@ -235,8 +235,8 @@ export class SyncContractCodeService {
       job_id: job?.id,
       job_data: JSON.stringify(data),
       job_name: QUEUES.SYNC_CONTRACT_CODE,
-      status: QUEUES_STATUS.PENDING,
       processor: QUEUES_PROCESSOR.SMART_CONTRACTS,
+      status: QUEUES_STATUS.PENDING,
     };
     await this.queueInfoRepository.insert(queueInfo);
   }

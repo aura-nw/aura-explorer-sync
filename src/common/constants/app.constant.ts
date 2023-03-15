@@ -185,8 +185,9 @@ export const QUEUES_PROCESSOR = {
 
 export const QUEUES_STATUS = {
   PENDING: 'PENDING',
+  ERROR: 'ERROR',
   SUCCESS: 'SUCCESS',
-  FAIL: 'FAIL',
+  FAILED: 'FAILED',
 };
 
 export const QUEUES = {

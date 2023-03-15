@@ -6,6 +6,8 @@ import { Queue } from 'bull';
 import {
   COINGECKO_API,
   QUEUES,
+  QUEUES_PROCESSOR,
+  QUEUES_STATUS,
   REDIS_KEY,
 } from '../common/constants/app.constant';
 
@@ -16,6 +18,7 @@ import { CommonUtil } from '../utils/common.util';
 import { RedisUtil } from '../utils/redis.util';
 import { Equal, In } from 'typeorm';
 import { TokenMarkets } from '../entities';
+import { QueueInfoRepository } from '../repositories/queue-info.repository';
 
 @Injectable()
 export class SyncTokenService {
@@ -28,6 +31,7 @@ export class SyncTokenService {
     private tokenMarketsRepository: TokenMarketsRepository,
     private redisUtil: RedisUtil,
     private smartContractRepository: SmartContractRepository,
+    private queueInfoRepository: QueueInfoRepository,
 
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
   ) {
@@ -72,7 +76,7 @@ export class SyncTokenService {
           tokensHavingCoinId.push(...defaultTokens);
         }
         if (tokensHavingCoinId.length > 0) {
-          this.contractQueue.add(
+          const job = await this.contractQueue.add(
             QUEUES.SYNC_PRICE_VOLUME,
             {
               listTokens: tokensHavingCoinId,
@@ -82,6 +86,13 @@ export class SyncTokenService {
               removeOnFail: true,
               timeout: 10000,
             },
+          );
+          this.pushDataToQueueInfo(
+            {
+              listTokens: tokensHavingCoinId,
+            },
+            job,
+            QUEUES_PROCESSOR.SMART_CONTRACTS,
           );
         }
       } catch (err) {
@@ -128,7 +139,7 @@ export class SyncTokenService {
       });
 
       if (tokenNoCoinIds.length > 0) {
-        this.contractQueue.add(
+        const job = await this.contractQueue.add(
           QUEUES.SYNC_COIN_ID,
           {
             tokens: tokenNoCoinIds,
@@ -138,6 +149,13 @@ export class SyncTokenService {
             removeOnFail: true,
             timeout: 10000,
           },
+        );
+        this.pushDataToQueueInfo(
+          {
+            tokens: tokenNoCoinIds,
+          },
+          job,
+          QUEUES_PROCESSOR.SMART_CONTRACTS,
         );
       }
 
@@ -188,5 +206,23 @@ export class SyncTokenService {
 
       throw error;
     }
+  }
+
+  /**
+   * Push data to queue
+   * @param data
+   * @param job
+   * @param processor
+   */
+  async pushDataToQueueInfo(data, job, processor) {
+    const queueInfo = {
+      job_id: job?.id,
+      height: data?.height,
+      job_data: JSON.stringify(data),
+      job_name: job?.name,
+      status: QUEUES_STATUS.PENDING,
+      processor: processor,
+    };
+    await this.queueInfoRepository.insert(queueInfo);
   }
 }

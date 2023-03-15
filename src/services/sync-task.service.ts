@@ -7,6 +7,8 @@ import {
   CONST_MSG_TYPE,
   NODE_API,
   QUEUES,
+  QUEUES_PROCESSOR,
+  QUEUES_STATUS,
 } from '../common/constants/app.constant';
 import { BlockSyncError } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -22,6 +24,7 @@ import { BackoffOptions, CronRepeatOptions, JobOptions, Queue } from 'bull';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
 import { TRANSACTION_TYPE } from '../common/constants/transaction-type.enum';
 import * as util from 'util';
+import { QueueInfoRepository } from '../repositories/queue-info.repository';
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -46,6 +49,7 @@ export class SyncTaskService {
     private statusRepository: SyncStatusRepository,
     private proposalVoteRepository: ProposalVoteRepository,
     private smartContractCodeRepository: SmartContractCodeRepository,
+    private queueInfoRepository: QueueInfoRepository,
     @InjectSchedule() private readonly schedule: Schedule,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
     @InjectQueue('validator') private readonly validatorQueue: Queue,
@@ -401,6 +405,7 @@ export class SyncTaskService {
       TRANSACTION_TYPE.UNJAIL,
     ];
     const optionQueue: JobOptions = {
+      attempts: 3,
       removeOnComplete: true,
       // repeat: this.everyRepeatOptions,
       backoff: { type: 'fixed', delay: 3000 } as BackoffOptions,
@@ -440,7 +445,7 @@ export class SyncTaskService {
               f.events.find((x) => x.type == CONST_CHAR.INSTANTIATE),
             );
             const contractAddress = message.contract;
-            this.contractQueue.add(
+            const job = await this.contractQueue.add(
               QUEUES.SYNC_EXECUTE_CONTRACTS,
               {
                 message,
@@ -448,6 +453,16 @@ export class SyncTaskService {
                 contractArr,
               },
               { ...optionQueue, timeout: 10000 },
+            );
+            this.pushDataToQueueInfo(
+              {
+                message,
+                contractAddress,
+                contractArr,
+              },
+              job,
+              QUEUES_PROCESSOR.SMART_CONTRACTS,
+              height,
             );
 
             let takeMessage;
@@ -461,7 +476,7 @@ export class SyncTaskService {
               unequipMessage = message;
             }
             if (takeMessage || unequipMessage) {
-              this.contractQueue.add(
+              const job = await this.contractQueue.add(
                 QUEUES.SYNC_CW4973_NFT_STATUS,
                 {
                   takeMessage,
@@ -471,33 +486,67 @@ export class SyncTaskService {
                 },
                 { ...optionQueue },
               );
+              this.pushDataToQueueInfo(
+                {
+                  takeMessage,
+                  unequipMessage,
+                  contractAddress,
+                  receiverAddress,
+                },
+                job,
+                QUEUES_PROCESSOR.SMART_CONTRACTS,
+                height,
+              );
             }
 
             // Instantiate contract
             const instantiate = contractInstantiate?.length > 0 ? true : false;
             if (instantiate) {
-              this.contractQueue.add(
+              const job = await this.contractQueue.add(
                 QUEUES.SYNC_INSTANTIATE_CONTRACTS,
                 {
                   height,
                 },
                 { ...optionQueue, delay: 7000 },
               );
+              this.pushDataToQueueInfo(
+                {
+                  height,
+                },
+                job,
+                QUEUES_PROCESSOR.SMART_CONTRACTS,
+                height,
+              );
             }
           } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
             const height = Number(txData.tx_response.height);
-            this.contractQueue.add(
+            const job = await this.contractQueue.add(
               QUEUES.SYNC_INSTANTIATE_CONTRACTS,
               {
                 height,
               },
               { ...optionQueue, delay: 7000 },
             );
+            this.pushDataToQueueInfo(
+              {
+                height,
+              },
+              job,
+              QUEUES_PROCESSOR.SMART_CONTRACTS,
+              height,
+            );
           } else if (msgTypes.indexOf(txType) > -1) {
-            this.validatorQueue.add(
+            const height = Number(txData.tx_response.height);
+            const job = await this.validatorQueue.add(
               QUEUES.SYNC_VALIDATOR,
               { txData, msg: message, txType, index: i },
               { ...optionQueue },
+            );
+            this.pushDataToQueueInfo(
+              { txData, msg: message, txType, index: i },
+              job,
+              QUEUES_PROCESSOR.SMART_CONTRACTS,
+              height,
             );
           } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
             const smartContractCode = SyncDataHelpers.makeStoreCodeData(
@@ -623,5 +672,23 @@ export class SyncTaskService {
       ENV_CONFIG.INFLUX_DB.URL,
       ENV_CONFIG.INFLUX_DB.TOKEN,
     );
+  }
+
+  /**
+   * Push data to queue
+   * @param data
+   * @param job
+   * @param processor
+   */
+  async pushDataToQueueInfo(data, job, processor, height) {
+    const queueInfo = {
+      job_id: job?.id,
+      height: height,
+      job_data: JSON.stringify(data),
+      job_name: job?.name,
+      status: QUEUES_STATUS.PENDING,
+      processor: processor,
+    };
+    await this.queueInfoRepository.insert(queueInfo);
   }
 }
