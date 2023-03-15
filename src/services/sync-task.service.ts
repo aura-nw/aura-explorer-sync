@@ -545,7 +545,7 @@ export class SyncTaskService {
             this.pushDataToQueueInfo(
               { txData, msg: message, txType, index: i },
               job,
-              QUEUES_PROCESSOR.SMART_CONTRACTS,
+              QUEUES_PROCESSOR.VALIDATOR,
               height,
             );
           } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
