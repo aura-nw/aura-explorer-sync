@@ -813,18 +813,9 @@ export class SmartContractsProcessor {
    * @param queue
    */
   async retryJobs(queue: Queue) {
-    // try {
-    //   const jobs = await queue.getFailed();
-    //   jobs.forEach(async (job) => {
-    //     const failed = await job.isFailed;
-    //     if (failed) {
-    //       await job.retry();
-    //     }
-    //   });
-    // } catch (error) {
-    //   this.logger.error(
-    //     `${this.retryJobs.name} execute error: ${error?.stack}`,
-    //   );
-    // }
+    // const jobs = await queue.getFailed();
+    // jobs.forEach(async (job) => {
+    //   await job.retry();
+    // });
   }
 }
