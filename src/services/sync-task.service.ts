@@ -426,6 +426,11 @@ export class SyncTaskService {
             );
             delegations.push(delegation);
             validators.push(message.validator_address);
+          } else if (
+            txType === TRANSACTION_TYPE.JAILED ||
+            txType === TRANSACTION_TYPE.UNJAIL
+          ) {
+            validators.push(message.validator_address);
           } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
             const smartContractCode = SyncDataHelpers.makeStoreCodeData(
               txData,
@@ -447,6 +452,9 @@ export class SyncTaskService {
                   contract_hash: dataHash.toLowerCase(),
                 });
               smartContractCode.contract_hash = dataHash.toLowerCase();
+              smartContractCode.created_at = new Date(
+                txData.tx_response.timestamp,
+              );
               if (
                 !!contractCode &&
                 contractCode.contract_verification ===
