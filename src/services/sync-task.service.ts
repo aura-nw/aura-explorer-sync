@@ -418,6 +418,11 @@ export class SyncTaskService {
             );
             delegations.push(delegation);
             validators.push(message.validator_address);
+          } else if (
+            txType === TRANSACTION_TYPE.JAILED ||
+            txType === TRANSACTION_TYPE.UNJAIL
+          ) {
+            validators.push(message.validator_address);
           } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
             const smartContractCode = SyncDataHelpers.makeStoreCodeData(
               txData,
