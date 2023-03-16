@@ -1,115 +1,115 @@
-import { Column, Entity, Unique } from 'typeorm';
-import { BaseEntityIncrementId } from './base/base.entity';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { BaseEntity } from './base/base.entity';
 
 @Entity('validators')
-export class Validator extends BaseEntityIncrementId {
-  @Unique('operator_address', ['operator_address'])
-  @Column({ name: 'operator_address' })
+export class Validator extends BaseEntity {
+  @PrimaryColumn({ name: 'operator_address', type: 'varchar' })
   operator_address: string;
 
-  @Column({ 
+  @Column({
     default: '',
-    name: 'acc_address',  
+    name: 'acc_address',
   })
   acc_address: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'cons_address',
   })
   cons_address: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'cons_pub_key',
   })
   cons_pub_key: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'title',
   })
   title: string;
 
-  @Column({ 
+  @Column({
     default: false,
     name: 'jailed',
   })
   jailed: boolean;
 
-  @Column({ 
+  @Column({
     type: 'text',
     name: 'commission',
   })
   commission: string;
 
-  @Column({ 
+  @Column({
     type: 'text',
     name: 'max_commission',
   })
   max_commission: string;
 
-  @Column({ 
+  @Column({
     type: 'text',
     name: 'max_change_rate',
   })
   max_change_rate: string;
 
-  @Column({ 
+  @Column({
     default: 0,
     name: 'min_self_delegation',
   })
   min_self_delegation: number;
 
-  @Column({ 
+  @Column({
     type: 'text',
     name: 'delegator_shares',
   })
   delegator_shares: string;
 
-  @Column({ 
+  @Column({
     type: 'float',
     name: 'power',
   })
   power: number;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'percent_power',
   })
   percent_power: string;
 
-  @Column({ 
+  @Column({
     type: 'float',
     name: 'self_bonded',
   })
   self_bonded: number;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'percent_self_bonded',
   })
   percent_self_bonded: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'website',
   })
   website: string;
 
-  @Column({ 
-    default: '',
+  @Column({
     name: 'details',
+    nullable: true,
+    type: 'text',
   })
   details: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'identity',
   })
   identity: string;
 
-  @Column({ 
+  @Column({
     default: '',
     name: 'unbonding_height',
   })
@@ -121,13 +121,13 @@ export class Validator extends BaseEntityIncrementId {
   @Column({ name: 'update_time' })
   update_time: Date;
 
-  @Column({ 
+  @Column({
     default: 0,
     name: 'up_time',
   })
   up_time: string;
 
-  @Column({ 
+  @Column({
     default: 0,
     name: 'status',
   })

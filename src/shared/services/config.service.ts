@@ -35,12 +35,60 @@ export class ConfigService {
     return this.get('NODE_ENV') || 'development';
   }
 
-  get timezone(): string {
-    return this.get('APP_TIMEZONE');
-  }
-
   get ENV_CONFIG() {
-    return {};
+    return {
+      WEBSOCKET_URL: process.env.WEBSOCKET_URL,
+      THREADS: Number(process.env.THREADS),
+      SMART_CONTRACT_SERVICE: process.env.SMART_CONTRACT_SERVICE,
+      START_HEIGHT: process.env.START_HEIGHT,
+      TIMES_SYNC: Number(process.env.TIMES_SYNC) || 3000,
+      SYNC_TRANSACTIONS_CLEAN_UP_DAY: Number(
+        process.env.SYNC_TRANSACTIONS_CLEAN_UP_DAY || 8,
+      ),
+      REDIS: {
+        HOST: process.env.REDIS_HOST,
+        PORT: Number(process.env.REDIS_PORT) || 6379,
+        PREFIX: process.env.REDIS_PREFIX,
+        DB: process.env.REDIS_DB,
+        USERNAME:
+          !process.env.REDIS_USERNAME ||
+          process.env.REDIS_USERNAME === 'default'
+            ? ''
+            : process.env.REDIS_USERNAME,
+        PASSWORD: process.env.REDIS_PASSWORD || '',
+      },
+      NODE: {
+        API: process.env.API,
+        RPC: process.env.RPC,
+      },
+      CHAIN_INFO: {
+        COIN_DENOM: process.env.COIN_DENOM,
+        COIN_MINIMAL_DENOM: process.env.COIN_MINIMAL_DENOM,
+        COIN_DECIMALS: Number(process.env.COIN_DECIMALS),
+        PRECISION_DIV: Math.pow(10, Number(process.env.COIN_DECIMALS)),
+      },
+      INFLUX_DB: {
+        BUCKET: process.env.INFLUXDB_BUCKET,
+        ORGANIZTION: process.env.INFLUXDB_ORG,
+        URL: process.env.INFLUXDB_URL,
+        TOKEN: process.env.INFLUXDB_TOKEN,
+      },
+      COINGECKO: {
+        API: process.env.COINGECKO_API,
+        COIN_ID: process.env.COINGECKO_COIN_ID,
+        MAX_REQUEST: Number(process.env.COINGECKO_MAX_REQUEST) || 250,
+        COINGEKO_PLATFORM: process.env.COINGEKO_PLATFORM || 'ethereum',
+      },
+      SYNC_SMART_CONTRACT: {
+        FROM_HEIGHT: Number(process.env.SYNC_SMART_CONTRACT_FROM_HEIGHT) || 0,
+        TO_HEIGHT: Number(process.env.SYNC_SMART_CONTRACT_TO_HEIGHT) || 0,
+        SYNC_DATA:
+          process.env.SYNC_SMART_CONTRACT_SYNC_DATA === 'true' ? true : false,
+      },
+      NODE_ENV: process.env.NODE_ENV,
+      SYNC_MISSING_CONTRACT_CODE:
+        process.env.SYNC_MISSING_CONTRACT_CODE === 'true' ? true : false,
+    };
   }
 
   get typeOrmConfig(): TypeOrmModuleOptions {
@@ -59,7 +107,7 @@ export class ConfigService {
       migrationsRun: true,
       connectTimeout: 1000,
       synchronize: false,
-      logging: this.nodeEnv === 'development',
+      logging: this.get('DB_LOGGING') === 'true',
       namingStrategy: new PascalCaseStrategy(),
       multipleStatements: true,
     };
