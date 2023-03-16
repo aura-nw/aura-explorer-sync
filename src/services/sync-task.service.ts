@@ -444,6 +444,9 @@ export class SyncTaskService {
                   contract_hash: dataHash.toLowerCase(),
                 });
               smartContractCode.contract_hash = dataHash.toLowerCase();
+              smartContractCode.created_at = new Date(
+                txData.tx_response.timestamp,
+              );
               if (
                 !!contractCode &&
                 contractCode.contract_verification ===
