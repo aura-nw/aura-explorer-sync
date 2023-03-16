@@ -499,9 +499,7 @@ export class SyncTaskService {
     // Create or update validator
     if (validators.length > 0) {
       this.validatorQueue.add(QUEUES.SYNC_VALIDATOR, validators, {
-        removeOnComplete: true,
-        // attempts: 3,
-        backoff: 1000,
+        ...optionQueue,
       });
     }
   }
