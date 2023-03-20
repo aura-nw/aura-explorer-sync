@@ -39,7 +39,7 @@ export class SyncTaskService {
   private threads = 0;
   private schedulesSync: Array<number> = [];
   private smartContractService;
-  private isSyncValidator: boolean;
+  private isSyncValidator = false;
 
   isCompleteWrite = false;
   private nodeEnv = ENV_CONFIG.NODE_ENV;
