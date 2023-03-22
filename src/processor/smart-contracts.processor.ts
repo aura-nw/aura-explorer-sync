@@ -81,7 +81,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_INSTANTIATE_CONTRACTS)
-  async handleInstantiateContract(job: any) {
+  async handleInstantiateContract(job) {
     this.logger.log(`Sync instantiate contracts by job Id ${job.id}`);
     const height = job.data.height;
     try {
@@ -188,7 +188,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_EXECUTE_CONTRACTS)
-  async handleExecuteContract(job: any) {
+  async handleExecuteContract(job) {
     const message = job.data.message;
     const contractAddress = job.data.contractAddress;
     this.logger.log(`${this.handleExecuteContract.name} was called!`);
@@ -270,7 +270,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_PRICE_VOLUME)
-  async handleSyncPriceVolume(job: any) {
+  async handleSyncPriceVolume(job) {
     try {
       const listTokens = job.data.listTokens;
       const coingecko = ENV_CONFIG.COINGECKO;
@@ -323,7 +323,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_COIN_ID)
-  async handleSyncCoinId(job: any) {
+  async handleSyncCoinId(job) {
     try {
       this.logger.log(
         `============== sync-coin-id from coingecko start ==============`,
@@ -357,7 +357,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_CONTRACT_FROM_HEIGHT)
-  async syncSmartContractFromHeight(job: any) {
+  async syncSmartContractFromHeight(job) {
     this.logger.log(`${this.syncSmartContractFromHeight.name} was called!`);
     try {
       const smartContracts = job.data;
@@ -429,7 +429,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_CW4973_NFT_STATUS)
-  async handleSyncCw4973NftStatus(job: any) {
+  async handleSyncCw4973NftStatus(job) {
     this.logger.log(
       `============== Queue handleSyncCw4973NftStatus was run! ==============`,
     );
@@ -571,7 +571,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_CONTRACT_CODE)
-  async synceMissingSmartContractCode(job: any) {
+  async synceMissingSmartContractCode(job) {
     this.logger.log(
       `============== Queue synceMissingSmartContractCode was run! ==============`,
     );

@@ -45,44 +45,13 @@ export class ValidatorProcessor {
   }
 
   @Process(QUEUES.SYNC_VALIDATOR)
-  async syncValidator(job: any) {
+  async syncValidator(job) {
     this.logger.log(
       `${this.syncValidator.name} was called with para: ${JSON.stringify(
         job.data,
       )}`,
     );
-    try {
-      const { txData, msg, txType } = job.data;
-      const addresses: string[] = [];
-      switch (txType) {
-        case TRANSACTION_TYPE.DELEGATE:
-          addresses.push(msg.validator_address);
-          await this.processDelegate(txData, msg);
-          break;
-        case TRANSACTION_TYPE.UNDELEGATE:
-          addresses.push(msg.validator_address);
-          await this.processUndelegate(txData, msg);
-          break;
-        case TRANSACTION_TYPE.REDELEGATE:
-          addresses.push(msg.validator_dst_address);
-          addresses.push(msg.validator_src_address);
-          await this.processRedelegation(txData, msg);
-          break;
-        case TRANSACTION_TYPE.GET_REWARD:
-          addresses.push(msg.validator_address);
-          await this.processWithDrawDelegation(txData, msg);
-          break;
-        case TRANSACTION_TYPE.CREATE_VALIDATOR:
-          addresses.push(msg.validator_address);
-          await this.processDelegation(txData, msg);
-          break;
-      }
-      await this.processValidator(addresses);
-    } catch (error) {
-      this.logger.error(`${error.name}: ${error.message}`);
-      this.logger.error(`${error.stack}`);
-      throw error;
-    }
+    await this.processValidator(job.data);
   }
 
   async processValidator(operatorAddresses: string[]) {
@@ -198,68 +167,6 @@ export class ValidatorProcessor {
     }
   }
 
-  async processDelegation(txData: any, message: any) {
-    this.logger.log(`${this.processDelegation.name} was called!}`);
-    const delegation = SyncDataHelpers.makeDelegationData(txData, message);
-    await this.insertDelegation([delegation]);
-  }
-
-  async processDelegate(txData: any, message: any) {
-    this.logger.log(`${this.processDelegate.name} was called!}`);
-    const [delegation, reward] = SyncDataHelpers.makeDelegateData(
-      txData,
-      message,
-    );
-    await this.insertDelegation([delegation]);
-    await this.insertDelegatorReward([reward]);
-  }
-
-  async processUndelegate(txData: any, message: any) {
-    this.logger.log(`${this.processUndelegate.name} was called!}`);
-    const [delegation, reward] = SyncDataHelpers.makeUndelegateData(
-      txData,
-      message,
-    );
-    await this.insertDelegation([delegation]);
-    await this.insertDelegatorReward([reward]);
-  }
-
-  async processRedelegation(txData: any, message: any) {
-    this.logger.log(`${this.processRedelegation.name} was called!}`);
-    const [delegation1, delegation2, reward1, reward2] =
-      SyncDataHelpers.makeRedelegationData(txData, message);
-    const delegations = [delegation1, delegation2];
-    const rewards = [reward1, reward2];
-    await this.insertDelegation(delegations);
-    await this.insertDelegatorReward(rewards);
-  }
-
-  async processWithDrawDelegation(txData: any, message: any) {
-    this.logger.log(`${this.processWithDrawDelegation.name} was called!}`);
-    const reward = SyncDataHelpers.makeWithDrawDelegationData(txData, message);
-    if (reward.amount) {
-      await this.insertDelegatorReward([reward]);
-    }
-  }
-
-  /**
-   * Insert data to delegations table
-   * @param delegation
-   */
-  async insertDelegation(delegation: any | any[]) {
-    await this.delegationRepository.insertOnDuplicate(delegation, ['id']);
-  }
-
-  /**
-   * Insert data to delegator_rewards table
-   * @param delegatorReward
-   */
-  async insertDelegatorReward(delegatorReward: any | any[]) {
-    await this.delegatorRewardRepository.insertOnDuplicate(delegatorReward, [
-      'id',
-    ]);
-  }
-
   @OnQueueCompleted()
   async onComplete(job: Job, result: any) {
     this.logger.log(`Completed job ${job.id} of type ${job.name}`);
@@ -272,10 +179,8 @@ export class ValidatorProcessor {
   }
 
   @OnQueueError()
-  onError(job: Job, error: Error) {
-    this.logger.error(`Job: ${job}`);
-    this.logger.error(`Error job ${job.id} of type ${job.name}`);
-    this.logger.error(`Error: ${error}`);
+  onError(error: Error) {
+    this.logger.error(`Queue Error: ${error.stack}`);
   }
 
   @OnQueueFailed()
