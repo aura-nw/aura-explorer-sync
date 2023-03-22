@@ -5,7 +5,7 @@ import {
   Process,
   Processor,
 } from '@nestjs/bull';
-import { Logger, Scope } from '@nestjs/common';
+import { Injectable, Logger, Scope } from '@nestjs/common';
 import { bech32 } from 'bech32';
 import { Job, Queue } from 'bull';
 import {
@@ -25,6 +25,7 @@ import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 
 @Processor('validator')
+@Injectable()
 export class ValidatorProcessor {
   private readonly logger = new Logger(ValidatorProcessor.name);
   private api = '';
@@ -44,7 +45,7 @@ export class ValidatorProcessor {
   }
 
   @Process(QUEUES.SYNC_VALIDATOR)
-  async syncValidator(job: Job) {
+  async syncValidator(job: any) {
     this.logger.log(
       `${this.syncValidator.name} was called with para: ${JSON.stringify(
         job.data,

@@ -6,7 +6,7 @@ import {
   Process,
   Processor,
 } from '@nestjs/bull';
-import { Logger, Scope } from '@nestjs/common';
+import { Injectable, Logger, Scope } from '@nestjs/common';
 import { Job, Queue } from 'bull';
 import * as util from 'util';
 import {
@@ -42,6 +42,7 @@ import { lastValueFrom, timeout, retry } from 'rxjs';
 import { QueueInfoRepository } from '../repositories/queue-info.repository';
 
 @Processor('smart-contracts')
+@Injectable()
 export class SmartContractsProcessor {
   private readonly logger = new Logger(SmartContractsProcessor.name);
   private rpc;
@@ -80,7 +81,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_INSTANTIATE_CONTRACTS)
-  async handleInstantiateContract(job: Job) {
+  async handleInstantiateContract(job: any) {
     this.logger.log(`Sync instantiate contracts by job Id ${job.id}`);
     const height = job.data.height;
     try {
@@ -187,7 +188,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_EXECUTE_CONTRACTS)
-  async handleExecuteContract(job: Job) {
+  async handleExecuteContract(job: any) {
     const message = job.data.message;
     const contractAddress = job.data.contractAddress;
     this.logger.log(`${this.handleExecuteContract.name} was called!`);
@@ -269,7 +270,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_PRICE_VOLUME)
-  async handleSyncPriceVolume(job: Job) {
+  async handleSyncPriceVolume(job: any) {
     try {
       const listTokens = job.data.listTokens;
       const coingecko = ENV_CONFIG.COINGECKO;
@@ -322,7 +323,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_COIN_ID)
-  async handleSyncCoinId(job: Job) {
+  async handleSyncCoinId(job: any) {
     try {
       this.logger.log(
         `============== sync-coin-id from coingecko start ==============`,
@@ -356,7 +357,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_CONTRACT_FROM_HEIGHT)
-  async syncSmartContractFromHeight(job: Job) {
+  async syncSmartContractFromHeight(job: any) {
     this.logger.log(`${this.syncSmartContractFromHeight.name} was called!`);
     try {
       const smartContracts = job.data;
@@ -428,7 +429,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_CW4973_NFT_STATUS)
-  async handleSyncCw4973NftStatus(job: Job) {
+  async handleSyncCw4973NftStatus(job: any) {
     this.logger.log(
       `============== Queue handleSyncCw4973NftStatus was run! ==============`,
     );
@@ -570,7 +571,7 @@ export class SmartContractsProcessor {
   }
 
   @Process(QUEUES.SYNC_CONTRACT_CODE)
-  async synceMissingSmartContractCode(job: Job) {
+  async synceMissingSmartContractCode(job: any) {
     this.logger.log(
       `============== Queue synceMissingSmartContractCode was run! ==============`,
     );

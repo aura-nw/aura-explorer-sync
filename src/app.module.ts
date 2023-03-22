@@ -46,6 +46,7 @@ import { SyncSmartContractService } from './services/sync-smart-contract.service
 import { ValidatorProcessor } from './processor/validator.processor';
 import { QueueInfoRepository } from './repositories/queue-info.repository';
 import { QueueInfo } from './entities/queue-info.entity';
+import { SyncQueueService } from './services/sync-queue.service';
 
 const controllers = [];
 const entities = [
@@ -92,6 +93,7 @@ const services = [
   SyncTokenService,
   SyncTransactionService,
   SyncSmartContractService,
+  SyncQueueService,
 ];
 
 const processors = [SmartContractsProcessor, ValidatorProcessor];
