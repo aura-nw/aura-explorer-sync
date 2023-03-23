@@ -8,12 +8,12 @@ import { ENV_CONFIG } from '../shared/services/config.service';
 
 @Injectable()
 export class SyncQueueService {
-  private readonly _logger = new Logger(SyncQueueService.name);
+  private readonly _logger = new Logger(SyncQueueService.name);  
+  private threads = 0;
   constructor(
     private queueInfoRepository: QueueInfoRepository,
     private smartContractProcessor: SmartContractsProcessor,
     private validatorProcessor: ValidatorProcessor,
-    private threads = 0,
   ) {
     this._logger.log(
       '============== Constructor Sync Queue Service ==============',
@@ -80,7 +80,6 @@ export class SyncQueueService {
           `${this.syncFailedQueue.name} has error: ${error?.message}`,
           error?.stack,
         );
-        throw error;
       }
     });
   }
