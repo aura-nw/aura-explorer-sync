@@ -54,15 +54,4 @@ export class SyncQueueService {
       }
     });
   }
-
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async removeSuccessQueue() {
-    this._logger.log(`${this.removeSuccessQueue.name} was called!`);
-    const data = await this.queueInfoRepository.find({
-      status: QUEUES_STATUS.SUCCESS,
-    });
-    if (data.length > 0) {
-      await this.queueInfoRepository.remove(data);
-    }
-  }
 }

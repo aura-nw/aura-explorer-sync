@@ -170,11 +170,7 @@ export class ValidatorProcessor {
   async onComplete(job: Job, result: any) {
     this.logger.log(`Completed job ${job.id} of type ${job.name}`);
     this.logger.log(`Result: ${result}`);
-    await this.queueInfoRepository.updateQueueStatus(
-      job.id,
-      job.name,
-      QUEUES_STATUS.SUCCESS,
-    );
+    await this.queueInfoRepository.remove({ job_id: job.id });
   }
 
   @OnQueueError()
