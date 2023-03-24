@@ -1,19 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { QUEUES, QUEUES_STATUS } from '../common/constants/app.constant';
+import { QUEUES, QUEUES_PROCESSOR, QUEUES_STATUS } from '../common/constants/app.constant';
 import { QueueInfoRepository } from '../repositories/queue-info.repository';
 import { SmartContractsProcessor } from '../processor/smart-contracts.processor';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ValidatorProcessor } from '../processor/validator.processor';
 import { ENV_CONFIG } from '../shared/services/config.service';
+import { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bull';
 
 @Injectable()
 export class SyncQueueService {
-  private readonly _logger = new Logger(SyncQueueService.name);  
+  private readonly _logger = new Logger(SyncQueueService.name);
   private threads = 0;
   constructor(
     private queueInfoRepository: QueueInfoRepository,
-    private smartContractProcessor: SmartContractsProcessor,
-    private validatorProcessor: ValidatorProcessor,
+    @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
+    @InjectQueue('validator') private readonly validatorQueue: Queue,
   ) {
     this._logger.log(
       '============== Constructor Sync Queue Service ==============',
@@ -21,60 +23,28 @@ export class SyncQueueService {
     this.threads = ENV_CONFIG.THREADS;
   }
 
-  @Cron('0 */3 * * * *')
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async syncFailedQueue() {
     this._logger.log(`${this.syncFailedQueue.name} was called!`);
-    const data = await this.queueInfoRepository.find({
+    const jobs = await this.queueInfoRepository.find({
       where: { status: QUEUES_STATUS.FAILED },
       take: this.threads,
     });
 
-    data?.forEach(async (queue) => {
+    jobs?.forEach(async (job) => {
       this._logger.log(
-        `Sync queue job_id: ${queue.job_id} and job_name: ${queue.job_name}!`,
+        `Sync queue job_id: ${job.job_id} and job_name: ${job.job_name}!`,
       );
-      const data = JSON.parse(queue?.job_data);
-      const job = {
-        id: queue.job_id,
-        data: data,
-        name: queue.job_name,
-      };
       try {
-        switch (queue.job_name) {
-          case QUEUES.SYNC_EXECUTE_CONTRACTS:
-            await this.smartContractProcessor.handleExecuteContract(job);
-            break;
-          case QUEUES.SYNC_CW4973_NFT_STATUS:
-            await this.smartContractProcessor.handleSyncCw4973NftStatus(job);
-            break;
-          case QUEUES.SYNC_INSTANTIATE_CONTRACTS:
-            await this.smartContractProcessor.handleInstantiateContract(job);
-            break;
-          case QUEUES.SYNC_PRICE_VOLUME:
-            await this.smartContractProcessor.handleSyncPriceVolume(job);
-            break;
-          case QUEUES.SYNC_COIN_ID:
-            await this.smartContractProcessor.handleSyncCoinId(job);
-            break;
-          case QUEUES.SYNC_CONTRACT_FROM_HEIGHT:
-            await this.smartContractProcessor.syncSmartContractFromHeight(job);
-            break;
-          case QUEUES.SYNC_VALIDATOR:
-            await this.validatorProcessor.syncValidator(job);
-            break;
-          case QUEUES.SYNC_CONTRACT_CODE:
-            await this.smartContractProcessor.synceMissingSmartContractCode(
-              job,
-            );
-            break;
-          default:
-            break;
+        let retryJob;
+        if (job.processor === QUEUES_PROCESSOR.SMART_CONTRACTS) {
+          retryJob = await this.contractQueue.getJob(job.job_id);
+        } else if (job.processor === QUEUES_PROCESSOR.VALIDATOR) {
+          retryJob = await this.validatorQueue.getJob(job.job_id);
         }
-        await this.queueInfoRepository.updateQueueStatus(
-          queue.job_id,
-          queue.job_name,
-          QUEUES_STATUS.SUCCESS,
-        );
+        if (retryJob?.isFailed) {
+          await retryJob?.retry();
+        }
       } catch (error) {
         this._logger.error(
           `${this.syncFailedQueue.name} has error: ${error?.message}`,

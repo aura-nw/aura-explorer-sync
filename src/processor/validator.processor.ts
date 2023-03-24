@@ -45,7 +45,7 @@ export class ValidatorProcessor {
   }
 
   @Process(QUEUES.SYNC_VALIDATOR)
-  async syncValidator(job) {
+  async syncValidator(job: Job) {
     this.logger.log(
       `${this.syncValidator.name} was called with para: ${JSON.stringify(
         job.data,
@@ -179,8 +179,13 @@ export class ValidatorProcessor {
   }
 
   @OnQueueError()
-  onError(error: Error) {
+  async onError(job: Job, error: Error) {
     this.logger.error(`Queue Error: ${error.stack}`);
+    await this.queueInfoRepository.updateQueueStatus(
+      job.id,
+      job.name,
+      QUEUES_STATUS.FAILED,
+    );
   }
 
   @OnQueueFailed()
