@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { QUEUES, QUEUES_PROCESSOR, QUEUES_STATUS } from '../common/constants/app.constant';
+import {
+  QUEUES_PROCESSOR,
+  QUEUES_STATUS,
+} from '../common/constants/app.constant';
 import { QueueInfoRepository } from '../repositories/queue-info.repository';
-import { SmartContractsProcessor } from '../processor/smart-contracts.processor';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ValidatorProcessor } from '../processor/validator.processor';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';

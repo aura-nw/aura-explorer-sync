@@ -15,7 +15,6 @@ import {
   QUEUES_STATUS,
 } from '../common/constants/app.constant';
 import { SmartContract, SmartContractCode, TokenMarkets } from '../entities';
-import { QueueInfo } from '../entities/queue-info.entity';
 import { QueueInfoRepository } from '../repositories/queue-info.repository';
 import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
 import { SmartContractRepository } from '../repositories/smart-contract.repository';

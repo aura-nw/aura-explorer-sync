@@ -296,8 +296,8 @@ export class SyncTaskService {
     const validators = [];
 
     const optionQueue: JobOptions = {
-      attempts: 3,
       removeOnComplete: true,
+      attempts: 3,
       // repeat: this.everyRepeatOptions,
       backoff: { type: 'fixed', delay: 3000 } as BackoffOptions,
     };

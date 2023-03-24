@@ -6,7 +6,7 @@ import {
   Process,
   Processor,
 } from '@nestjs/bull';
-import { Injectable, Logger, Scope } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { Job, Queue } from 'bull';
 import * as util from 'util';
 import {
@@ -42,7 +42,6 @@ import { lastValueFrom, timeout, retry } from 'rxjs';
 import { QueueInfoRepository } from '../repositories/queue-info.repository';
 
 @Processor('smart-contracts')
-@Injectable()
 export class SmartContractsProcessor {
   private readonly logger = new Logger(SmartContractsProcessor.name);
   private rpc;

@@ -5,7 +5,7 @@ import {
   Process,
   Processor,
 } from '@nestjs/bull';
-import { Injectable, Logger, Scope } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { bech32 } from 'bech32';
 import { Job, Queue } from 'bull';
 import {
@@ -25,7 +25,6 @@ import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 
 @Processor('validator')
-@Injectable()
 export class ValidatorProcessor {
   private readonly logger = new Logger(ValidatorProcessor.name);
   private api = '';
