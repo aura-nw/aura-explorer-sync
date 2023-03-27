@@ -167,6 +167,7 @@ export class SyncTaskService {
             },
           );
         } catch (error) {
+          this.schedule.cancelJob(el.height.toString());
           this._logger.log('Catch duplicate height ', error.stack);
         }
       });
