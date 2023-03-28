@@ -5,6 +5,7 @@ import { InjectSchedule, Schedule } from 'nest-schedule';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
+  CONST_PUBKEY_ADDR,
   NODE_API,
   QUEUES,
   SMART_CONTRACT_VERIFICATION,
@@ -26,6 +27,7 @@ import * as util from 'util';
 import { ValidatorRepository } from '../repositories/validator.repository';
 import { DelegationRepository } from '../repositories/delegation.repository';
 import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
+import { bech32 } from 'bech32';
 
 @Injectable()
 export class SyncTaskService {
