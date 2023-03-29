@@ -382,7 +382,6 @@ export class SyncTaskService {
             );
             delegations.push(delegation);
             delegatorRewards.push(reward);
-            validators.push(message.validator_address);
           } else if (txType === TRANSACTION_TYPE.UNDELEGATE) {
             const [delegation, reward] = SyncDataHelpers.makeUndelegateData(
               txData,
@@ -390,7 +389,6 @@ export class SyncTaskService {
             );
             delegations.push(delegation);
             delegatorRewards.push(reward);
-            validators.push(message.validator_address);
           } else if (txType === TRANSACTION_TYPE.REDELEGATE) {
             const [delegation1, delegation2, reward1, reward2] =
               SyncDataHelpers.makeRedelegationData(txData, message);
@@ -398,8 +396,6 @@ export class SyncTaskService {
             delegations.push(delegation2);
             delegatorRewards.push(reward1);
             delegatorRewards.push(reward2);
-            validators.push(message.validator_dst_address);
-            validators.push(message.validator_src_address);
           } else if (txType === TRANSACTION_TYPE.GET_REWARD) {
             const reward = SyncDataHelpers.makeWithDrawDelegationData(
               txData,
@@ -407,7 +403,6 @@ export class SyncTaskService {
             );
             if (reward.amount) {
               delegatorRewards.push(reward);
-              validators.push(message.validator_address);
             }
           } else if (txType === TRANSACTION_TYPE.CREATE_VALIDATOR) {
             const delegation = SyncDataHelpers.makeDelegationData(
@@ -415,11 +410,6 @@ export class SyncTaskService {
               message,
             );
             delegations.push(delegation);
-            validators.push(message.validator_address);
-          } else if (
-            txType === TRANSACTION_TYPE.JAILED ||
-            txType === TRANSACTION_TYPE.UNJAIL
-          ) {
             validators.push(message.validator_address);
           } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
             const smartContractCode = SyncDataHelpers.makeStoreCodeData(

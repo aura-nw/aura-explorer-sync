@@ -33,7 +33,7 @@ export class SyncValidatorService {
     })();
   }
 
-  // @Interval(10000)
+  @Interval(10000)
   async syncValidator() {
     try {
       // check status
