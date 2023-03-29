@@ -1,17 +1,14 @@
 import { OnQueueError, OnQueueFailed, Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { bech32 } from 'bech32';
-import { Job, Queue } from 'bull';
+import { Job } from 'bull';
 import {
   CONST_CHAR,
   CONST_PUBKEY_ADDR,
   NODE_API,
   QUEUES,
 } from '../common/constants/app.constant';
-import { TRANSACTION_TYPE } from '../common/constants/transaction-type.enum';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
-import { DelegationRepository } from '../repositories/delegation.repository';
-import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
 import { ValidatorRepository } from '../repositories/validator.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
@@ -20,18 +17,18 @@ import { CommonUtil } from '../utils/common.util';
 export class ValidatorProcessor {
   private readonly logger = new Logger(ValidatorProcessor.name);
   private api = '';
+  private keybaseUrl = '';
 
   constructor(
     private commonUtil: CommonUtil,
     private validatorRepository: ValidatorRepository,
-    private delegationRepository: DelegationRepository,
-    private delegatorRewardRepository: DelegatorRewardRepository,
   ) {
     this.logger.log(
       '============== Constructor Validator Processor Service ==============',
     );
 
     this.api = ENV_CONFIG.NODE.API;
+    this.keybaseUrl = ENV_CONFIG.KEY_BASE_URL;
   }
 
   @Process(QUEUES.SYNC_VALIDATOR)
@@ -49,6 +46,7 @@ export class ValidatorProcessor {
       `${this.processValidator.name} was called with paramter: ${operatorAddresses}`,
     );
     const validators = [];
+    const validatorImage = [];
     try {
       for (const index in operatorAddresses) {
         let validatorInfo = null;
@@ -145,14 +143,33 @@ export class ValidatorProcessor {
             this.logger.error(null, `Not exist delegations`);
           }
           validators.push(newValidator);
+          validatorImage.push({
+            operator_address: newValidator.operator_address,
+            identity: newValidator.identity,
+            image_url: null,
+          });
         }
       }
       if (validators.length > 0) {
         await this.validatorRepository.update(validators);
+
+        // Update image
+        this.updateImage(validatorImage);
       }
     } catch (error) {
       this.logger.error(`${error.name}: ${error.message}`);
       this.logger.error(`${error.stack}`);
+      throw error;
+    }
+  }
+
+  @Process(QUEUES.SYNC_VALIDATOR_IMAGE)
+  async proccessImage(job: Job) {
+    const data: [] = job.data;
+    try {
+      this.updateImage(data);
+    } catch (error) {
+      this.logger.error(`${error.message}: ${error.message}`);
       throw error;
     }
   }
@@ -166,5 +183,28 @@ export class ValidatorProcessor {
   async onFailed(job: Job, error: Error) {
     this.logger.error(`Failed job ${job.id} of type ${job.name}`);
     this.logger.error(`Error: ${error}`);
+  }
+
+  /**
+   * Update data for image_url column
+   * @param data
+   */
+  async updateImage(data: any) {
+    const validators = [];
+    data.forEach(async (item: any) => {
+      if (item.identity?.length > 0) {
+        // Call keybase get data
+        item.image_url = await this.commonUtil.getImageFromKeyBase(
+          item.identity,
+        );
+      } else {
+        item.image_url = `${item.operator_address}.png`;
+      }
+      validators.push(item);
+    });
+
+    if (validators.length > 0) {
+      await this.validatorRepository.update(validators);
+    }
   }
 }

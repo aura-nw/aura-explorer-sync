@@ -45,6 +45,7 @@ export class ConfigService {
       SYNC_TRANSACTIONS_CLEAN_UP_DAY: Number(
         process.env.SYNC_TRANSACTIONS_CLEAN_UP_DAY || 8,
       ),
+      KEY_BASE_URL: process.env.KEY_BASE_URL,
       REDIS: {
         HOST: process.env.REDIS_HOST,
         PORT: Number(process.env.REDIS_PORT) || 6379,
