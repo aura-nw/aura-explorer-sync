@@ -194,15 +194,9 @@ export class ValidatorProcessor {
     data.forEach(async (item: any) => {
       if (item.identity?.length > 0) {
         // Call keybase get data
-        const keybaseResponse = await this.commonUtil.getDataAPI(
-          this.keybaseUrl,
-          `lookup.json?key_suffix=${item.identity}&fields=pictures`,
+        item.image_url = await this.commonUtil.getImageFromKeyBase(
+          item.identity,
         );
-
-        if (keybaseResponse) {
-          item.image_url =
-            keybaseResponse?.them[0]?.pictures?.primary.url || null;
-        }
       } else {
         item.image_url = `${item.operator_address}.png`;
       }
