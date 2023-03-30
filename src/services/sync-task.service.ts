@@ -283,9 +283,9 @@ export class SyncTaskService {
    */
   async syncDataWithTransactions(listTransactions) {
     const proposalVotes = [];
+    const smartContractCodes = [];
     const delegations = [];
     const delegatorRewards = [];
-    const smartContractCodes = [];
     const validators = [];
 
     const optionQueue: JobOptions = {
@@ -361,7 +361,6 @@ export class SyncTaskService {
                 { ...optionQueue },
               );
             }
-
             // Instantiate contract
             const instantiate = contractInstantiate?.length > 0 ? true : false;
             if (instantiate) {
