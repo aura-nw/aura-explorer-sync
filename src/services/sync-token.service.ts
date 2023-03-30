@@ -47,7 +47,7 @@ export class SyncTokenService {
    * @todo: use for sync cw20 tokens price
    * Create thread to sync data
    */
-  @Cron('0 */3 * * * *')
+  @Cron(ENV_CONFIG.PRICE_TIME_SYNC)
   async syncCW20TokensPrice() {
     const numberCW20Tokens =
       await this.tokenMarketsRepository.countCw20TokensHavingCoinId();
