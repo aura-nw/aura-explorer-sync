@@ -361,6 +361,31 @@ export class SyncDataHelpers {
     return coinInfo;
   }
 
+  static updateCoinMarketsData(
+    currentData: TokenMarkets,
+    data: any,
+  ): TokenMarkets {
+    const quote = data.quote?.USD;
+    const coinInfo = { ...currentData };
+    coinInfo.current_price = Number(quote?.price?.toFixed(6)) || 0;
+    coinInfo.price_change_percentage_24h =
+      Number(quote?.percent_change_24h?.toFixed(6)) || 0;
+    coinInfo.total_volume = Number(quote?.volume_24h?.toFixed(6)) || 0;
+    coinInfo.circulating_supply =
+      Number(data.circulating_supply?.toFixed(6)) || 0;
+    const circulating_market_cap =
+      coinInfo.circulating_supply * coinInfo.current_price;
+    coinInfo.circulating_market_cap =
+      Number(circulating_market_cap?.toFixed(6)) || 0;
+    coinInfo.max_supply = Number(data.max_supply?.toFixed(6)) || 0;
+    coinInfo.market_cap =
+      Number(data.self_reported_market_cap?.toFixed(6)) || 0;
+    coinInfo.fully_diluted_valuation =
+      Number(quote?.fully_diluted_market_cap?.toFixed(6)) || 0;
+
+    return coinInfo;
+  }
+
   /**
    * Create TokenMarkets entity
    * @param smartContract
