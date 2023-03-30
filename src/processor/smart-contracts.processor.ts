@@ -826,7 +826,7 @@ export class SmartContractsProcessor {
   }
 
   async syncCoingeckoPrice(listTokens) {
-    const coingecko = ENV_CONFIG.COIN_MARKET_CAP;
+    const coingecko = ENV_CONFIG.COINGECKO;
     this.logger.log(`============== Call Coingecko Api ==============`);
     const coinIds = listTokens.join(',');
     const coinMarkets: TokenMarkets[] = [];
