@@ -136,6 +136,10 @@ export enum COINGECKO_API {
   GET_COINS = 'coins/list?include_platform=true',
 }
 
+export enum COIN_MARKET_CAP_API {
+  GET_COINS_MARKET = 'cryptocurrency/quotes/latest?slug=%s',
+}
+
 export enum AURA_INFO {
   TYPE = 'AURA',
   IMAGE = 'https://nft-ipfs.s3.amazonaws.com/assets/imgs/icons/color/aura.svg',

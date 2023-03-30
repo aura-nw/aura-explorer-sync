@@ -41,6 +41,15 @@ export class CommonUtil {
     ).then((rs) => rs.data);
   }
 
+  async getDataAPIWithHeader(api, params, headersRequest) {
+    return lastValueFrom(
+      this.httpService.get(api + params, {
+        timeout: 30000,
+        headers: headersRequest,
+      }),
+    ).then((rs) => rs.data);
+  }
+
   async getDataService(api, params) {
     const data = await axios.get(api + params);
 
