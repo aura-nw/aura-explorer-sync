@@ -23,7 +23,7 @@ export enum NODE_API {
   VALIDATOR = `cosmos/staking/v1beta1/validators`,
   SLASHING_PARAM = `cosmos/slashing/v1beta1/params`,
   SIGNING_INFOS = `cosmos/slashing/v1beta1/signing_infos`,
-  LATEST_BLOCK = `blocks/latest`,
+  LATEST_BLOCK = `cosmos/base/tendermint/v1beta1/blocks/latest`,
   CONTRACT_INFO = `cosmwasm/wasm/v1/contract/%s/smart/%s`,
   CONTRACT_CODE = `cosmwasm/wasm/v1/code?pagination.key=%s`,
   CONTRACT_CODE_DETAIL = `cosmwasm/wasm/v1/code/%s`,
