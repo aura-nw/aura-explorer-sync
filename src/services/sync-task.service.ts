@@ -674,7 +674,7 @@ export class SyncTaskService {
       null,
       `Class ${SyncTaskService.name}, call getBlockLatest method`,
     );
-    const paramsBlockLatest = `blocks/latest`;
+    const paramsBlockLatest = NODE_API.LATEST_BLOCK;
     const results = await this._commonUtil.getDataAPI(
       this.api,
       paramsBlockLatest,
