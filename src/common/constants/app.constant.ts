@@ -190,6 +190,7 @@ export const QUEUES = {
   SYNC_COIN_ID: 'sync-coin-id',
   SYNC_CONTRACT_FROM_HEIGHT: 'sync-contract-from-height',
   SYNC_VALIDATOR: 'sync-validator',
+  SYNC_VALIDATOR_IMAGE: 'sync-validator-image',
   SYNC_CONTRACT_CODE: 'sync-contract-code',
 };
 

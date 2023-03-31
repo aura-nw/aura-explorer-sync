@@ -16,4 +16,17 @@ export class ValidatorRepository extends BaseRepository<Validator> {
       '============== Constructor Validator Repository ==============',
     );
   }
+
+  async getImageValidator(limit: number, offset: number) {
+    const validators = await this.repos
+      .createQueryBuilder('val')
+      .select(['operator_address', 'identity', 'image_url'])
+      .take(limit)
+      .skip(limit * offset)
+      .getRawMany();
+
+    const count = await this.repos.count();
+
+    return { validators, count };
+  }
 }
