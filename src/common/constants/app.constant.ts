@@ -25,7 +25,7 @@ export enum NODE_API {
   SLASHING_PARAM = `cosmos/slashing/v1beta1/params`,
   SIGNING_INFOS = `cosmos/slashing/v1beta1/signing_infos`,
   LIST_SIGNING_INFOS = `cosmos/slashing/v1beta1/signing_infos?pagination.key=%s`,
-  LATEST_BLOCK = `blocks/latest`,
+  LATEST_BLOCK = `cosmos/base/tendermint/v1beta1/blocks/latest`,
   CONTRACT_INFO = `cosmwasm/wasm/v1/contract/%s/smart/%s`,
   CONTRACT_CODE = `cosmwasm/wasm/v1/code?pagination.key=%s`,
   CONTRACT_CODE_DETAIL = `cosmwasm/wasm/v1/code/%s`,
@@ -136,6 +136,10 @@ export enum COINGECKO_API {
   GET_PRICE_VOLUME = 'simple/price?ids=%s&vs_currencies=usd&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true',
   GET_COINS_MARKET = 'coins/markets?vs_currency=usd&ids=%s&order=market_cap_desc&per_page=%s&page=1&sparkline=false&price_change_percentage=24h',
   GET_COINS = 'coins/list?include_platform=true',
+}
+
+export enum COIN_MARKET_CAP_API {
+  GET_COINS_MARKET = 'cryptocurrency/quotes/latest?slug=%s',
 }
 
 export enum AURA_INFO {

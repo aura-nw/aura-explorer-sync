@@ -214,7 +214,7 @@ export class ValidatorProcessor {
           item.identity,
         );
       } else {
-        item.image_url = `${item.operator_address}.png`;
+        item.image_url = `validator-default.svg`;
       }
       validators.push(item);
     });

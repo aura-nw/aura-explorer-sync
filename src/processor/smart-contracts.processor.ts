@@ -21,6 +21,7 @@ import {
   SOULBOUND_TOKEN_STATUS,
   SOULBOUND_PICKED_TOKEN,
   QUEUES,
+  COIN_MARKET_CAP_API,
 } from '../common/constants/app.constant';
 import { SmartContract, TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -269,44 +270,10 @@ export class SmartContractsProcessor {
   async handleSyncPriceVolume(job: Job) {
     try {
       const listTokens = job.data.listTokens;
-      const coingecko = ENV_CONFIG.COINGECKO;
-      this.logger.log(`============== Call Coingecko Api ==============`);
-      const coinIds = listTokens.join(',');
-      const coinMarkets: TokenMarkets[] = [];
-
-      const para = `${util.format(
-        COINGECKO_API.GET_COINS_MARKET,
-        coinIds,
-        coingecko.MAX_REQUEST,
-      )}`;
-
-      const [response, tokenInfos] = await Promise.all([
-        this._commonUtil.getDataAPI(coingecko.API, para),
-        this.tokenMarketsRepository.find({
-          where: {
-            coin_id: In(listTokens),
-          },
-        }),
-      ]);
-
-      if (response) {
-        for (let index = 0; index < response.length; index++) {
-          const data = response[index];
-          let tokenInfo = tokenInfos?.find((f) => f.coin_id === data.id);
-          if (tokenInfo) {
-            tokenInfo = SyncDataHelpers.updateTokenMarketsData(tokenInfo, data);
-            coinMarkets.push(tokenInfo);
-          }
-        }
-      }
-      if (coinMarkets.length > 0) {
-        await this.tokenMarketsRepository.update(coinMarkets);
-
-        this.logger.log(`============== Write data to Influxdb ==============`);
-        await this.influxDbClient.writeBlockTokenPriceAndVolume(coinMarkets);
-        this.logger.log(
-          `============== Write data to Influxdb  successfully ==============`,
-        );
+      if (ENV_CONFIG.PRICE_HOST_SYNC === 'COIN_MARKET_CAP') {
+        this.syncCoinMarketCapPrice(listTokens);
+      } else {
+        this.syncCoingeckoPrice(listTokens);
       }
     } catch (err) {
       this.logger.log(`sync-price-volume has error: ${err.message}`, err.stack);
@@ -806,6 +773,97 @@ export class SmartContractsProcessor {
     }
   }
 
+  async syncCoinMarketCapPrice(listTokens) {
+    const coinMarketCap = ENV_CONFIG.COIN_MARKET_CAP;
+    this.logger.log(`============== Call CoinMarketCap Api ==============`);
+    const coinIds = ENV_CONFIG.COIN_MARKET_CAP.COIN_ID;
+    const coinMarkets: TokenMarkets[] = [];
+
+    const para = `${util.format(
+      COIN_MARKET_CAP_API.GET_COINS_MARKET,
+      coinIds,
+    )}`;
+
+    const headersRequest = {
+      'Content-Type': 'application/json',
+      'X-CMC_PRO_API_KEY': ENV_CONFIG.COIN_MARKET_CAP.API_KEY,
+    };
+
+    const [response, tokenInfos] = await Promise.all([
+      this._commonUtil.getDataAPIWithHeader(
+        coinMarketCap.API,
+        para,
+        headersRequest,
+      ),
+      this.tokenMarketsRepository.find({
+        where: {
+          coin_id: In(listTokens),
+        },
+      }),
+    ]);
+
+    if (response?.status?.error_code == 0 && response?.data) {
+      for (const [key, value] of Object.entries(response?.data)) {
+        const data = response?.data[key];
+        let tokenInfo = tokenInfos?.find((f) => f.coin_id === data.slug);
+        if (tokenInfo) {
+          tokenInfo = SyncDataHelpers.updateCoinMarketsData(tokenInfo, data);
+          coinMarkets.push(tokenInfo);
+        }
+      }
+    }
+    if (coinMarkets.length > 0) {
+      await this.tokenMarketsRepository.update(coinMarkets);
+
+      this.logger.log(`============== Write data to Influxdb ==============`);
+      await this.influxDbClient.writeBlockTokenPriceAndVolume(coinMarkets);
+      this.logger.log(
+        `============== Write data to Influxdb  successfully ==============`,
+      );
+    }
+  }
+
+  async syncCoingeckoPrice(listTokens) {
+    const coingecko = ENV_CONFIG.COINGECKO;
+    this.logger.log(`============== Call Coingecko Api ==============`);
+    const coinIds = listTokens.join(',');
+    const coinMarkets: TokenMarkets[] = [];
+
+    const para = `${util.format(
+      COINGECKO_API.GET_COINS_MARKET,
+      coinIds,
+      coingecko.MAX_REQUEST,
+    )}`;
+
+    const [response, tokenInfos] = await Promise.all([
+      this._commonUtil.getDataAPI(coingecko.API, para),
+      this.tokenMarketsRepository.find({
+        where: {
+          coin_id: In(listTokens),
+        },
+      }),
+    ]);
+
+    if (response) {
+      for (let index = 0; index < response.length; index++) {
+        const data = response[index];
+        let tokenInfo = tokenInfos?.find((f) => f.coin_id === data.id);
+        if (tokenInfo) {
+          tokenInfo = SyncDataHelpers.updateTokenMarketsData(tokenInfo, data);
+          coinMarkets.push(tokenInfo);
+        }
+      }
+    }
+    if (coinMarkets.length > 0) {
+      await this.tokenMarketsRepository.update(coinMarkets);
+
+      this.logger.log(`============== Write data to Influxdb ==============`);
+      await this.influxDbClient.writeBlockTokenPriceAndVolume(coinMarkets);
+      this.logger.log(
+        `============== Write data to Influxdb  successfully ==============`,
+      );
+    }
+  }
   /**
    * Restart job fail
    * @param queue

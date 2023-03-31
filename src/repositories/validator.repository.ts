@@ -22,7 +22,7 @@ export class ValidatorRepository extends BaseRepository<Validator> {
       .createQueryBuilder('val')
       .select(['operator_address', 'identity', 'image_url'])
       .take(limit)
-      .offset(limit * offset)
+      .skip(limit * offset)
       .getRawMany();
 
     const count = await this.repos.count();
