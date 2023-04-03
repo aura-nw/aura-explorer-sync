@@ -191,7 +191,7 @@ export class ValidatorProcessor {
    */
   async updateImage(data: any) {
     const validators = [];
-    data.forEach(async (item: any) => {
+    for await (const item of data) {
       if (item.identity?.length > 0) {
         // Call keybase get data
         item.image_url = await this.commonUtil.getImageFromKeyBase(
@@ -201,8 +201,7 @@ export class ValidatorProcessor {
         item.image_url = `validator-default.svg`;
       }
       validators.push(item);
-    });
-
+    }
     if (validators.length > 0) {
       await this.validatorRepository.update(validators);
     }
