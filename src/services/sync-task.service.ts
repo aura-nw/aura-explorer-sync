@@ -5,6 +5,7 @@ import { InjectSchedule, Schedule } from 'nest-schedule';
 import {
   CONST_CHAR,
   CONST_MSG_TYPE,
+  CONST_PUBKEY_ADDR,
   NODE_API,
   QUEUES,
   SMART_CONTRACT_VERIFICATION,
@@ -25,6 +26,7 @@ import { TRANSACTION_TYPE } from '../common/constants/transaction-type.enum';
 import * as util from 'util';
 import { DelegationRepository } from '../repositories/delegation.repository';
 import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
+
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -35,6 +37,7 @@ export class SyncTaskService {
   private threads = 0;
   private schedulesSync: Array<number> = [];
   private smartContractService;
+  private isSyncValidator = false;
 
   isCompleteWrite = false;
   private nodeEnv = ENV_CONFIG.NODE_ENV;
@@ -277,9 +280,9 @@ export class SyncTaskService {
    */
   async syncDataWithTransactions(listTransactions) {
     const proposalVotes = [];
+    const smartContractCodes = [];
     const delegations = [];
     const delegatorRewards = [];
-    const smartContractCodes = [];
     const validators = [];
 
     const optionQueue: JobOptions = {
@@ -355,7 +358,6 @@ export class SyncTaskService {
                 { ...optionQueue },
               );
             }
-
             // Instantiate contract
             const instantiate = contractInstantiate?.length > 0 ? true : false;
             if (instantiate) {
@@ -490,6 +492,131 @@ export class SyncTaskService {
       this.validatorQueue.add(QUEUES.SYNC_VALIDATOR, validators, {
         ...optionQueue,
       });
+    }
+  }
+
+  @Interval(10000)
+  async syncValidator() {
+    try {
+      // check status
+      if (this.isSyncValidator) {
+        this._logger.log('Already syncing validator... wait');
+        return;
+      } else {
+        this._logger.log('Fetching data validator...');
+      }
+
+      // get validators
+      const paramsValidator = NODE_API.VALIDATOR;
+      // get staking pool
+      const paramspool = NODE_API.STAKING_POOL;
+      // get slashing param
+      const paramsSlashing = NODE_API.SLASHING_PARAM;
+      // get slashing signing info
+      const paramsSigning = NODE_API.SIGNING_INFOS;
+
+      const [validatorData, poolData, slashingData, signingData] =
+        await Promise.all([
+          this._commonUtil.getDataAPI(this.api, paramsValidator),
+          this._commonUtil.getDataAPI(this.api, paramspool),
+          this._commonUtil.getDataAPI(this.api, paramsSlashing),
+          this._commonUtil.getDataAPI(this.api, paramsSigning),
+        ]);
+
+      if (validatorData) {
+        this.isSyncValidator = true;
+        for (const key in validatorData.validators) {
+          const data = validatorData.validators[key];
+          // get account address
+          const operator_address = data.operator_address;
+          const decodeAcc = bech32.decode(operator_address, 1023);
+          const wordsByte = bech32.fromWords(decodeAcc.words);
+          const account_address = bech32.encode(
+            CONST_PUBKEY_ADDR.AURA,
+            bech32.toWords(wordsByte),
+          );
+          // get validator detail
+          const validatorUrl = `staking/validators/${data.operator_address}`;
+          const validatorResponse = await this._commonUtil.getDataAPI(
+            this.api,
+            validatorUrl,
+          );
+
+          try {
+            // create validator
+            const status = Number(validatorResponse.result?.status) || 0;
+            const validatorAddr = this._commonUtil.getAddressFromPubkey(
+              data.consensus_pubkey.key,
+            );
+
+            // Makinf Validator entity to insert data
+            const newValidator = SyncDataHelpers.makeValidatorData(
+              data,
+              account_address,
+              status,
+              validatorAddr,
+            );
+
+            const percentPower =
+              (data.tokens / poolData.pool.bonded_tokens) * 100;
+            newValidator.percent_power = percentPower.toFixed(2);
+            const pubkey = this._commonUtil.getAddressFromPubkey(
+              data.consensus_pubkey.key,
+            );
+            const address = this._commonUtil.hexToBech32(
+              pubkey,
+              CONST_PUBKEY_ADDR.AURAVALCONS,
+            );
+            const signingInfo = signingData.info.filter(
+              (e) => e.address === address,
+            );
+            if (signingInfo.length > 0) {
+              const signedBlocksWindow =
+                slashingData.params.signed_blocks_window;
+              const missedBlocksCounter = signingInfo[0].missed_blocks_counter;
+              const upTime =
+                ((Number(signedBlocksWindow) - Number(missedBlocksCounter)) /
+                  Number(signedBlocksWindow)) *
+                100;
+
+              newValidator.up_time =
+                String(upTime.toFixed(2)) + CONST_CHAR.PERCENT;
+            }
+            newValidator.self_bonded = 0;
+            newValidator.percent_self_bonded = '0.00';
+            try {
+              // get delegations
+              const paramDelegation = `cosmos/staking/v1beta1/validators/${data.operator_address}/delegations/${account_address}`;
+              const delegationData = await this._commonUtil.getDataAPI(
+                this.api,
+                paramDelegation,
+              );
+              if (delegationData && delegationData.delegation_response) {
+                newValidator.self_bonded =
+                  delegationData.delegation_response.balance.amount;
+                const percentSelfBonded =
+                  (delegationData.delegation_response.balance.amount /
+                    data.tokens) *
+                  100;
+                newValidator.percent_self_bonded =
+                  percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
+              }
+            } catch (error) {
+              this._logger.error(null, `Not exist delegations`);
+            }
+            await this.validatorRepository.update(newValidator);
+
+            this.isSyncValidator = false;
+          } catch (error) {
+            this.isSyncValidator = false;
+            this._logger.error(`${error.name}: ${error.message}`);
+            this._logger.error(`${error.stack}`);
+          }
+        }
+      }
+    } catch (err) {
+      this.isSyncValidator = false;
+      this._logger.error(`${err.name}: ${err.message}`);
     }
   }
 

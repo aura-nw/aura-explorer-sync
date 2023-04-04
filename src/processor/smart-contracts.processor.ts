@@ -79,13 +79,15 @@ export class SmartContractsProcessor {
 
   @Process(QUEUES.SYNC_INSTANTIATE_CONTRACTS)
   async handleInstantiateContract(job: Job) {
-    this.logger.log(`Sync instantiate contracts by job Id ${job.id}`);
     const height = job.data.height;
+    this.logger.log(
+      `Sync instantiate contracts by job Id ${job.id}, height[${height}]`,
+    );
     try {
       await this.instantiateContracts(height);
     } catch (err) {
       this.logger.error(
-        `${this.handleInstantiateContract.name} job id[${job.id}] execute error: ${err?.message}`,
+        `${this.handleInstantiateContract.name} job id[${job.id}] height[${height}] execute error: ${err?.message}`,
       );
       throw err;
     }
