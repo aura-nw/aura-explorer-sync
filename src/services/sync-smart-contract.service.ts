@@ -1,9 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  INDEXER_API,
-  NODE_API,
-  QUEUES,
-} from '../common/constants/app.constant';
+import { INDEXER_API, QUEUES } from '../common/constants/app.constant';
 import { Cron, CronExpression, Interval } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from 'nest-schedule';
 import { InjectQueue } from '@nestjs/bull';
@@ -25,7 +21,6 @@ export class SyncSmartContractService {
   private fromHeight = 0;
   private toHeight = 0;
   private totalContract = 0;
-  private api;
 
   constructor(
     private configService: ConfigService,
@@ -43,12 +38,6 @@ export class SyncSmartContractService {
     this.syncData = config.SYNC_DATA;
     this.fromHeight = config.FROM_HEIGHT;
     this.toHeight = config.TO_HEIGHT;
-    this.api = ENV_CONFIG.NODE.API;
-
-    // sync num of total tx when app start
-    (async () => {
-      await this.syncNumOfTotalTx();
-    })();
   }
 
   /***
@@ -89,33 +78,6 @@ export class SyncSmartContractService {
         this.logger.error(
           `${this.syncSmartContractFromHeight.name} was called error: ${err.stack}`,
         );
-      }
-    }
-  }
-
-  async syncNumOfTotalTx() {
-    if (ENV_CONFIG.SYNC_TOTAL_TX) {
-      this.logger.log(`${this.syncNumOfTotalTx.name} was called!`);
-      const contracts = await this.smartContractRepository.find({
-        order: { updated_at: 'DESC' },
-      });
-      for await (const contract of contracts) {
-        if (contract.total_tx === 0) {
-          await this.sleep(3000);
-          const paramsTx = `${util.format(
-            NODE_API.TRANSACTION,
-            contract.contract_address,
-          )}`;
-          const transaction = await this._commonUtil.getDataAPI(
-            this.api,
-            paramsTx,
-          );
-
-          if (!!transaction && transaction.pagination?.total !== '0') {
-            contract.total_tx = transaction.pagination?.total;
-            await this.smartContractRepository.update(contract);
-          }
-        }
       }
     }
   }
