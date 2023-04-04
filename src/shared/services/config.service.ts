@@ -104,6 +104,7 @@ export class ConfigService {
       NODE_ENV: process.env.NODE_ENV,
       SYNC_MISSING_CONTRACT_CODE:
         process.env.SYNC_MISSING_CONTRACT_CODE === 'true' ? true : false,
+      SYNC_TOTAL_TX: process.env.SYNC_TOTAL_TX === 'true' ? true : false,
     };
   }
 

@@ -8,6 +8,8 @@ import { TransactionRepository } from 'src/repositories/transaction.repository';
 import { ConfigService, ENV_CONFIG } from 'src/shared/services/config.service';
 import * as util from 'util';
 import { CommonUtil } from '../utils/common.util';
+import { SmartContractRepository } from '../repositories/smart-contract.repository';
+import { In } from 'typeorm';
 
 @Injectable()
 export class SyncTransactionService {
@@ -23,6 +25,7 @@ export class SyncTransactionService {
     private commonUtil: CommonUtil,
     private txsRepository: TransactionRepository,
     private blockRepository: BlockRepository,
+    private smartContractRepository: SmartContractRepository,
     @InjectSchedule() private readonly schedule: Schedule,
   ) {
     this._logger.log(
@@ -106,6 +109,20 @@ export class SyncTransactionService {
     const transactionsToStore = transactions.map(
       TransactionHelper.makeSyncTransaction,
     );
+
+    // count num of total transaction
+    const address = transactionsToStore
+      .filter((item) => !!item.contract_address)
+      .map((item) => item.contract_address);
+    if (address?.length > 0) {
+      const contracts = await this.smartContractRepository.find({
+        where: { contract_address: In(address) },
+      });
+      if (contracts?.length > 0) {
+        contracts?.forEach((item) => item.total_tx++);
+        await this.smartContractRepository.update(contracts);
+      }
+    }
 
     await this.txsRepository.upsert(transactionsToStore, ['tx_hash']);
   }
