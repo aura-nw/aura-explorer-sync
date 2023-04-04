@@ -17,6 +17,7 @@ import axios from 'axios';
 import * as util from 'util';
 import { SmartContract } from '../entities';
 import { sha256 } from 'js-sha256';
+import { ENV_CONFIG } from '../shared/services/config.service';
 
 @Injectable()
 export class CommonUtil {
@@ -284,5 +285,15 @@ export class CommonUtil {
     } else {
       return value;
     }
+  }
+
+  async getImageFromKeyBase(suffix: string): Promise<string> {
+    const keyBaseUrl = `user/lookup.json?key_suffix=${suffix}&fields=pictures`;
+    const respones = await this.getDataAPI(ENV_CONFIG.KEY_BASE_URL, keyBaseUrl);
+    if (respones?.them?.length > 0) {
+      const primary = respones.them[0]?.pictures?.primary;
+      return primary?.url || '';
+    }
+    return '';
   }
 }
