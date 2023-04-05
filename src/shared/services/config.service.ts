@@ -45,6 +45,9 @@ export class ConfigService {
       SYNC_TRANSACTIONS_CLEAN_UP_DAY: Number(
         process.env.SYNC_TRANSACTIONS_CLEAN_UP_DAY || 8,
       ),
+      KEY_BASE_URL: process.env.KEY_BASE_URL,
+      PRICE_HOST_SYNC: process.env.PRICE_HOST_SYNC || 'COINGECKO',
+      PRICE_TIME_SYNC: process.env.PRICE_TIME_SYNC || '0 */3 * * * *',
       REDIS: {
         HOST: process.env.REDIS_HOST,
         PORT: Number(process.env.REDIS_PORT) || 6379,
@@ -75,9 +78,22 @@ export class ConfigService {
       },
       COINGECKO: {
         API: process.env.COINGECKO_API,
-        COIN_ID: process.env.COINGECKO_COIN_ID,
-        MAX_REQUEST: Number(process.env.COINGECKO_MAX_REQUEST) || 250,
-        COINGEKO_PLATFORM: process.env.COINGEKO_PLATFORM || 'ethereum',
+        COIN_ID:
+          process.env.COIN_ID !== ''
+            ? process.env.COIN_ID
+            : 'aura-network,bitcoin',
+        MAX_REQUEST: Number(process.env.MAX_REQUEST) || 250,
+        COINGEKO_PLATFORM: process.env.PLATFORM || 'ethereum',
+      },
+      COIN_MARKET_CAP: {
+        API: process.env.COIN_MARKET_CAP_API_EP,
+        API_KEY: process.env.COIN_MARKET_CAP_API_KEY,
+        COIN_ID:
+          process.env.COIN_ID !== ''
+            ? process.env.COIN_ID
+            : 'aura-network,bitcoin',
+        MAX_REQUEST: Number(process.env.MAX_REQUEST) || 250,
+        COIN_MARKET_CAP_PLATFORM: process.env.PLATFORM || 'ethereum',
       },
       SYNC_SMART_CONTRACT: {
         FROM_HEIGHT: Number(process.env.SYNC_SMART_CONTRACT_FROM_HEIGHT) || 0,
