@@ -132,4 +132,7 @@ export class Validator extends BaseEntity {
     name: 'status',
   })
   status: number;
+
+  @Column({ name: 'image_url', nullable: true, type: 'nvarchar' })
+  image_url: string;
 }
