@@ -21,8 +21,10 @@ export enum NODE_API {
   INFLATION = `cosmos/mint/v1beta1/inflation`,
   COMMUNITY_POOL = `cosmos/distribution/v1beta1/community_pool`,
   VALIDATOR = `cosmos/staking/v1beta1/validators`,
+  LIST_VALIDATOR = `cosmos/staking/v1beta1/validators?pagination.key=%s`,
   SLASHING_PARAM = `cosmos/slashing/v1beta1/params`,
   SIGNING_INFOS = `cosmos/slashing/v1beta1/signing_infos`,
+  LIST_SIGNING_INFOS = `cosmos/slashing/v1beta1/signing_infos?pagination.key=%s`,
   LATEST_BLOCK = `cosmos/base/tendermint/v1beta1/blocks/latest`,
   CONTRACT_INFO = `cosmwasm/wasm/v1/contract/%s/smart/%s`,
   CONTRACT_CODE = `cosmwasm/wasm/v1/code?pagination.key=%s`,
@@ -193,6 +195,7 @@ export const QUEUES = {
   SYNC_CONTRACT_FROM_HEIGHT: 'sync-contract-from-height',
   SYNC_VALIDATOR: 'sync-validator',
   SYNC_VALIDATOR_IMAGE: 'sync-validator-image',
+  SYNC_LIST_VALIDATOR: 'sync-list-validator',
   SYNC_CONTRACT_CODE: 'sync-contract-code',
 };
 

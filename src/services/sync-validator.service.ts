@@ -13,6 +13,7 @@ import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import * as util from 'util';
 
 @Injectable()
 export class SyncValidatorService {
@@ -45,28 +46,51 @@ export class SyncValidatorService {
       }
 
       const validators = [];
+      const signing = [];
+      const listValidator = [];
+      let valNextKey = '';
+      let signNextKey = '';
 
-      // get validators
-      const paramsValidator = NODE_API.VALIDATOR;
       // get staking pool
       const paramspool = NODE_API.STAKING_POOL;
       // get slashing param
       const paramsSlashing = NODE_API.SLASHING_PARAM;
-      // get slashing signing info
-      const paramsSigning = NODE_API.SIGNING_INFOS;
 
-      const [validatorData, poolData, slashingData, signingData] =
-        await Promise.all([
-          this._commonUtil.getDataAPI(this.api, paramsValidator),
-          this._commonUtil.getDataAPI(this.api, paramspool),
-          this._commonUtil.getDataAPI(this.api, paramsSlashing),
-          this._commonUtil.getDataAPI(this.api, paramsSigning),
-        ]);
+      do {
+        const paramsValidator = `${this.api}${util.format(
+          NODE_API.LIST_VALIDATOR,
+          encodeURIComponent(valNextKey),
+        )}`;
+        const validatorData = await this._commonUtil.getDataAPI(
+          paramsValidator,
+          '',
+        );
+        valNextKey = validatorData?.pagination?.next_key;
+        validators.push(...validatorData?.validators);
+      } while (!!valNextKey);
 
-      if (validatorData) {
+      do {
+        const paramsSigning = `${this.api}${util.format(
+          NODE_API.LIST_SIGNING_INFOS,
+          encodeURIComponent(signNextKey),
+        )}`;
+        const signingData = await this._commonUtil.getDataAPI(
+          paramsSigning,
+          '',
+        );
+        signNextKey = signingData?.pagination?.next_key;
+        signing.push(...signingData?.info);
+      } while (!!signNextKey);
+
+      const [poolData, slashingData] = await Promise.all([
+        this._commonUtil.getDataAPI(this.api, paramspool),
+        this._commonUtil.getDataAPI(this.api, paramsSlashing),
+      ]);
+
+      if (validators.length > 0) {
         this.isSyncValidator = true;
-        for (const key in validatorData.validators) {
-          const data = validatorData.validators[key];
+        for (const key in validators) {
+          const data = validators[key];
           // get account address
           const operator_address = data.operator_address;
           const decodeAcc = bech32.decode(operator_address, 1023);
@@ -107,9 +131,7 @@ export class SyncValidatorService {
               pubkey,
               CONST_PUBKEY_ADDR.AURAVALCONS,
             );
-            const signingInfo = signingData.info.filter(
-              (e) => e.address === address,
-            );
+            const signingInfo = signing.filter((e) => e.address === address);
             if (signingInfo.length > 0) {
               const signedBlocksWindow =
                 slashingData.params.signed_blocks_window;
@@ -144,7 +166,7 @@ export class SyncValidatorService {
             } catch (error) {
               this._logger.error(null, `Not exist delegations`);
             }
-            validators.push(newValidator);
+            listValidator.push(newValidator);
           } catch (error) {
             this.isSyncValidator = false;
             this._logger.error(`${error.name}: ${error.message}`);
@@ -152,8 +174,8 @@ export class SyncValidatorService {
           }
         }
       }
-      if (validators.length > 0) {
-        await this.validatorRepository.update(validators);
+      if (listValidator.length > 0) {
+        this.pushDataToQueue(listValidator, QUEUES.SYNC_LIST_VALIDATOR);
       }
       this.isSyncValidator = false;
     } catch (err) {
@@ -169,7 +191,7 @@ export class SyncValidatorService {
       await this.validatorRepository.getImageValidator(limit, 0);
 
     if (validators.length > 0) {
-      this.pushDataToQueue(validators);
+      this.pushDataToQueue(validators, QUEUES.SYNC_VALIDATOR_IMAGE);
     }
 
     if (count > 0) {
@@ -180,7 +202,7 @@ export class SyncValidatorService {
             limit,
             i,
           );
-          this.pushDataToQueue(result.validators);
+          this.pushDataToQueue(result.validators, QUEUES.SYNC_VALIDATOR_IMAGE);
         }
       }
     }
@@ -190,8 +212,8 @@ export class SyncValidatorService {
    * Push validators data to queue for image synchronization
    * @param data
    */
-  pushDataToQueue(data: any) {
-    this.validatorQueue.add(QUEUES.SYNC_VALIDATOR_IMAGE, data, {
+  pushDataToQueue(data: any, queue: string) {
+    this.validatorQueue.add(queue, data, {
       removeOnComplete: true,
       removeOnFail: false,
       delay: 5000,
