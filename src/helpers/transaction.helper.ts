@@ -145,6 +145,7 @@ export class TransactionHelper {
 
     const type = TransactionHelper.getTransactionType(messages);
     switch (type) {
+      case TRANSACTION_TYPE.INSTANTIATE_CONTRACT_2:
       case TRANSACTION_TYPE.INSTANTIATE_CONTRACT: {
         fromAddress = message.sender;
         toAddress =

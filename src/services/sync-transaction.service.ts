@@ -119,7 +119,12 @@ export class SyncTransactionService {
         where: { contract_address: In(address) },
       });
       if (contracts?.length > 0) {
-        contracts?.forEach((item) => item.total_tx++);
+        contracts?.forEach((item) => {
+          const count = address.filter(
+            (addr) => addr === item.contract_address,
+          ).length;
+          item.total_tx = item.total_tx + count;
+        });
         await this.smartContractRepository.update(contracts);
       }
     }

@@ -23,6 +23,7 @@ export enum TRANSACTION_TYPE {
   UNJAIL = 'MsgUnjail',
   STORE_CODE = 'MsgStoreCode',
   INSTANTIATE_CONTRACT = 'MsgInstantiateContract',
+  INSTANTIATE_CONTRACT_2 = 'MsgInstantiateContract2',
   EXECUTE_CONTRACT = 'MsgExecuteContract',
   MODIFY_WITHDRAW_ADDRESS = 'MsgSetWithdrawAddress',
   JOIN_POOL = 'MsgJoinPool',
