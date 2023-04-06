@@ -110,7 +110,7 @@ export class SyncTransactionService {
       TransactionHelper.makeSyncTransaction,
     );
 
-    // count num of total transaction
+    // Filter contract address in list transaction
     const address = transactionsToStore
       .filter((item) => !!item.contract_address)
       .map((item) => item.contract_address);
@@ -120,11 +120,13 @@ export class SyncTransactionService {
       });
       if (contracts?.length > 0) {
         contracts?.forEach((item) => {
+          // count num of total transaction
           const count = address.filter(
             (addr) => addr === item.contract_address,
           ).length;
           item.total_tx = item.total_tx + count;
         });
+        // update num of total transaction to DB
         await this.smartContractRepository.update(contracts);
       }
     }
