@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ValidatorRepository } from '../repositories/validator.repository';
 import { bech32 } from 'bech32';
-import { Cron, CronExpression, Interval } from '@nestjs/schedule';
+import { CronExpression, Interval } from '@nestjs/schedule';
 import { CommonUtil } from '../utils/common.util';
 import {
   CONST_CHAR,
@@ -22,16 +22,23 @@ export class SyncValidatorService {
   private api = '';
 
   constructor(
-    private validatorRepository: ValidatorRepository,
     private _commonUtil: CommonUtil,
     @InjectQueue('validator') private readonly validatorQueue: Queue,
   ) {
     this.api = ENV_CONFIG.NODE.API;
 
     // Sync Image Validator when app start
-    (async () => {
-      await this.syncValidatorImage();
-    })();
+    // (async () => {
+    //   await this.syncValidatorImage();
+    // })();
+
+    this.validatorQueue.add(
+      QUEUES.SYNC_VALIDATOR_IMAGE,
+      {},
+      {
+        repeat: { cron: CronExpression.EVERY_DAY_AT_MIDNIGHT },
+      },
+    );
   }
 
   @Interval(10000)
@@ -184,29 +191,29 @@ export class SyncValidatorService {
     }
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async syncValidatorImage() {
-    const limit = 20;
-    const { validators, count } =
-      await this.validatorRepository.getImageValidator(limit, 0);
+  // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  // async syncValidatorImage() {
+  //   const limit = 20;
+  //   const { validators, count } =
+  //     await this.validatorRepository.getImageValidator(limit, 0);
 
-    if (validators.length > 0) {
-      this.pushDataToQueue(validators, QUEUES.SYNC_VALIDATOR_IMAGE);
-    }
+  //   if (validators.length > 0) {
+  //     this.pushDataToQueue(validators, QUEUES.SYNC_VALIDATOR_IMAGE);
+  //   }
 
-    if (count > 0) {
-      const pages = Math.ceil(count / limit);
-      if (pages > 1) {
-        for (let i = 1; i <= pages; i++) {
-          const result = await this.validatorRepository.getImageValidator(
-            limit,
-            i,
-          );
-          this.pushDataToQueue(result.validators, QUEUES.SYNC_VALIDATOR_IMAGE);
-        }
-      }
-    }
-  }
+  //   if (count > 0) {
+  //     const pages = Math.ceil(count / limit);
+  //     if (pages > 1) {
+  //       for (let i = 1; i <= pages; i++) {
+  //         const result = await this.validatorRepository.getImageValidator(
+  //           limit,
+  //           i,
+  //         );
+  //         this.pushDataToQueue(result.validators, QUEUES.SYNC_VALIDATOR_IMAGE);
+  //       }
+  //     }
+  //   }
+  // }
 
   /**
    * Push validators data to queue for image synchronization

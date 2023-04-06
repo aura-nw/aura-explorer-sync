@@ -180,14 +180,34 @@ export class ValidatorProcessor {
   }
 
   @Process(QUEUES.SYNC_VALIDATOR_IMAGE)
-  async proccessImage(job: Job) {
-    const data: [] = job.data;
-    try {
-      this.updateImage(data);
-    } catch (error) {
-      this.logger.error(`${error.message}: ${error.message}`);
-      throw error;
+  async processImage(job: Job) {
+    const timeStart = Date.now();
+    const limit = 20;
+    const { count } = await this.validatorRepository.getImageValidator(
+      limit,
+      0,
+    );
+
+    this.logger.log(`${this.processImage.name} is executing job ${job.id}`);
+
+    const totalPages = Math.ceil(count / limit);
+    for (let page = 0; page < totalPages; page++) {
+      const { validators } = await this.validatorRepository.getImageValidator(
+        limit,
+        page,
+      );
+
+      try {
+        this.updateImage(validators);
+      } catch (error) {
+        this.logger.error(`${error.message}: ${error.message}`);
+        throw error;
+      }
     }
+    const timeEnd = Date.now();
+    this.logger.log(
+      `${this.processImage.name} done in ${timeEnd - timeStart} ms.`,
+    );
   }
 
   @OnQueueError()
