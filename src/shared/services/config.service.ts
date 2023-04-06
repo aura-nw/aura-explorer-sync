@@ -46,12 +46,12 @@ export class ConfigService {
         process.env.SYNC_TRANSACTIONS_CLEAN_UP_DAY || 8,
       ),
       KEY_BASE_URL: process.env.KEY_BASE_URL,
-      PRICE_HOST_SYNC: process.env.PRICE_HOST_SYNC,
-      PRICE_TIME_SYNC: process.env.PRICE_TIME_SYNC,
+      PRICE_HOST_SYNC: process.env.PRICE_HOST_SYNC || 'COINGECKO',
+      PRICE_TIME_SYNC: process.env.PRICE_TIME_SYNC || '0 */3 * * * *',
       REDIS: {
         HOST: process.env.REDIS_HOST,
         PORT: Number(process.env.REDIS_PORT) || 6379,
-        PREFIX: process.env.REDIS_PREFIX,
+        PREFIX: process.env.INDEXER_CHAIN_ID,
         DB: process.env.REDIS_DB,
         USERNAME:
           !process.env.REDIS_USERNAME ||
