@@ -110,25 +110,22 @@ export class SyncTransactionService {
       TransactionHelper.makeSyncTransaction,
     );
 
-    // Filter contract address in list transaction
-    const address = transactionsToStore
-      .filter((item) => !!item.contract_address)
-      .map((item) => item.contract_address);
-    if (address?.length > 0) {
-      const contracts = await this.smartContractRepository.find({
-        where: { contract_address: In(address) },
+    // Get list address in transaction
+    const addressInTx = TransactionHelper.getContractAddressInTX(transactions);
+
+    const contracts = await this.smartContractRepository.find({
+      where: { contract_address: In(addressInTx) },
+    });
+    if (contracts?.length > 0) {
+      contracts?.forEach((item) => {
+        // count num of total transaction
+        const count = addressInTx.filter(
+          (addr) => addr === item.contract_address,
+        ).length;
+        item.total_tx = item.total_tx + count;
       });
-      if (contracts?.length > 0) {
-        contracts?.forEach((item) => {
-          // count num of total transaction
-          const count = address.filter(
-            (addr) => addr === item.contract_address,
-          ).length;
-          item.total_tx = item.total_tx + count;
-        });
-        // update num of total transaction to DB
-        await this.smartContractRepository.update(contracts);
-      }
+      // update num of total transaction to DB
+      await this.smartContractRepository.update(contracts);
     }
 
     await this.txsRepository.upsert(transactionsToStore, ['tx_hash']);

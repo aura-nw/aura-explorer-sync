@@ -229,4 +229,23 @@ export class TransactionHelper {
     }
     return { fromAddress, toAddress, contractAddress };
   }
+
+  static getContractAddressInTX(transactions) {
+    const addressInTx = [];
+    transactions.forEach((transaction) => {
+      const messages = transaction.tx_response.tx.body.messages;
+      const message = messages[0];
+      const type = TransactionHelper.getTransactionType(messages);
+
+      // Transaction with contract address in message without instantiate type
+      if (
+        type !== TRANSACTION_TYPE.INSTANTIATE_CONTRACT_2 &&
+        type !== TRANSACTION_TYPE.INSTANTIATE_CONTRACT &&
+        !!message?.contract
+      ) {
+        addressInTx.push(message.contract);
+      }
+    });
+    return addressInTx;
+  }
 }
