@@ -25,6 +25,9 @@ import { TRANSACTION_TYPE } from '../common/constants/transaction-type.enum';
 import * as util from 'util';
 import { DelegationRepository } from '../repositories/delegation.repository';
 import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
+import { TransactionHelper } from '../helpers/transaction.helper';
+import { SmartContractRepository } from '../repositories/smart-contract.repository';
+import { In } from 'typeorm';
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -51,6 +54,7 @@ export class SyncTaskService {
     private smartContractCodeRepository: SmartContractCodeRepository,
     private delegationRepository: DelegationRepository,
     private delegatorRewardRepository: DelegatorRewardRepository,
+    private smartContractRepository: SmartContractRepository,
     @InjectSchedule() private readonly schedule: Schedule,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
     @InjectQueue('validator') private readonly validatorQueue: Queue,
@@ -226,6 +230,36 @@ export class SyncTaskService {
         //sync data with transactions
         if (listTransactions.length > 0) {
           await this.syncDataWithTransactions(listTransactions);
+        }
+
+        // Get list address in transaction
+        const addressInTx = TransactionHelper.getContractAddressInTX(txDatas);
+        if (addressInTx?.length > 0) {
+          this._logger.log(
+            `============== count total transacntion addressInTx: ${addressInTx} ===============`,
+          );
+          const contracts = await this.smartContractRepository.find({
+            where: { contract_address: In(addressInTx) },
+          });
+          if (contracts?.length > 0) {
+            const result = [];
+            contracts?.forEach((item) => {
+              // count num of total transaction
+              const count = addressInTx.filter(
+                (addr) => addr === item.contract_address,
+              ).length;
+              result.push({
+                id: item.id,
+                contract_address: item.contract_address,
+                total_tx: item.total_tx + count,
+              });
+            });
+            // update num of total transaction to DB
+            await this.smartContractRepository.update(result);
+            this._logger.log(
+              `============== Update total Tx with data: ${result} ===============`,
+            );
+          }
         }
       }
 

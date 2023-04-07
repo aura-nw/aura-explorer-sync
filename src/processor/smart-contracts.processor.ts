@@ -619,6 +619,8 @@ export class SmartContractsProcessor {
     smartContract.description = '';
     smartContract.image = '';
     smartContract.num_tokens = Number(contract.num_tokens) || 0;
+    // Set total transaction with default instantiate transaction.
+    smartContract.total_tx = 1;
 
     const tokenInfo = contract.token_info;
     if (tokenInfo) {
