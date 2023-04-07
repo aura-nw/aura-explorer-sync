@@ -234,7 +234,9 @@ export class SyncTaskService {
 
         // Get list address in transaction
         const addressInTx = TransactionHelper.getContractAddressInTX(txDatas);
-
+        this._logger.log(
+          `============== count total transacntion addressInTx: ${addressInTx} ===============`,
+        );
         const contracts = await this.smartContractRepository.find({
           where: { contract_address: In(addressInTx) },
         });
@@ -253,6 +255,9 @@ export class SyncTaskService {
           });
           // update num of total transaction to DB
           await this.smartContractRepository.update(result);
+          this._logger.log(
+            `============== Update total Tx with data: ${result} ===============`,
+          );
         }
       }
 
