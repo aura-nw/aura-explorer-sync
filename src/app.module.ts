@@ -110,7 +110,7 @@ const processors = [SmartContractsProcessor, ValidatorProcessor];
         username: ENV_CONFIG.REDIS.USERNAME,
         db: parseInt(ENV_CONFIG.REDIS.DB, 10),
       },
-      // prefix: 'EXPLORER_SYNC',
+      prefix: ENV_CONFIG.REDIS.PREFIX,
       defaultJobOptions: {
         removeOnComplete: true,
       },
