@@ -234,30 +234,32 @@ export class SyncTaskService {
 
         // Get list address in transaction
         const addressInTx = TransactionHelper.getContractAddressInTX(txDatas);
-        this._logger.log(
-          `============== count total transacntion addressInTx: ${addressInTx} ===============`,
-        );
-        const contracts = await this.smartContractRepository.find({
-          where: { contract_address: In(addressInTx) },
-        });
-        if (contracts?.length > 0) {
-          const result = [];
-          contracts?.forEach((item) => {
-            // count num of total transaction
-            const count = addressInTx.filter(
-              (addr) => addr === item.contract_address,
-            ).length;
-            result.push({
-              id: item.id,
-              contract_address: item.contract_address,
-              total_tx: item.total_tx + count,
-            });
-          });
-          // update num of total transaction to DB
-          await this.smartContractRepository.update(result);
+        if (addressInTx?.length > 0) {
           this._logger.log(
-            `============== Update total Tx with data: ${result} ===============`,
+            `============== count total transacntion addressInTx: ${addressInTx} ===============`,
           );
+          const contracts = await this.smartContractRepository.find({
+            where: { contract_address: In(addressInTx) },
+          });
+          if (contracts?.length > 0) {
+            const result = [];
+            contracts?.forEach((item) => {
+              // count num of total transaction
+              const count = addressInTx.filter(
+                (addr) => addr === item.contract_address,
+              ).length;
+              result.push({
+                id: item.id,
+                contract_address: item.contract_address,
+                total_tx: item.total_tx + count,
+              });
+            });
+            // update num of total transaction to DB
+            await this.smartContractRepository.update(result);
+            this._logger.log(
+              `============== Update total Tx with data: ${result} ===============`,
+            );
+          }
         }
       }
 
