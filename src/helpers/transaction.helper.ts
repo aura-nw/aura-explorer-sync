@@ -145,6 +145,7 @@ export class TransactionHelper {
 
     const type = TransactionHelper.getTransactionType(messages);
     switch (type) {
+      case TRANSACTION_TYPE.INSTANTIATE_CONTRACT_2:
       case TRANSACTION_TYPE.INSTANTIATE_CONTRACT: {
         fromAddress = message.sender;
         toAddress =
@@ -227,5 +228,25 @@ export class TransactionHelper {
         break;
     }
     return { fromAddress, toAddress, contractAddress };
+  }
+
+  static getContractAddressInTX(transactions) {
+    const addressInTx = [];
+    transactions.forEach((transaction) => {
+      const messages = transaction.tx_response.tx.body.messages;
+      const type = TransactionHelper.getTransactionType(messages);
+
+      // Transaction with contract address in message without instantiate type
+      messages.forEach((message) => {
+        if (
+          type !== TRANSACTION_TYPE.INSTANTIATE_CONTRACT_2 &&
+          type !== TRANSACTION_TYPE.INSTANTIATE_CONTRACT &&
+          !!message?.contract
+        ) {
+          addressInTx.push(message.contract);
+        }
+      });
+    });
+    return addressInTx;
   }
 }
