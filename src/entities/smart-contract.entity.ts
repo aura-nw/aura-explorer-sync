@@ -102,4 +102,7 @@ export class SmartContract extends BaseEntityIncrementId {
 
   @Column()
   decimals: number;
+
+  @Column({ name: 'total_tx' })
+  total_tx: number;
 }

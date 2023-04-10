@@ -51,7 +51,7 @@ export class ConfigService {
       REDIS: {
         HOST: process.env.REDIS_HOST,
         PORT: Number(process.env.REDIS_PORT) || 6379,
-        PREFIX: process.env.REDIS_PREFIX,
+        PREFIX: process.env.INDEXER_CHAIN_ID,
         DB: process.env.REDIS_DB,
         USERNAME:
           !process.env.REDIS_USERNAME ||
