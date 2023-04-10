@@ -283,7 +283,7 @@ export class SyncDataHelpers {
     newValidator.jailed = data.jailed;
     newValidator.commission = Number(
       data.commission.commission_rates.rate,
-    ).toFixed(2);
+    ).toFixed(4);
     newValidator.max_commission = data.commission.commission_rates.max_rate;
     newValidator.max_change_rate =
       data.commission.commission_rates.max_change_rate;
