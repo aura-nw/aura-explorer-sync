@@ -129,10 +129,10 @@ export class SyncValidatorService {
 
             if (Number(newValidator.percent_power) < equalPT) {
               newValidator.voting_power_level = VOTING_POWER_LEVEL.GREEN;
-            } else if (Number(newValidator.percent_power) > 3 * equalPT) {
-              newValidator.voting_power_level = VOTING_POWER_LEVEL.RED;
-            } else {
+            } else if (Number(newValidator.percent_power) < 3 * equalPT) {
               newValidator.voting_power_level = VOTING_POWER_LEVEL.YELLOW;
+            } else {
+              newValidator.voting_power_level = VOTING_POWER_LEVEL.RED;
             }
 
             const pubkey = this._commonUtil.getAddressFromPubkey(
