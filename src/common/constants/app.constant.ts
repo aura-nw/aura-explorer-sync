@@ -200,3 +200,9 @@ export const QUEUES = {
 export enum CW4973_CONTRACT {
   AGREEMENT = 'Agreement(string chain_id,address active,address passive,string tokenURI)',
 }
+
+export enum VOTING_POWER_LEVEL {
+  GREEN = '1',
+  YELLOW = '2',
+  RED = '3',
+}
