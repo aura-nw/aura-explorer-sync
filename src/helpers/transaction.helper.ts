@@ -244,12 +244,6 @@ export class TransactionHelper {
           !!message?.contract
         ) {
           addressInTx.push(message.contract);
-          const contractAddress =
-            message?.msg?.buy?.contract_address ||
-            message?.msg?.accept_nft_offer?.nft?.contract_address;
-          if (!!contractAddress) {
-            addressInTx.push(contractAddress);
-          }
         }
       });
     });
