@@ -8,6 +8,7 @@ import {
   CONST_PUBKEY_ADDR,
   NODE_API,
   QUEUES,
+  VOTING_POWER_LEVEL,
 } from '../common/constants/app.constant';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { ENV_CONFIG } from '../shared/services/config.service';
@@ -89,6 +90,7 @@ export class SyncValidatorService {
 
       if (validators.length > 0) {
         this.isSyncValidator = true;
+        const equalPT = Number((100 / validators.length).toFixed(2));
         for (const key in validators) {
           const data = validators[key];
           // get account address
@@ -124,6 +126,15 @@ export class SyncValidatorService {
             const percentPower =
               (data.tokens / poolData.pool.bonded_tokens) * 100;
             newValidator.percent_power = percentPower.toFixed(2);
+
+            if (Number(newValidator.percent_power) < equalPT) {
+              newValidator.voting_power_level = VOTING_POWER_LEVEL.GREEN;
+            } else if (Number(newValidator.percent_power) > 3 * equalPT) {
+              newValidator.voting_power_level = VOTING_POWER_LEVEL.RED;
+            } else {
+              newValidator.voting_power_level = VOTING_POWER_LEVEL.YELLOW;
+            }
+
             const pubkey = this._commonUtil.getAddressFromPubkey(
               data.consensus_pubkey.key,
             );
