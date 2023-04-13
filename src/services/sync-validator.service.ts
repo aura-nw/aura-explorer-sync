@@ -91,6 +91,7 @@ export class SyncValidatorService {
       if (validators.length > 0) {
         this.isSyncValidator = true;
         const equalPT = Number((100 / validators.length).toFixed(2));
+
         for (const key in validators) {
           const data = validators[key];
           // get account address
