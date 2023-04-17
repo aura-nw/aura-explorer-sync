@@ -1,8 +1,19 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { BeforeInsert, Column, Entity, PrimaryColumn } from 'typeorm';
 import { BaseEntity } from './base/base.entity';
+import { CommonUtil } from '../utils/common.util';
+import { HttpService } from '@nestjs/axios';
 
 @Entity('validators')
 export class Validator extends BaseEntity {
+  private readonly commonUtil = new CommonUtil(new HttpService());
+
+  @BeforeInsert()
+  async setImageURL() {
+    this.image_url = this.identity
+      ? await this.commonUtil.getImageFromKeyBase(this.identity)
+      : 'validator-default.svg';
+  }
+
   @PrimaryColumn({ name: 'operator_address', type: 'varchar' })
   operator_address: string;
 
