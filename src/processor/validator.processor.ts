@@ -85,7 +85,11 @@ export class ValidatorProcessor {
 
       // assign validators attributes
       if (validatorsData.length > 0) {
-        const equalPT = Number((100 / validatorsData.length).toFixed(2));
+        const numOfValidators = validatorsData.filter((x) => !x.jailed).length;
+        let equalPT = 0;
+        if (numOfValidators > 0) {
+          equalPT = Number((100 / numOfValidators).toFixed(2));
+        }
         listValidator = await Promise.all(
           Object.entries(validatorsData).map(
             async ([key, validatorData]) =>
