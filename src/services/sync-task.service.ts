@@ -29,7 +29,6 @@ import { TransactionHelper } from '../helpers/transaction.helper';
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
 import { In } from 'typeorm';
 
-
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
