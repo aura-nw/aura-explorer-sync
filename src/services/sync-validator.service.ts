@@ -90,7 +90,11 @@ export class SyncValidatorService {
 
       if (validators.length > 0) {
         this.isSyncValidator = true;
-        const equalPT = Number((100 / validators.length).toFixed(2));
+        const numOfValidators = validators.filter((x) => !x.jailed).length;
+        let equalPT = 0;
+        if (numOfValidators > 0) {
+          equalPT = Number((100 / numOfValidators).toFixed(2));
+        }
 
         for (const key in validators) {
           const data = validators[key];
