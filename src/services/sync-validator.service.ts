@@ -90,7 +90,9 @@ export class SyncValidatorService {
 
       if (validators.length > 0) {
         this.isSyncValidator = true;
-        const numOfValidators = validators.filter((x) => !x.jailed).length;
+        const numOfValidators = validators.filter(
+          (x) => x.status === 'BOND_STATUS_BONDED',
+        ).length;
         let equalPT = 0;
         if (numOfValidators > 0) {
           equalPT = Number((100 / numOfValidators).toFixed(2));
