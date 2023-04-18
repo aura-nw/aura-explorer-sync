@@ -108,7 +108,9 @@ export class ValidatorProcessor {
       // assign validators attributes
       if (validatorsData.length > 0) {
         // calculate equal power threshold
-        const numOfValidators = validatorsData.filter((x) => !x.jailed).length;
+        const numOfValidators = validatorsData.filter(
+          (x) => x.status === 'BOND_STATUS_BONDED',
+        ).length;
         let equalPT = 0;
         if (numOfValidators > 0) {
           equalPT = Number((100 / numOfValidators).toFixed(2));
@@ -176,7 +178,7 @@ export class ValidatorProcessor {
 
   /**
    * Assign attributes for validator
-   * @param validatorData, poolData, signing, slashingData, equalPT
+   * @param validatorData, equalPT
    */
   assignAttrsForValidator(validatorData, equalPT) {
     let validator;
