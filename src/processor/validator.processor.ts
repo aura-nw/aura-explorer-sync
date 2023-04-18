@@ -68,11 +68,6 @@ export class ValidatorProcessor {
       let listValidator = [];
 
       //get list validator
-      const headers = {
-        'content-type': 'application/json',
-        'x-hasura-admin-secret': ENV_CONFIG.INDEXER_V2.SECRET,
-      };
-
       const validatorAttributes = `description
                                     operator_address
                                     account_address
@@ -100,7 +95,6 @@ export class ValidatorProcessor {
         await this.commonUtil.fetchDataFromGraphQL(
           ENV_CONFIG.INDEXER_V2.GRAPH_QL,
           'POST',
-          headers,
           graphqlQuery,
         )
       ).data[ENV_CONFIG.INDEXER_V2.CHAIN_DB]['validator'];
@@ -125,8 +119,9 @@ export class ValidatorProcessor {
         await this.processListValidator(listValidator);
       }
     } catch (error) {
-      this.logger.error(`${error.name}: ${error.message}`);
-      throw error;
+      const errorMsg = `Error while processing list validator ${error}`;
+      this.logger.error(errorMsg);
+      throw new Error(errorMsg);
     }
   }
 
@@ -143,7 +138,9 @@ export class ValidatorProcessor {
       this.logger.error(
         `${this.syncValidatorImage.name} error while processing.`,
       );
-      throw error;
+      const errorMsg = `Error while syncing validators image ${error}`;
+      this.logger.error(errorMsg);
+      throw new Error(errorMsg);
     }
   }
 
@@ -201,8 +198,9 @@ export class ValidatorProcessor {
       validator.percent_self_bonded =
         percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
     } catch (error) {
-      this.logger.error(`Error while assign validator attributes.`);
-      throw error;
+      const errorMsg = `Error while assigning validator attributes ${error}`;
+      this.logger.error(errorMsg);
+      throw new Error(errorMsg);
     }
 
     return validator;

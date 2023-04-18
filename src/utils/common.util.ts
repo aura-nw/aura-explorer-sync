@@ -56,7 +56,14 @@ export class CommonUtil {
     return data;
   }
 
-  async fetchDataFromGraphQL(endpoint, method, headers, query) {
+  async fetchDataFromGraphQL(endpoint, method, query, headers?) {
+    headers = headers
+      ? headers
+      : {
+          'content-type': 'application/json',
+          'x-hasura-admin-secret': ENV_CONFIG.INDEXER_V2.SECRET,
+        };
+
     try {
       const response = await axios({
         url: endpoint,
@@ -66,9 +73,15 @@ export class CommonUtil {
         timeout: 30000,
       });
 
+      if (response.data?.errors?.length > 0) {
+        throw new Error(JSON.stringify(response.data.errors));
+      }
+
       return response.data;
     } catch (error) {
-      this._logger.error(`Error while query from graphql! error: ${error}`);
+      const errorMsg = `Error while querying from graphql! ${error}`;
+      this._logger.error(errorMsg);
+      throw new Error(errorMsg);
     }
   }
   getAddressFromPubkey(pubkey) {
