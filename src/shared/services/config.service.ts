@@ -104,6 +104,12 @@ export class ConfigService {
       NODE_ENV: process.env.NODE_ENV,
       SYNC_MISSING_CONTRACT_CODE:
         process.env.SYNC_MISSING_CONTRACT_CODE === 'true' ? true : false,
+      INDEXER_V2: {
+        URL: process.env.INDEXER_V2_URL,
+        GRAPH_QL: `${process.env.INDEXER_V2_URL}v1/graphql`,
+        CHAIN_DB: process.env.INDEXER_V2_DB,
+        SECRET: process.env.INDEXER_V2_SECRET,
+      },
     };
   }
 

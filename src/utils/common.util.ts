@@ -56,6 +56,21 @@ export class CommonUtil {
     return data;
   }
 
+  async fetchDataFromGraphQL(endpoint, method, headers, query) {
+    try {
+      const response = await axios({
+        url: endpoint,
+        method: method,
+        headers: headers,
+        data: query,
+        timeout: 30000,
+      });
+
+      return response.data;
+    } catch (error) {
+      this._logger.error(`Error while query from graphql! error: ${error}`);
+    }
+  }
   getAddressFromPubkey(pubkey) {
     const bytes = Buffer.from(pubkey, 'base64');
     return tmhash(bytes).slice(0, 20).toString('hex').toUpperCase();

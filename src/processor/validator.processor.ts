@@ -11,6 +11,7 @@ import { Job, Queue } from 'bull';
 import {
   CONST_CHAR,
   CONST_PUBKEY_ADDR,
+  INDEXER_V2_API,
   NODE_API,
   QUEUES,
   VOTING_POWER_LEVEL,
@@ -74,33 +75,55 @@ export class ValidatorProcessor {
     try {
       let listValidator = [];
 
-      // get staking pool, slashing param, list validator, list signing
-      const [poolData, slashingData, validatorsData, signingData] =
-        await Promise.all([
-          this.commonUtil.getDataAPI(this.api, NODE_API.STAKING_POOL),
-          this.commonUtil.getDataAPI(this.api, NODE_API.SLASHING_PARAM),
-          this.fetchPaginatedDataByKey(NODE_API.LIST_VALIDATOR, 'validators'),
-          this.fetchPaginatedDataByKey(NODE_API.LIST_SIGNING_INFOS, 'info'),
-        ]);
+      //get list validator
+      const headers = {
+        'content-type': 'application/json',
+        'x-hasura-admin-secret': ENV_CONFIG.INDEXER_V2.SECRET,
+      };
+
+      const validatorAttributes = `description
+                                    operator_address
+                                    account_address
+                                    consensus_hex_address
+                                    percent_voting_power
+                                    tokens
+                                    jailed
+                                    uptime
+                                    status
+                                    unbonding_height
+                                    unbonding_time
+                                    consensus_pubkey
+                                    delegator_shares
+                                    commission
+                                    self_delegation_balance
+                                    min_self_delegation`;
+
+      const graphqlQuery = {
+        query: util.format(
+          INDEXER_V2_API.GRAPH_QL.LIST_VALIDATOR,
+          validatorAttributes,
+        ),
+      };
+      const validatorsData = (
+        await this.commonUtil.fetchDataFromGraphQL(
+          ENV_CONFIG.INDEXER_V2.GRAPH_QL,
+          'POST',
+          headers,
+          graphqlQuery,
+        )
+      ).data[ENV_CONFIG.INDEXER_V2.CHAIN_DB]['validator'];
 
       // assign validators attributes
       if (validatorsData.length > 0) {
+        // calculate equal power threshold
         const numOfValidators = validatorsData.filter((x) => !x.jailed).length;
         let equalPT = 0;
         if (numOfValidators > 0) {
           equalPT = Number((100 / numOfValidators).toFixed(2));
         }
-        listValidator = await Promise.all(
-          Object.entries(validatorsData).map(
-            async ([key, validatorData]) =>
-              await this.assignAttrsForValidator(
-                validatorData,
-                poolData,
-                signingData,
-                slashingData,
-                equalPT,
-              ),
-          ),
+        listValidator = Object.entries(validatorsData).map(
+          ([key, validatorData]) =>
+            this.assignAttrsForValidator(validatorData, equalPT),
         );
       }
       // update list validator
@@ -185,48 +208,14 @@ export class ValidatorProcessor {
    * Assign attributes for validator
    * @param validatorData, poolData, signing, slashingData, equalPT
    */
-  async assignAttrsForValidator(
-    validatorData,
-    poolData,
-    signing,
-    slashingData,
-    equalPT,
-  ): Promise<any> {
+  assignAttrsForValidator(validatorData, equalPT) {
     let validator;
-    // get account address
-    const operator_address = validatorData.operator_address;
-    const decodeAcc = bech32.decode(operator_address, 1023);
-    const wordsByte = bech32.fromWords(decodeAcc.words);
-    const account_address = bech32.encode(
-      CONST_PUBKEY_ADDR.AURA,
-      bech32.toWords(wordsByte),
-    );
-    // get validator detail
-    const validatorUrl = `staking/validators/${validatorData.operator_address}`;
-    const validatorResponse = await this.commonUtil.getDataAPI(
-      this.api,
-      validatorUrl,
-    );
-    try {
-      // create validator
-      const status = Number(validatorResponse.result?.status) || 0;
-      const validatorAddr = this.commonUtil.getAddressFromPubkey(
-        validatorData.consensus_pubkey.key,
-      );
 
+    try {
       // Make Validator entity to insert data
-      validator = SyncDataHelpers.makeValidatorData(
-        validatorData,
-        account_address,
-        status,
-        validatorAddr,
-      );
+      validator = SyncDataHelpers.makeValidatorData(validatorData);
 
       // Calculate power
-      const percentPower =
-        (validatorData.tokens / poolData.pool.bonded_tokens) * 100;
-      validator.percent_power = percentPower.toFixed(2);
-
       if (Number(validator.percent_power) < equalPT) {
         validator.voting_power_level = VOTING_POWER_LEVEL.GREEN;
       } else if (Number(validator.percent_power) < 3 * equalPT) {
@@ -235,52 +224,16 @@ export class ValidatorProcessor {
         validator.voting_power_level = VOTING_POWER_LEVEL.RED;
       }
 
-      const pubkey = this.commonUtil.getAddressFromPubkey(
-        validatorData.consensus_pubkey.key,
-      );
-      const address = this.commonUtil.hexToBech32(
-        pubkey,
-        CONST_PUBKEY_ADDR.AURAVALCONS,
-      );
-      const signingInfo = signing.filter((e) => e.address === address);
-      if (signingInfo.length > 0) {
-        const signedBlocksWindow = slashingData.params.signed_blocks_window;
-        const missedBlocksCounter = signingInfo[0].missed_blocks_counter;
-        const upTime =
-          ((Number(signedBlocksWindow) - Number(missedBlocksCounter)) /
-            Number(signedBlocksWindow)) *
-          100;
-
-        validator.up_time = String(upTime.toFixed(2)) + CONST_CHAR.PERCENT;
-      }
-      validator.self_bonded = 0;
-      validator.percent_self_bonded = '0.00';
-      try {
-        // get delegations
-        const paramDelegation = `cosmos/staking/v1beta1/validators/${validatorData.operator_address}/delegations/${account_address}`;
-        const delegationData = await this.commonUtil.getDataAPI(
-          this.api,
-          paramDelegation,
-        );
-        if (delegationData && delegationData.delegation_response) {
-          validator.self_bonded =
-            delegationData.delegation_response.balance.amount;
-          const percentSelfBonded =
-            (delegationData.delegation_response.balance.amount /
-              validatorData.tokens) *
-            100;
-          validator.percent_self_bonded =
-            percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
-        }
-      } catch (error) {
-        this.logger.error(null, `Not exist delegations`);
-        throw error;
-      }
+      const percentSelfBonded =
+        (validator.self_bonded / validatorData.tokens) * 100;
+      validator.percent_self_bonded =
+        percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
     } catch (error) {
       this.logger.error(`${error.name}: ${error.message}`);
       this.logger.error(`${error.stack}`);
       throw error;
     }
+
     return validator;
   }
 
