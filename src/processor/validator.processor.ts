@@ -6,13 +6,10 @@ import {
   Processor,
 } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
-import { bech32 } from 'bech32';
 import { Job, Queue } from 'bull';
 import {
   CONST_CHAR,
-  CONST_PUBKEY_ADDR,
   INDEXER_V2_API,
-  NODE_API,
   QUEUES,
   VOTING_POWER_LEVEL,
 } from '../common/constants/app.constant';
@@ -26,8 +23,6 @@ import { CronExpression } from '@nestjs/schedule';
 @Processor('validator')
 export class ValidatorProcessor {
   private readonly logger = new Logger(ValidatorProcessor.name);
-  private api = '';
-  private keybaseUrl = '';
 
   constructor(
     private commonUtil: CommonUtil,
@@ -37,9 +32,6 @@ export class ValidatorProcessor {
     this.logger.log(
       '============== Constructor Validator Processor Service ==============',
     );
-
-    this.api = ENV_CONFIG.NODE.API;
-    this.keybaseUrl = ENV_CONFIG.KEY_BASE_URL;
 
     this.validatorQueue.add(
       QUEUES.SYNC_LIST_VALIDATOR,
@@ -183,28 +175,6 @@ export class ValidatorProcessor {
   }
 
   /**
-   * Fetch data from api and get an value by obj key
-   * @param path, key
-   */
-  async fetchPaginatedDataByKey(path, key): Promise<any> {
-    const result = [];
-    let nextKey = '';
-
-    do {
-      const params = `${this.api}${util.format(
-        path,
-        encodeURIComponent(nextKey),
-      )}`;
-      const data = await this.commonUtil.getDataAPI(params, '');
-
-      nextKey = data?.pagination?.nextKey;
-      result.push(...data[key]);
-    } while (!!nextKey);
-
-    return result;
-  }
-
-  /**
    * Assign attributes for validator
    * @param validatorData, poolData, signing, slashingData, equalPT
    */
@@ -229,8 +199,7 @@ export class ValidatorProcessor {
       validator.percent_self_bonded =
         percentSelfBonded.toFixed(2) + CONST_CHAR.PERCENT;
     } catch (error) {
-      this.logger.error(`${error.name}: ${error.message}`);
-      this.logger.error(`${error.stack}`);
+      this.logger.error(`Error while assign validator attributes.`);
       throw error;
     }
 
