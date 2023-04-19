@@ -505,11 +505,12 @@ export class SyncTaskService {
       await this.delegationRepository.insertOnDuplicate(delegations, ['id']);
     }
 
-    if (delegatorRewards.length > 0) {
-      await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, [
-        'id',
-      ]);
-    }
+    // TODO: disable delegator reward sync because of performance problem
+    // if (delegatorRewards.length > 0) {
+    //   await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, [
+    //     'id',
+    //   ]);
+    // }
 
     // Create or update smart contract
     if (smartContractCodes.length > 0) {
