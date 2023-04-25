@@ -55,6 +55,7 @@ export enum MODE_EXECUTE_TRANSACTION {
   MINT = 'mint',
   BURN = 'burn',
   BUY = 'buy',
+  ACCEPT_NFT_OFFER = 'accept_nft_offer',
 }
 
 export enum TRANSACTION_EVENT {

@@ -177,6 +177,12 @@ export class TransactionHelper {
         if (method === MODE_EXECUTE_TRANSACTION.MINT) {
           fromAddress = '';
         }
+        if (method === MODE_EXECUTE_TRANSACTION.BUY) {
+          toAddress = msg?.contract_address;
+        }
+        if (method === MODE_EXECUTE_TRANSACTION.ACCEPT_NFT_OFFER) {
+          toAddress = msg?.nft?.contract_address;
+        }
         contractAddress = message.contract;
         break;
       case TRANSACTION_TYPE.DELEGATE:
