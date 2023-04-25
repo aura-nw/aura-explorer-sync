@@ -178,7 +178,7 @@ export class TransactionHelper {
           fromAddress = '';
         }
         if (method === MODE_EXECUTE_TRANSACTION.BUY) {
-          toAddress = msg.contract_address;
+          toAddress = msg?.contract_address;
         }
         if (method === MODE_EXECUTE_TRANSACTION.ACCEPT_NFT_OFFER) {
           toAddress = msg?.nft?.contract_address;
