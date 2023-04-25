@@ -62,6 +62,7 @@ export enum TRANSACTION_EVENT {
   TRANSFER = 'transfer',
   INSTANTIATE = 'instantiate',
   WITHDRAW_REWARDS = 'withdraw_rewards',
+  EXECUTE = 'execute',
 }
 
 export enum TRANSACTION_ATTRIBUTE {
