@@ -184,16 +184,9 @@ export class TransactionHelper {
           contractAddress = _contractAddress
             ? TransactionHelper.decode(_contractAddress.value)
             : '';
-          toAddress = contractAddress;
-        }
-        if (method === MODE_EXECUTE_TRANSACTION.BUY) {
-          toAddress = msg?.contract_address;
-        }
-        if (method === MODE_EXECUTE_TRANSACTION.ACCEPT_NFT_OFFER) {
-          toAddress = msg?.nft?.contract_address;
-        }
-        if (toAddress === message.contract) {
-          toAddress = '';
+          if (contractAddress !== message.contract) {
+            toAddress = contractAddress;
+          }
         }
         if (method === MODE_EXECUTE_TRANSACTION.BUY) {
           toAddress = msg?.contract_address;
