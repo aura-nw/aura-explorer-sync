@@ -270,7 +270,10 @@ export class TransactionHelper {
             addressInTx.push(contractAddress);
           }
           const method = Object.keys(message.msg || {})[0] || '';
-          if (method === MODE_EXECUTE_TRANSACTION.MINT) {
+          if (
+            type === TRANSACTION_TYPE.EXECUTE_CONTRACT &&
+            method === MODE_EXECUTE_TRANSACTION.MINT
+          ) {
             const _contractAddress = events
               .findLast((e) => e.type === TRANSACTION_EVENT.EXECUTE)
               ?.attributes?.findLast(
