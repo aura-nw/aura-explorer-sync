@@ -176,6 +176,24 @@ export class TransactionHelper {
         }
         if (method === MODE_EXECUTE_TRANSACTION.MINT) {
           fromAddress = '';
+          const _contractAddress = events
+            .findLast((e) => e.type === TRANSACTION_EVENT.EXECUTE)
+            ?.attributes?.findLast(
+              (a) => a.key === TRANSACTION_ATTRIBUTE.CONTRACT_ADDRESS,
+            );
+          contractAddress = _contractAddress
+            ? TransactionHelper.decode(_contractAddress.value)
+            : '';
+          toAddress = contractAddress;
+        }
+        if (method === MODE_EXECUTE_TRANSACTION.BUY) {
+          toAddress = msg?.contract_address;
+        }
+        if (method === MODE_EXECUTE_TRANSACTION.ACCEPT_NFT_OFFER) {
+          toAddress = msg?.nft?.contract_address;
+        }
+        if (toAddress === message.contract) {
+          toAddress = '';
         }
         if (method === MODE_EXECUTE_TRANSACTION.BUY) {
           toAddress = msg?.contract_address;
@@ -240,6 +258,7 @@ export class TransactionHelper {
     const addressInTx = [];
     transactions.forEach((transaction) => {
       const messages = transaction.tx_response.tx.body.messages;
+      const events = transaction.tx_response.events;
       const type = TransactionHelper.getTransactionType(messages);
 
       // Transaction with contract address in message without instantiate type
@@ -255,6 +274,23 @@ export class TransactionHelper {
             message?.msg?.accept_nft_offer?.nft?.contract_address;
           if (!!contractAddress) {
             addressInTx.push(contractAddress);
+          }
+          const method = Object.keys(message.msg || {})[0] || '';
+          if (
+            type === TRANSACTION_TYPE.EXECUTE_CONTRACT &&
+            method === MODE_EXECUTE_TRANSACTION.MINT
+          ) {
+            const _contractAddress = events
+              .findLast((e) => e.type === TRANSACTION_EVENT.EXECUTE)
+              ?.attributes?.findLast(
+                (a) => a.key === TRANSACTION_ATTRIBUTE.CONTRACT_ADDRESS,
+              );
+            const address = _contractAddress
+              ? TransactionHelper.decode(_contractAddress.value)
+              : '';
+            if (address !== message.contract) {
+              addressInTx.push(address);
+            }
           }
         }
       });
