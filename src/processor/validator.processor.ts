@@ -78,6 +78,7 @@ export class ValidatorProcessor {
                                     uptime
                                     status
                                     unbonding_height
+                                    start_height
                                     unbonding_time
                                     consensus_pubkey
                                     delegator_shares

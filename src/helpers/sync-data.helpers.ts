@@ -296,6 +296,7 @@ export class SyncDataHelpers {
     newValidator.percent_power = data.percent_voting_power.toFixed(2);
     newValidator.up_time = String(data.uptime) + CONST_CHAR.PERCENT;
     newValidator.self_bonded = data.self_delegation_balance;
+    newValidator.bonded_height = data.start_height || 1;
 
     return newValidator;
   }

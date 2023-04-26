@@ -149,4 +149,7 @@ export class Validator extends BaseEntity {
 
   @Column({ name: 'voting_power_level' })
   voting_power_level: string;
+
+  @Column({ name: 'bonded_height', default: 1 })
+  bonded_height: number;
 }
