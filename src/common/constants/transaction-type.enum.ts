@@ -55,12 +55,14 @@ export enum MODE_EXECUTE_TRANSACTION {
   MINT = 'mint',
   BURN = 'burn',
   BUY = 'buy',
+  ACCEPT_NFT_OFFER = 'accept_nft_offer',
 }
 
 export enum TRANSACTION_EVENT {
   TRANSFER = 'transfer',
   INSTANTIATE = 'instantiate',
   WITHDRAW_REWARDS = 'withdraw_rewards',
+  EXECUTE = 'execute',
 }
 
 export enum TRANSACTION_ATTRIBUTE {

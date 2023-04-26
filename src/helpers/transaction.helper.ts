@@ -176,6 +176,27 @@ export class TransactionHelper {
         }
         if (method === MODE_EXECUTE_TRANSACTION.MINT) {
           fromAddress = '';
+          const execute = events?.filter(
+            (e) => e.type === TRANSACTION_EVENT.EXECUTE,
+          );
+          let _contractAddress;
+          if (execute?.length > 0) {
+            _contractAddress = execute[execute.length - 1].attributes.find(
+              (a) => a.key === TRANSACTION_ATTRIBUTE.CONTRACT_ADDRESS,
+            );
+            contractAddress = _contractAddress
+              ? TransactionHelper.decode(_contractAddress.value)
+              : '';
+            if (contractAddress !== message.contract) {
+              toAddress = contractAddress;
+            }
+          }
+        }
+        if (method === MODE_EXECUTE_TRANSACTION.BUY) {
+          toAddress = msg?.contract_address;
+        }
+        if (method === MODE_EXECUTE_TRANSACTION.ACCEPT_NFT_OFFER) {
+          toAddress = msg?.nft?.contract_address;
         }
         contractAddress = message.contract;
         break;
@@ -234,6 +255,7 @@ export class TransactionHelper {
     const addressInTx = [];
     transactions.forEach((transaction) => {
       const messages = transaction.tx_response.tx.body.messages;
+      const events = transaction.tx_response.events;
       const type = TransactionHelper.getTransactionType(messages);
 
       // Transaction with contract address in message without instantiate type
@@ -250,6 +272,29 @@ export class TransactionHelper {
           if (!!contractAddress) {
             addressInTx.push(contractAddress);
           }
+          const method = Object.keys(message.msg || {})[0] || '';
+          if (
+            type === TRANSACTION_TYPE.EXECUTE_CONTRACT &&
+            method === MODE_EXECUTE_TRANSACTION.MINT
+          ) {
+            const execute = events?.filter(
+              (e) => e.type === TRANSACTION_EVENT.EXECUTE,
+            );
+
+            let _contractAddress;
+            if (execute?.length > 0) {
+              _contractAddress = execute[execute.length - 1].attributes.find(
+                (a) => a.key === TRANSACTION_ATTRIBUTE.CONTRACT_ADDRESS,
+              );
+              const address = _contractAddress
+                ? TransactionHelper.decode(_contractAddress.value)
+                : '';
+              if (address !== message.contract) {
+                addressInTx.push(address);
+              }
+            }
+          }
+
         }
       });
     });
