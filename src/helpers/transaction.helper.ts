@@ -176,16 +176,21 @@ export class TransactionHelper {
         }
         if (method === MODE_EXECUTE_TRANSACTION.MINT) {
           fromAddress = '';
-          const _contractAddress = events
-            .findLast((e) => e.type === TRANSACTION_EVENT.EXECUTE)
-            ?.attributes?.findLast(
+
+          const execute = events.filter(
+            (e) => e.type === TRANSACTION_EVENT.EXECUTE,
+          );
+          let _contractAddress;
+          if (execute?.length > 0) {
+            _contractAddress = execute[execute.length - 1].attributes.find(
               (a) => a.key === TRANSACTION_ATTRIBUTE.CONTRACT_ADDRESS,
             );
-          contractAddress = _contractAddress
-            ? TransactionHelper.decode(_contractAddress.value)
-            : '';
-          if (contractAddress !== message.contract) {
-            toAddress = contractAddress;
+            contractAddress = _contractAddress
+              ? TransactionHelper.decode(_contractAddress.value)
+              : '';
+            if (contractAddress !== message.contract) {
+              toAddress = contractAddress;
+            }
           }
         }
         if (method === MODE_EXECUTE_TRANSACTION.BUY) {
@@ -273,16 +278,21 @@ export class TransactionHelper {
             type === TRANSACTION_TYPE.EXECUTE_CONTRACT &&
             method === MODE_EXECUTE_TRANSACTION.MINT
           ) {
-            const _contractAddress = events
-              .findLast((e) => e.type === TRANSACTION_EVENT.EXECUTE)
-              ?.attributes?.findLast(
+            const execute = events.filter(
+              (e) => e.type === TRANSACTION_EVENT.EXECUTE,
+            );
+
+            let _contractAddress;
+            if (execute?.length > 0) {
+              _contractAddress = execute[execute.length - 1].attributes.find(
                 (a) => a.key === TRANSACTION_ATTRIBUTE.CONTRACT_ADDRESS,
               );
-            const address = _contractAddress
-              ? TransactionHelper.decode(_contractAddress.value)
-              : '';
-            if (address !== message.contract) {
-              addressInTx.push(address);
+              const address = _contractAddress
+                ? TransactionHelper.decode(_contractAddress.value)
+                : '';
+              if (address !== message.contract) {
+                addressInTx.push(address);
+              }
             }
           }
         }
