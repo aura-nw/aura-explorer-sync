@@ -176,7 +176,7 @@ export class TransactionHelper {
         }
         if (method === MODE_EXECUTE_TRANSACTION.MINT) {
           fromAddress = '';
-          const execute = events.filter(
+          const execute = events?.filter(
             (e) => e.type === TRANSACTION_EVENT.EXECUTE,
           );
           let _contractAddress;
@@ -277,7 +277,7 @@ export class TransactionHelper {
             type === TRANSACTION_TYPE.EXECUTE_CONTRACT &&
             method === MODE_EXECUTE_TRANSACTION.MINT
           ) {
-            const execute = events.filter(
+            const execute = events?.filter(
               (e) => e.type === TRANSACTION_EVENT.EXECUTE,
             );
 
@@ -294,6 +294,7 @@ export class TransactionHelper {
               }
             }
           }
+
         }
       });
     });
