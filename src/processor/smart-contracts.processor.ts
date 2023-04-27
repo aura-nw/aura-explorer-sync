@@ -498,23 +498,9 @@ export class SmartContractsProcessor {
                 (f.status === SOULBOUND_TOKEN_STATUS.EQUIPPED ||
                   f.status === SOULBOUND_TOKEN_STATUS.UNEQUIPPED),
             );
-
-            const numOfPicked = soulboundTokenInfos?.filter(
-              (f) =>
-                f.receiver_address === item.receiver_address &&
-                f.picked == true,
-            );
-            const numOfUnClaimed = soulboundTokenInfos?.filter(
-              (f) =>
-                f.receiver_address === item.receiver_address &&
-                (f.status === SOULBOUND_TOKEN_STATUS.UNCLAIM ||
-                  f.status === SOULBOUND_TOKEN_STATUS.UNEQUIPPED),
-            );
             if (
-              (numOfPicked?.length == SOULBOUND_PICKED_TOKEN.MIN &&
-                numOfUnClaimed?.length == 1) ||
-              (numOfTokens?.length < SOULBOUND_PICKED_TOKEN.MAX &&
-                item.status === SOULBOUND_TOKEN_STATUS.UNCLAIM)
+              numOfTokens?.length < SOULBOUND_PICKED_TOKEN.MAX &&
+              item.status === SOULBOUND_TOKEN_STATUS.UNCLAIM
             ) {
               item.picked = true;
             }
