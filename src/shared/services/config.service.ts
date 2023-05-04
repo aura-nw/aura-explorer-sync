@@ -102,6 +102,7 @@ export class ConfigService {
           process.env.SYNC_SMART_CONTRACT_SYNC_DATA === 'true' ? true : false,
       },
       NODE_ENV: process.env.NODE_ENV,
+      IPFS_URL: process.env.IPFS_URL || 'https://ipfs.io/',
       SYNC_MISSING_CONTRACT_CODE:
         process.env.SYNC_MISSING_CONTRACT_CODE === 'true' ? true : false,
     };
