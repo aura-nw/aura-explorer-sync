@@ -281,9 +281,9 @@ export class CommonUtil {
 
   transform(value: string): string {
     if (!value.includes('https://ipfs.io/')) {
-      return 'https://ipfs.io/' + value.replace('://', '/');
+      return ENV_CONFIG.IPFS_URL + value.replace('://', '/');
     } else {
-      return value;
+      return value.replace('https://ipfs.io/', ENV_CONFIG.IPFS_URL);
     }
   }
 
