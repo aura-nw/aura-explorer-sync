@@ -1,4 +1,5 @@
 import {
+  InjectQueue,
   OnQueueActive,
   OnQueueCompleted,
   OnQueueError,
@@ -22,6 +23,7 @@ import {
   SOULBOUND_PICKED_TOKEN,
   QUEUES,
   COIN_MARKET_CAP_API,
+  INDEXER_V2_API,
 } from '../common/constants/app.constant';
 import { SmartContract, TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -39,6 +41,7 @@ import { InfluxDBClient } from '../utils/influxdb-client';
 import { SoulboundTokenRepository } from '../repositories/soulbound-token.repository';
 import { SoulboundToken } from '../entities/soulbound-token.entity';
 import { lastValueFrom, timeout, retry } from 'rxjs';
+import { CronExpression } from '@nestjs/schedule';
 
 @Processor('smart-contracts')
 export class SmartContractsProcessor {
@@ -61,6 +64,7 @@ export class SmartContractsProcessor {
     private httpService: HttpService,
     private soulboundTokenRepos: SoulboundTokenRepository,
     private smartContractCodeRepository: SmartContractCodeRepository,
+    @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
   ) {
     this.logger.log(
       '============== Constructor Smart Contracts Processor Service ==============',
@@ -75,6 +79,14 @@ export class SmartContractsProcessor {
 
     // Connect influxdb
     this.connectInfluxdb();
+    this.contractQueue.add(
+      QUEUES.SYNC_CONTRACT_FROM_HEIGHT,
+      {},
+      {
+        removeOnFail: false,
+        repeat: { cron: CronExpression.EVERY_10_MINUTES },
+      },
+    );
   }
 
   @Process(QUEUES.SYNC_INSTANTIATE_CONTRACTS)
@@ -322,72 +334,116 @@ export class SmartContractsProcessor {
   @Process(QUEUES.SYNC_CONTRACT_FROM_HEIGHT)
   async syncSmartContractFromHeight(job: Job) {
     this.logger.log(`${this.syncSmartContractFromHeight.name} was called!`);
+    // try {
+    //   const smartContracts = job.data;
+    //   const contracts = [];
+    //   const tokenMarkets = [];
+    //   const smartContractCodes = [];
+    //   let tokenMarketInfos = [];
+    //   let contractAddresses = [];
+    //   if (smartContracts?.length > 0) {
+    //     contractAddresses = smartContracts.map((m) => m.contract_address);
+    //     tokenMarketInfos = await this.tokenMarketsRepository.find({
+    //       where: {
+    //         contract_address: In(contractAddresses),
+    //       },
+    //     });
+    //   }
+    //   for (let i = 0; i < smartContracts.length; i++) {
+    //     const data = smartContracts[i];
+    //     const contract = await this.makeInstantiateContractData(data);
+
+    //     // Create smart contract code data
+    //     if (data?.contract_type?.status !== CONTRACT_CODE_STATUS.NOT_FOUND) {
+    //       const smartContractCode = SyncDataHelpers.makeSmartContractCode(data);
+    //       smartContractCodes.push(smartContractCode);
+    //     }
+
+    //     // Create token martket data
+    //     if (
+    //       data?.contract_type?.status === CONTRACT_CODE_STATUS.COMPLETED &&
+    //       data?.contract_type?.type === CONTRACT_TYPE.CW20
+    //     ) {
+    //       const tokenInfo = tokenMarketInfos.find(
+    //         (f) => f.contract_address === data.contract_address,
+    //       );
+    //       if (!tokenInfo) {
+    //         const tokenMarket = SyncDataHelpers.makeTokenMarket(contract);
+    //         tokenMarkets.push(tokenMarket);
+    //       }
+    //     }
+
+    //     contracts.push(contract);
+    //   }
+
+    //   // Insert Data smart contract
+    //   if (contracts.length > 0) {
+    //     await this.smartContractRepository.insertOnDuplicate(contracts, ['id']);
+    //   }
+
+    //   // Insert data token markets
+    //   if (tokenMarkets.length > 0) {
+    //     await this.tokenMarketsRepository.insertOnDuplicate(tokenMarkets, [
+    //       'id',
+    //     ]);
+    //   }
+
+    //   // Insert data smart contract code
+    //   if (smartContractCodes.length > 0) {
+    //     await this.smartContractCodeRepository.insertOnDuplicate(
+    //       smartContractCodes,
+    //       ['id'],
+    //     );
+    //   }
+    // } catch (err) {
+    //   this.logger.error(
+    //     `${this.syncSmartContractFromHeight.name} was called error: ${err.stack}`,
+    //   );
+    //   throw err;
+    // }
+
     try {
-      const smartContracts = job.data;
-      const contracts = [];
-      const tokenMarkets = [];
-      const smartContractCodes = [];
       let tokenMarketInfos = [];
       let contractAddresses = [];
-      if (smartContracts?.length > 0) {
-        contractAddresses = smartContracts.map((m) => m.contract_address);
+      const highestSyncedHeight =
+        await this.smartContractRepository.getLatestBlockHeight();
+      const smartContractAttrs = `address
+                                  code_id
+                                  created_at
+                                  creator
+                                  instantiate_hash
+                                  instantiate_height
+                                  name
+                                  updated_at
+                                  version`;
+      const queryListContract = {
+        query: util.format(
+          INDEXER_V2_API.GRAPH_QL.SMART_CONTRACT,
+          smartContractAttrs,
+        ),
+        variables: {
+          whereClause: { instantiate_height: { _gt: highestSyncedHeight } },
+        },
+      };
+      const listContractData = (
+        await this._commonUtil.fetchDataFromGraphQL(queryListContract)
+      ).data[ENV_CONFIG.INDEXER_V2.CHAIN_DB]['smart_contract'];
+
+      if (listContractData.length > 0) {
+        contractAddresses = listContractData.map(
+          (contract) => contract.address,
+        );
         tokenMarketInfos = await this.tokenMarketsRepository.find({
           where: {
             contract_address: In(contractAddresses),
           },
         });
       }
-      for (let i = 0; i < smartContracts.length; i++) {
-        const data = smartContracts[i];
-        const contract = await this.makeInstantiateContractData(data);
-
-        // Create smart contract code data
-        if (data?.contract_type?.status !== CONTRACT_CODE_STATUS.NOT_FOUND) {
-          const smartContractCode = SyncDataHelpers.makeSmartContractCode(data);
-          smartContractCodes.push(smartContractCode);
-        }
-
-        // Create token martket data
-        if (
-          data?.contract_type?.status === CONTRACT_CODE_STATUS.COMPLETED &&
-          data?.contract_type?.type === CONTRACT_TYPE.CW20
-        ) {
-          const tokenInfo = tokenMarketInfos.find(
-            (f) => f.contract_address === data.contract_address,
-          );
-          if (!tokenInfo) {
-            const tokenMarket = SyncDataHelpers.makeTokenMarket(contract);
-            tokenMarkets.push(tokenMarket);
-          }
-        }
-
-        contracts.push(contract);
-      }
-
-      // Insert Data smart contract
-      if (contracts.length > 0) {
-        await this.smartContractRepository.insertOnDuplicate(contracts, ['id']);
-      }
-
-      // Insert data token markets
-      if (tokenMarkets.length > 0) {
-        await this.tokenMarketsRepository.insertOnDuplicate(tokenMarkets, [
-          'id',
-        ]);
-      }
-
-      // Insert data smart contract code
-      if (smartContractCodes.length > 0) {
-        await this.smartContractCodeRepository.insertOnDuplicate(
-          smartContractCodes,
-          ['id'],
-        );
-      }
-    } catch (err) {
-      this.logger.error(
-        `${this.syncSmartContractFromHeight.name} was called error: ${err.stack}`,
-      );
-      throw err;
+      listContractData.forEach((contractData) => {
+        console.log(contractData);
+      });
+    } catch (error) {
+      console.log(error);
     }
   }
   SYNC_CONTRACT_FROM_HEIGHT;
@@ -559,14 +615,6 @@ export class SmartContractsProcessor {
   async onFailed(job: Job, error: Error) {
     this.logger.error(`Failed job ${job.id} of type ${job.name}`);
     this.logger.error(`Error: ${error}`);
-
-    // Resart queue
-    const queue = await job.queue;
-    if (queue) {
-      if (job.name === QUEUES.SYNC_INSTANTIATE_CONTRACTS) {
-        await this.retryJobs(queue);
-      }
-    }
   }
 
   /**

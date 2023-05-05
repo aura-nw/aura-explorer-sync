@@ -137,6 +137,13 @@ export enum INDEXER_API {
 export const INDEXER_V2_API = {
   GRAPH_QL: {
     LIST_VALIDATOR: `query Query { ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} { validator { %s } } }`,
+    SMART_CONTRACT: `query SmartContract($whereClause: ${ENV_CONFIG.INDEXER_V2.CHAIN_DB}_smart_contract_bool_exp, , $limit: Int, $offset: Int) {
+                      ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} {
+                        smart_contract(where: $whereClause, limit: $limit, offset: $offset ) {
+                          %s
+                        }
+                      }
+                    }`,
   },
 };
 

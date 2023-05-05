@@ -56,14 +56,14 @@ export class CommonUtil {
     return data;
   }
 
-  async fetchDataFromGraphQL(endpoint, method, query, headers?) {
-    headers = headers
-      ? headers
-      : {
-          'content-type': 'application/json',
-          'x-hasura-admin-secret': ENV_CONFIG.INDEXER_V2.SECRET,
-        };
-
+  async fetchDataFromGraphQL(query, endpoint?, method?, headers?) {
+    const defaultHeaders = {
+      'content-type': 'application/json',
+      'x-hasura-admin-secret': ENV_CONFIG.INDEXER_V2.SECRET,
+    };
+    headers = headers ? headers : defaultHeaders;
+    endpoint = endpoint ? endpoint : ENV_CONFIG.INDEXER_V2.GRAPH_QL;
+    method = method ? method : 'POST';
     try {
       const response = await axios({
         url: endpoint,
