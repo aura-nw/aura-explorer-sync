@@ -145,6 +145,33 @@ export class ValidatorProcessor {
     }
   }
 
+  @Process(QUEUES.SYNC_LIST_VALIDATOR)
+  async processListValidator(job: Job) {
+    const listValidator = job.data;
+    await this.validatorRepository.update(listValidator);
+    const validatorsDB = await this.validatorRepository.findAll();
+    const operators = validatorsDB
+      .filter(
+        (element) =>
+          !listValidator
+            .map((item) => item.operator_address)
+            .includes(element.operator_address),
+      )
+      .map((item) => item.operator_address);
+    await this.validatorRepository.removeUndelegateValidator(operators);
+  }
+
+  @Process(QUEUES.SYNC_VALIDATOR_IMAGE)
+  async proccessImage(job: Job) {
+    const data: [] = job.data;
+    try {
+      this.updateImage(data);
+    } catch (error) {
+      this.logger.error(`${error.message}: ${error.message}`);
+      throw error;
+    }
+  }
+
   @OnQueueError()
   onError(error: Error) {
     this.logger.error(`Queue Error: ${error.stack}`);
