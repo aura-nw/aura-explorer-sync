@@ -1,3 +1,5 @@
+import { ENV_CONFIG } from 'src/shared/services/config.service';
+
 export enum ORDER_BY {
   DESC = 'DESC',
   ASC = 'ASC',
@@ -132,6 +134,12 @@ export enum INDEXER_API {
   GET_SMART_CONTRACT_BT_LIST_CONTRACT_ADDRESS = 'api/v1/smart-contracts?chainId=%s',
 }
 
+export const INDEXER_V2_API = {
+  GRAPH_QL: {
+    LIST_VALIDATOR: `query Query { ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} { validator { %s } } }`,
+  },
+};
+
 export enum COINGECKO_API {
   GET_PRICE_VOLUME = 'simple/price?ids=%s&vs_currencies=usd&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true',
   GET_COINS_MARKET = 'coins/markets?vs_currency=usd&ids=%s&order=market_cap_desc&per_page=%s&page=1&sparkline=false&price_change_percentage=24h',
@@ -205,4 +213,11 @@ export enum VOTING_POWER_LEVEL {
   GREEN = '1',
   YELLOW = '2',
   RED = '3',
+}
+
+export enum VALIDATOR_STATUSES {
+  BOND_STATUS_UNSPECIFIED,
+  BOND_STATUS_UNBONDED,
+  BOND_STATUS_UNBONDING,
+  BOND_STATUS_BONDED,
 }

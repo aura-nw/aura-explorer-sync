@@ -44,7 +44,6 @@ import { SoulboundTokenRepository } from './repositories/soulbound-token.reposit
 import { SoulboundToken } from './entities/soulbound-token.entity';
 import { SyncSmartContractService } from './services/sync-smart-contract.service';
 import { ValidatorProcessor } from './processor/validator.processor';
-import { SyncValidatorService } from './services/sync-validator.service';
 
 const controllers = [];
 const entities = [
@@ -89,7 +88,6 @@ const services = [
   SyncTokenService,
   SyncTransactionService,
   SyncSmartContractService,
-  SyncValidatorService,
 ];
 
 const processors = [SmartContractsProcessor, ValidatorProcessor];
@@ -112,7 +110,7 @@ const processors = [SmartContractsProcessor, ValidatorProcessor];
       },
       prefix: ENV_CONFIG.REDIS.PREFIX,
       defaultJobOptions: {
-        removeOnComplete: true,
+        removeOnComplete: 100,
       },
     }),
     BullModule.registerQueue(

@@ -176,6 +176,7 @@ export class TransactionHelper {
         }
         if (method === MODE_EXECUTE_TRANSACTION.MINT) {
           fromAddress = '';
+
           const execute = events.filter(
             (e) => e.type === TRANSACTION_EVENT.EXECUTE,
           );

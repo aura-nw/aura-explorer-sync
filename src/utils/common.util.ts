@@ -56,6 +56,34 @@ export class CommonUtil {
     return data;
   }
 
+  async fetchDataFromGraphQL(endpoint, method, query, headers?) {
+    headers = headers
+      ? headers
+      : {
+          'content-type': 'application/json',
+          'x-hasura-admin-secret': ENV_CONFIG.INDEXER_V2.SECRET,
+        };
+
+    try {
+      const response = await axios({
+        url: endpoint,
+        method: method,
+        headers: headers,
+        data: query,
+        timeout: 30000,
+      });
+
+      if (response.data?.errors?.length > 0) {
+        throw new Error(JSON.stringify(response.data.errors));
+      }
+
+      return response.data;
+    } catch (error) {
+      const errorMsg = `Error while querying from graphql! ${error}`;
+      this._logger.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }
   getAddressFromPubkey(pubkey) {
     const bytes = Buffer.from(pubkey, 'base64');
     return tmhash(bytes).slice(0, 20).toString('hex').toUpperCase();

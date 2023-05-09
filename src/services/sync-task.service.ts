@@ -28,7 +28,6 @@ import { DelegatorRewardRepository } from '../repositories/delegator-reward.repo
 import { TransactionHelper } from '../helpers/transaction.helper';
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
 import { In } from 'typeorm';
-
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
@@ -315,7 +314,6 @@ export class SyncTaskService {
     const delegations = [];
     const delegatorRewards = [];
     const smartContractCodes = [];
-    const validators = [];
 
     const optionQueue: JobOptions = {
       removeOnComplete: true,
@@ -446,7 +444,6 @@ export class SyncTaskService {
               message,
             );
             delegations.push(delegation);
-            validators.push(message.validator_address);
           } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
             const smartContractCode = SyncDataHelpers.makeStoreCodeData(
               txData,
@@ -518,13 +515,6 @@ export class SyncTaskService {
         smartContractCodes,
         ['id'],
       );
-    }
-
-    // Create or update validator
-    if (validators.length > 0) {
-      this.validatorQueue.add(QUEUES.SYNC_VALIDATOR, validators, {
-        ...optionQueue,
-      });
     }
   }
 

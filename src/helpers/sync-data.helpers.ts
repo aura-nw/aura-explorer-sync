@@ -5,6 +5,7 @@ import {
   CONTRACT_CODE_RESULT,
   CONTRACT_CODE_STATUS,
   CONTRACT_TYPE,
+  VALIDATOR_STATUSES,
 } from '../common/constants/app.constant';
 import {
   Block,
@@ -268,16 +269,11 @@ export class SyncDataHelpers {
     return delegation;
   }
 
-  static makeValidatorData(
-    data: any,
-    account_address: string,
-    status: number,
-    validatorAddr: string,
-  ) {
+  static makeValidatorData(data: any) {
     const newValidator = new Validator();
     newValidator.operator_address = data.operator_address;
-    newValidator.acc_address = account_address;
-    newValidator.cons_address = validatorAddr;
+    newValidator.acc_address = data.account_address;
+    newValidator.cons_address = data.consensus_hex_address;
     newValidator.cons_pub_key = data.consensus_pubkey.key;
     newValidator.title = data.description.moniker;
     newValidator.jailed = data.jailed;
@@ -296,7 +292,11 @@ export class SyncDataHelpers {
     newValidator.unbonding_height = data.unbonding_height;
     newValidator.unbonding_time = new Date(data.unbonding_time);
     newValidator.update_time = new Date(data.commission.update_time);
-    newValidator.status = status;
+    newValidator.status = Number(VALIDATOR_STATUSES[data.status]);
+    newValidator.percent_power = data.percent_voting_power.toFixed(2);
+    newValidator.up_time = String(data.uptime) + CONST_CHAR.PERCENT;
+    newValidator.self_bonded = data.self_delegation_balance;
+    newValidator.bonded_height = data.start_height || 1;
 
     return newValidator;
   }
