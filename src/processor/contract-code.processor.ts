@@ -67,82 +67,79 @@ export class ContractCodeProcessor {
       this.logger.log(null, 'fetching data contract code...');
     }
     try {
+      this.isSyncContractCode = true;
       const lastContractCode = await this.smartContractCodeRepository.findOne({
         order: { code_id: 'DESC' },
       });
-      this.isSyncContractCode = true;
-      if (!!lastContractCode) {
-        const attributes = `code_id
+      const lastId = lastContractCode?.code_id || 0;
+
+      const attributes = `code_id
         store_hash
         data_hash
         creator
         created_at
         `;
 
-        const graphqlQuery = {
-          query: util.format(
-            INDEXER_V2_API.GRAPH_QL.CONTRACT_CODE_BY_CODE_ID,
-            attributes,
-          ),
-          variables: {
-            code_id: lastContractCode.code_id,
-          },
-        };
+      const graphqlQuery = {
+        query: util.format(
+          INDEXER_V2_API.GRAPH_QL.CONTRACT_CODE_BY_CODE_ID,
+          attributes,
+        ),
+        variables: {
+          code_id: lastId,
+        },
+      };
 
-        const contractCodeData = (
-          await this.commonUtil.fetchDataFromGraphQL(
-            ENV_CONFIG.INDEXER_V2.GRAPH_QL,
-            'POST',
-            graphqlQuery,
-          )
-        ).data[ENV_CONFIG.INDEXER_V2.CHAIN_DB]['code'];
+      const contractCodeData = (
+        await this.commonUtil.fetchDataFromGraphQL(
+          ENV_CONFIG.INDEXER_V2.GRAPH_QL,
+          'POST',
+          graphqlQuery,
+        )
+      ).data[ENV_CONFIG.INDEXER_V2.CHAIN_DB]['code'];
 
-        if (contractCodeData?.length > 0) {
-          const contractCodes = [];
-          for await (const element of contractCodeData) {
-            const contractCode: any = {
-              code_id: element.code_id,
-              creator: element.creator,
-              tx_hash: element.store_hash,
-              contract_hash: element.data_hash,
-              created_at: element.element,
-            };
-            // sync contract code verification info with same data hash
-            if (element.data_hash) {
-              const matchContract =
-                await this.smartContractCodeRepository.findOne({
-                  contract_hash: element.data_hash.toLowerCase(),
-                });
-              if (
-                !!matchContract &&
-                matchContract.contract_verification ===
-                  SMART_CONTRACT_VERIFICATION.VERIFIED
-              ) {
-                contractCode.contract_verification =
-                  matchContract.contract_verification;
-                contractCode.compiler_version = matchContract.compiler_version;
-                contractCode.execute_msg_schema =
-                  matchContract.execute_msg_schema;
-                contractCode.instantiate_msg_schema =
-                  matchContract.instantiate_msg_schema;
-                contractCode.query_msg_schema = matchContract.query_msg_schema;
-                contractCode.s3_location = matchContract.s3_location;
-                contractCode.verified_at = new Date();
-                contractCode.url = matchContract.url;
-              }
+      if (contractCodeData?.length > 0) {
+        const contractCodes = [];
+        for await (const element of contractCodeData) {
+          const contractCode: any = {
+            code_id: element.code_id,
+            creator: element.creator,
+            tx_hash: element.store_hash,
+            contract_hash: element.data_hash,
+            created_at: element.element,
+          };
+          // sync contract code verification info with same data hash
+          if (element.data_hash) {
+            const matchContract =
+              await this.smartContractCodeRepository.findOne({
+                contract_hash: element.data_hash.toLowerCase(),
+              });
+            if (
+              !!matchContract &&
+              matchContract.contract_verification ===
+                SMART_CONTRACT_VERIFICATION.VERIFIED
+            ) {
+              contractCode.contract_verification =
+                matchContract.contract_verification;
+              contractCode.compiler_version = matchContract.compiler_version;
+              contractCode.execute_msg_schema =
+                matchContract.execute_msg_schema;
+              contractCode.instantiate_msg_schema =
+                matchContract.instantiate_msg_schema;
+              contractCode.query_msg_schema = matchContract.query_msg_schema;
+              contractCode.s3_location = matchContract.s3_location;
+              contractCode.verified_at = new Date();
+              contractCode.url = matchContract.url;
             }
-            contractCodes.push(contractCode);
           }
-
-          // Create or update smart contract
-          if (contractCodes.length > 0) {
-            await this.smartContractCodeRepository.insertOnDuplicate(
-              contractCodes,
-              ['id'],
-            );
-          }
-          this.isSyncContractCode = false;
+          contractCodes.push(contractCode);
         }
+
+        // Create or update smart contract
+        if (contractCodes.length > 0) {
+          await this.smartContractCodeRepository.insert(contractCodes);
+        }
+        this.isSyncContractCode = false;
       }
     } catch (error) {
       this.logger.error(
