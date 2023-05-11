@@ -520,23 +520,6 @@ export class SmartContractsProcessor {
     }
   }
 
-  @Process(QUEUES.SYNC_CONTRACT_CODE)
-  async synceMissingSmartContractCode(job: Job) {
-    this.logger.log(
-      `============== Queue synceMissingSmartContractCode was run! ==============`,
-    );
-    const smartContractCodes = job.data;
-    try {
-      // insert data
-      await this.smartContractCodeRepository.insert(smartContractCodes);
-    } catch (error) {
-      this.logger.error(
-        `synceMissingSmartContractCode was error, ${error?.code}: ${error?.stack}`,
-      );
-      throw error;
-    }
-  }
-
   @OnQueueActive()
   onActive(job: Job) {
     this.logger.log(`Processing job ${job.id} of type ${job.name}...`);

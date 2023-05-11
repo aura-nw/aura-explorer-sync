@@ -33,7 +33,6 @@ import { SmartContractRepository } from './repositories/smart-contract.repositor
 import { SyncStatusRepository } from './repositories/sync-status.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
 import { ValidatorRepository } from './repositories/validator.repository';
-import { SyncContractCodeService } from './services/sync-contract-code.service';
 import { SyncTaskService } from './services/sync-task.service';
 import { SyncTokenService } from './services/sync-token.service';
 import { SyncTransactionService } from './services/sync-transaction.service';
@@ -44,6 +43,7 @@ import { SoulboundTokenRepository } from './repositories/soulbound-token.reposit
 import { SoulboundToken } from './entities/soulbound-token.entity';
 import { SyncSmartContractService } from './services/sync-smart-contract.service';
 import { ValidatorProcessor } from './processor/validator.processor';
+import { ContractCodeProcessor } from './processor/contract-code.processor';
 
 const controllers = [];
 const entities = [
@@ -84,13 +84,16 @@ const repositories = [
 
 const services = [
   SyncTaskService,
-  SyncContractCodeService,
   SyncTokenService,
   SyncTransactionService,
   SyncSmartContractService,
 ];
 
-const processors = [SmartContractsProcessor, ValidatorProcessor];
+const processors = [
+  SmartContractsProcessor,
+  ValidatorProcessor,
+  ContractCodeProcessor,
+];
 
 @Module({
   imports: [
@@ -119,6 +122,9 @@ const processors = [SmartContractsProcessor, ValidatorProcessor];
       },
       {
         name: 'validator',
+      },
+      {
+        name: 'contract-code',
       },
     ),
     CacheModule.register({ ttl: 10000 }),

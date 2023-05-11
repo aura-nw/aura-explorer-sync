@@ -137,6 +137,8 @@ export enum INDEXER_API {
 export const INDEXER_V2_API = {
   GRAPH_QL: {
     LIST_VALIDATOR: `query Query { ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} { validator { %s } } }`,
+    CONTRACT_CODE_RESULT: `query Query($code_id: [Int]) { ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} { code(where: {code_id: {_in: $code_id}}) { %s } } }`,
+    CONTRACT_CODE_BY_CODE_ID: `query Query($code_id: Int) { ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} { code(where: {code_id: {_gt: $code_id}}) { %s } } }`,
   },
 };
 
@@ -203,6 +205,7 @@ export const QUEUES = {
   SYNC_VALIDATOR_IMAGE: 'sync-validator-image',
   SYNC_LIST_VALIDATOR: 'sync-list-validator',
   SYNC_CONTRACT_CODE: 'sync-contract-code',
+  SYNC_CONTRACT_CODE_RESULT: 'sync-contract-code-result',
 };
 
 export enum CW4973_CONTRACT {
