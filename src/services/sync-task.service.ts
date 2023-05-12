@@ -313,7 +313,6 @@ export class SyncTaskService {
     const proposalVotes = [];
     const delegations = [];
     const delegatorRewards = [];
-    const smartContractCodes = [];
 
     const optionQueue: JobOptions = {
       removeOnComplete: true,
@@ -444,51 +443,6 @@ export class SyncTaskService {
               message,
             );
             delegations.push(delegation);
-          } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
-            const smartContractCode = SyncDataHelpers.makeStoreCodeData(
-              txData,
-              message,
-              i,
-            );
-            // Generate request URL
-            const urlRequest = `${this.api}${util.format(
-              NODE_API.CONTRACT_CODE_DETAIL,
-              smartContractCode.code_id,
-            )}`;
-            // Call lcd to get data
-            const responses = await this._commonUtil.getDataAPI(urlRequest, '');
-            const dataHash = responses?.code_info?.data_hash;
-            // sync contract code verification info with same data hash
-            if (dataHash) {
-              const contractCode =
-                await this.smartContractCodeRepository.findOne({
-                  contract_hash: dataHash.toLowerCase(),
-                });
-              smartContractCode.contract_hash = dataHash.toLowerCase();
-              smartContractCode.created_at = new Date(
-                txData.tx_response.timestamp,
-              );
-              if (
-                !!contractCode &&
-                contractCode.contract_verification ===
-                  SMART_CONTRACT_VERIFICATION.VERIFIED
-              ) {
-                smartContractCode.contract_verification =
-                  contractCode.contract_verification;
-                smartContractCode.compiler_version =
-                  contractCode.compiler_version;
-                smartContractCode.execute_msg_schema =
-                  contractCode.execute_msg_schema;
-                smartContractCode.instantiate_msg_schema =
-                  contractCode.instantiate_msg_schema;
-                smartContractCode.query_msg_schema =
-                  contractCode.query_msg_schema;
-                smartContractCode.s3_location = contractCode.s3_location;
-                smartContractCode.verified_at = new Date();
-                smartContractCode.url = contractCode.url;
-              }
-            }
-            smartContractCodes.push(smartContractCode);
           }
         }
       }
@@ -507,14 +461,6 @@ export class SyncTaskService {
       await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, [
         'id',
       ]);
-    }
-
-    // Create or update smart contract
-    if (smartContractCodes.length > 0) {
-      await this.smartContractCodeRepository.insertOnDuplicate(
-        smartContractCodes,
-        ['id'],
-      );
     }
   }
 
