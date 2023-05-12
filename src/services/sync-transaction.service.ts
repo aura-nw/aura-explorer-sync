@@ -36,7 +36,7 @@ export class SyncTransactionService {
   /**
    * crawl transaction from indexer
    */
-  @Interval(3000)
+  //@Interval(3000)
   async crawlTransactions() {
     if (this.isBlocked) return;
     this.isBlocked = true;
@@ -59,7 +59,7 @@ export class SyncTransactionService {
    * Cleanup transactions after 7 days
    * Daily at 00:00
    */
-  @Cron('0 0 * * *')
+  //@Cron('0 0 * * *')
   async cleanupTransactions() {
     this._logger.log('Start cleanup transactions ...');
 

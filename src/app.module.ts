@@ -44,6 +44,7 @@ import { SoulboundTokenRepository } from './repositories/soulbound-token.reposit
 import { SoulboundToken } from './entities/soulbound-token.entity';
 import { SyncSmartContractService } from './services/sync-smart-contract.service';
 import { ValidatorProcessor } from './processor/validator.processor';
+import { TransactionProcessor } from './processor/transaction.processor';
 
 const controllers = [];
 const entities = [
@@ -90,7 +91,11 @@ const services = [
   SyncSmartContractService,
 ];
 
-const processors = [SmartContractsProcessor, ValidatorProcessor];
+const processors = [
+  SmartContractsProcessor,
+  ValidatorProcessor,
+  TransactionProcessor,
+];
 
 @Module({
   imports: [
@@ -119,6 +124,9 @@ const processors = [SmartContractsProcessor, ValidatorProcessor];
       },
       {
         name: 'validator',
+      },
+      {
+        name: 'transaction',
       },
     ),
     CacheModule.register({ ttl: 10000 }),
