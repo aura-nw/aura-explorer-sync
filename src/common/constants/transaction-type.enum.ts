@@ -70,3 +70,9 @@ export enum TRANSACTION_ATTRIBUTE {
   RECIPIENT = 'cmVjaXBpZW50',
   CONTRACT_ADDRESS = 'X2NvbnRyYWN0X2FkZHJlc3M=',
 }
+
+export enum EVENT_ATTRIBUTE {
+  AMOUNT = 'amount',
+  RECIPIENT = 'recipient',
+  CONTRACT_ADDRESS = '_contract_address',
+}

@@ -1,4 +1,5 @@
 import {
+  EVENT_ATTRIBUTE,
   IBC_TRANSACTIONS,
   MODE_EXECUTE_TRANSACTION,
   TRANSACTION_ATTRIBUTE,
@@ -26,13 +27,13 @@ export class TransactionHelper {
 
   static getAmount(messages: any[], events: any[], type: TRANSACTION_TYPE) {
     const ibcTransfer = messages.find((m) =>
-      m['@type'].includes(TRANSACTION_TYPE.IBC_TRANSFER),
+      m['type'].includes(TRANSACTION_TYPE.IBC_TRANSFER),
     );
     if (messages.length > 1 && IBC_TRANSACTIONS.includes(type) && ibcTransfer) {
-      return TransactionHelper.formatAmount(ibcTransfer.token.amount);
+      return TransactionHelper.formatAmount(ibcTransfer.content.token.amount);
     }
 
-    const message = messages[0];
+    const message = messages[0].content;
 
     const delegateTypes = [
       TRANSACTION_TYPE.UNDELEGATE,
@@ -62,19 +63,16 @@ export class TransactionHelper {
       events
         .filter((e) => e.type === TRANSACTION_EVENT.WITHDRAW_REWARDS)
         .forEach((e) => {
-          const _amount = e.attributes.find(
-            (k) => k.key === TRANSACTION_ATTRIBUTE.AMOUNT,
+          const _amount = e.event_attributes.find(
+            (k) => k.key === EVENT_ATTRIBUTE.AMOUNT,
           );
           const amount = _amount
-            ? TransactionHelper.decode(_amount.value)?.replace(
-                TransactionHelper.minimalDenom,
-                '',
-              )
+            ? _amount.value?.replace(TransactionHelper.minimalDenom, '')
             : 0;
           total += Number(amount);
         });
 
-      return TransactionHelper.formatAmount(total);
+      return TransactionHelper.formatAmount(Number(total) || 0);
     }
 
     if (type === TRANSACTION_TYPE.MULTI_SEND) {
@@ -84,7 +82,7 @@ export class TransactionHelper {
         total += Number(amount);
       });
 
-      return TransactionHelper.formatAmount(total);
+      return TransactionHelper.formatAmount(Number(total) || 0);
     }
 
     if (message?.amount) {
@@ -159,12 +157,10 @@ export class TransactionHelper {
           msg?.mint?.minter;
         const _contractAddress = events
           .find((e) => e.type === TRANSACTION_EVENT.INSTANTIATE)
-          ?.attributes?.find(
-            (a) => a.key === TRANSACTION_ATTRIBUTE.CONTRACT_ADDRESS,
+          ?.event_attributes?.find(
+            (a) => a.key === EVENT_ATTRIBUTE.CONTRACT_ADDRESS,
           );
-        contractAddress = _contractAddress
-          ? TransactionHelper.decode(_contractAddress.value)
-          : '';
+        contractAddress = _contractAddress ? _contractAddress.value : '';
         break;
       }
       case TRANSACTION_TYPE.EXECUTE_CONTRACT:
@@ -187,12 +183,12 @@ export class TransactionHelper {
           );
           let _contractAddress;
           if (execute?.length > 0) {
-            _contractAddress = execute[execute.length - 1].attributes.find(
-              (a) => a.key === TRANSACTION_ATTRIBUTE.CONTRACT_ADDRESS,
+            _contractAddress = execute[
+              execute.length - 1
+            ].event_attributes.find(
+              (a) => a.key === EVENT_ATTRIBUTE.CONTRACT_ADDRESS,
             );
-            contractAddress = _contractAddress
-              ? TransactionHelper.decode(_contractAddress.value)
-              : '';
+            contractAddress = _contractAddress ? _contractAddress.value : '';
             if (contractAddress !== message.contract) {
               toAddress = contractAddress;
             }
@@ -219,8 +215,8 @@ export class TransactionHelper {
 
         const recipient = events
           .find((e) => e.type === TRANSACTION_EVENT.TRANSFER)
-          ?.attributes?.find((a) => a.key === TRANSACTION_ATTRIBUTE.RECIPIENT);
-        toAddress = recipient ? TransactionHelper.decode(recipient.value) : '';
+          ?.event_attributes?.find((a) => a.key === EVENT_ATTRIBUTE.RECIPIENT);
+        toAddress = recipient ? recipient.value : '';
         contractAddress = toAddress;
         break;
       }
@@ -228,8 +224,8 @@ export class TransactionHelper {
         fromAddress = message.depositor;
         const recipient = events
           .find((e) => e.type === TRANSACTION_EVENT.TRANSFER)
-          ?.attributes?.find((a) => a.key === TRANSACTION_ATTRIBUTE.RECIPIENT);
-        toAddress = recipient ? TransactionHelper.decode(recipient.value) : '';
+          ?.event_attributes?.find((a) => a.key === EVENT_ATTRIBUTE.RECIPIENT);
+        toAddress = recipient ? recipient.value : '';
         contractAddress = toAddress;
         break;
       }

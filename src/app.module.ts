@@ -36,7 +36,6 @@ import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
 import { SyncTaskService } from './services/sync-task.service';
 import { SyncTokenService } from './services/sync-token.service';
-import { SyncTransactionService } from './services/sync-transaction.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { TokenMarketsRepository } from './repositories/token-markets.repository';
@@ -87,7 +86,6 @@ const services = [
   SyncTaskService,
   SyncContractCodeService,
   SyncTokenService,
-  SyncTransactionService,
   SyncSmartContractService,
 ];
 
