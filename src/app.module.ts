@@ -33,17 +33,16 @@ import { SmartContractRepository } from './repositories/smart-contract.repositor
 import { SyncStatusRepository } from './repositories/sync-status.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
 import { ValidatorRepository } from './repositories/validator.repository';
-import { SyncContractCodeService } from './services/sync-contract-code.service';
-import { SyncTaskService } from './services/sync-task.service';
-import { SyncTokenService } from './services/sync-token.service';
-import { SyncTransactionService } from './services/sync-transaction.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { TokenMarketsRepository } from './repositories/token-markets.repository';
 import { SoulboundTokenRepository } from './repositories/soulbound-token.repository';
 import { SoulboundToken } from './entities/soulbound-token.entity';
-import { SyncSmartContractService } from './services/sync-smart-contract.service';
 import { ValidatorProcessor } from './processor/validator.processor';
+import { QUEUES } from './common/constants/app.constant';
+import { CoinProcessor } from './processor/coin.processor';
+import { BlockProcessor } from './processor/block.processor';
+import { ReSyncSmartContractProcessor } from './processor/resync/resync-smart-contract.processor';
 
 const controllers = [];
 const entities = [
@@ -82,15 +81,13 @@ const repositories = [
   SoulboundTokenRepository,
 ];
 
-const services = [
-  SyncTaskService,
-  SyncContractCodeService,
-  SyncTokenService,
-  SyncTransactionService,
-  SyncSmartContractService,
+const processors = [
+  SmartContractsProcessor,
+  ValidatorProcessor,
+  CoinProcessor,
+  BlockProcessor,
+  ReSyncSmartContractProcessor,
 ];
-
-const processors = [SmartContractsProcessor, ValidatorProcessor];
 
 @Module({
   imports: [
@@ -115,10 +112,19 @@ const processors = [SmartContractsProcessor, ValidatorProcessor];
     }),
     BullModule.registerQueue(
       {
-        name: 'smart-contracts',
+        name: QUEUES.SYNC_CONTRACT.QUEUE_NAME,
+      },
+      {
+        name: QUEUES.RESYNC.CONTRACT.QUEUE_NAME,
       },
       {
         name: 'validator',
+      },
+      {
+        name: QUEUES.SYNC_COIN.QUEUE_NAME,
+      },
+      {
+        name: QUEUES.SYNC_BLOCK.QUEUE_NAME,
       },
     ),
     CacheModule.register({ ttl: 10000 }),
@@ -132,6 +138,6 @@ const processors = [SmartContractsProcessor, ValidatorProcessor];
   ],
   exports: [BullModule, ...processors],
   controllers: [...controllers],
-  providers: [...repositories, ...services, ...processors],
+  providers: [...repositories, ...processors],
 })
 export class AppModule {}

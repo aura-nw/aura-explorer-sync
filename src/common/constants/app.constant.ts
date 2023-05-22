@@ -137,6 +137,20 @@ export enum INDEXER_API {
 export const INDEXER_V2_API = {
   GRAPH_QL: {
     LIST_VALIDATOR: `query Query { ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} { validator { %s } } }`,
+    SMART_CONTRACT: `query SmartContract($whereClause: ${ENV_CONFIG.INDEXER_V2.CHAIN_DB}_smart_contract_bool_exp, $limit: Int, $offset: Int) {
+                      ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} {
+                        smart_contract(where: $whereClause, limit: $limit, offset: $offset) {
+                          %s
+                        }
+                      }
+                    }`,
+    BLOCK: `query Block($whereClause: ${ENV_CONFIG.INDEXER_V2.CHAIN_DB}_block_bool_exp) {
+              ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} {
+                block(where: $whereClause) {
+                  %s
+                }
+              }
+            }`,
   },
 };
 
@@ -193,9 +207,6 @@ export const SOULBOUND_PICKED_TOKEN = {
 };
 
 export const QUEUES = {
-  SYNC_EXECUTE_CONTRACTS: 'sync-execute-contracts',
-  SYNC_CW4973_NFT_STATUS: 'sync-cw4973-nft-status',
-  SYNC_INSTANTIATE_CONTRACTS: 'sync-instantiate-contracts',
   SYNC_PRICE_VOLUME: 'sync-price-volume',
   SYNC_COIN_ID: 'sync-coin-id',
   SYNC_CONTRACT_FROM_HEIGHT: 'sync-contract-from-height',
@@ -203,6 +214,36 @@ export const QUEUES = {
   SYNC_VALIDATOR_IMAGE: 'sync-validator-image',
   SYNC_LIST_VALIDATOR: 'sync-list-validator',
   SYNC_CONTRACT_CODE: 'sync-contract-code',
+  SYNC_CONTRACT: {
+    QUEUE_NAME: 'sync-contracts',
+    JOBS: {
+      SYNC_EXECUTE_CONTRACTS: 'sync-execute-contracts',
+      SYNC_CW4973_NFT_STATUS: 'sync-cw4973-nft-status',
+      SYNC_INSTANTIATE_CONTRACTS: 'sync-instantiate-contracts',
+    },
+  },
+  SYNC_COIN: {
+    QUEUE_NAME: 'sync-coin',
+    JOBS: {
+      SYNC_ID: 'sync-coin-id',
+      SYNC_PRICE: 'sync-coin-price',
+    },
+  },
+  SYNC_BLOCK: {
+    QUEUE_NAME: 'sync-block',
+    JOBS: {
+      SYNC_BLOCK_HEIGHT: 'sync-block-height',
+      PROCESS_BLOCK: 'process-block',
+    },
+  },
+  RESYNC: {
+    CONTRACT: {
+      QUEUE_NAME: 'resync-contract',
+      JOBS: {
+        RESYNC_CONTRACT_FROM_HEIGHT: 'resync-contract-from-height',
+      },
+    },
+  },
 };
 
 export enum CW4973_CONTRACT {
@@ -221,3 +262,18 @@ export enum VALIDATOR_STATUSES {
   BOND_STATUS_UNBONDING,
   BOND_STATUS_BONDED,
 }
+
+export enum LIMIT_NUMBS {
+  LIMIT_100 = 100,
+}
+
+export enum SYNC_COIN_INF_HOSTS {
+  COIN_MARKET_CAP = 'COIN_MARKET_CAP',
+}
+
+export const VOTE_OPTIONS = {
+  0: 'VOTE_OPTION_UNSPECIFIED',
+  1: 'VOTE_OPTION_YES',
+  2: 'VOTE_OPTION_NO',
+  3: 'VOTE_OPTION_NO_WITH_VETO',
+};
