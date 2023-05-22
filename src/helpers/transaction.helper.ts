@@ -148,7 +148,10 @@ export class TransactionHelper {
     switch (type) {
       case TRANSACTION_TYPE.INSTANTIATE_CONTRACT_2:
       case TRANSACTION_TYPE.INSTANTIATE_CONTRACT: {
-        const msg = JSON.parse(message.msg);
+        let msg = message.msg;
+        if (typeof message.msg === 'string' || message.msg instanceof String) {
+          msg = JSON.parse(message.msg);
+        }
         fromAddress = message.sender;
         toAddress =
           msg?.minter ||
@@ -164,7 +167,10 @@ export class TransactionHelper {
         break;
       }
       case TRANSACTION_TYPE.EXECUTE_CONTRACT:
-        const jsonMsg = JSON.parse(message.msg);
+        let jsonMsg = message.msg;
+        if (typeof message.msg === 'string' || message.msg instanceof String) {
+          jsonMsg = JSON.parse(message.msg);
+        }
         const method = Object.keys(jsonMsg || {})[0] || '';
         const msg = jsonMsg?.[method];
 
