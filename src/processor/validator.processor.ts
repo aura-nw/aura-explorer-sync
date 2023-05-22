@@ -93,11 +93,7 @@ export class ValidatorProcessor {
         ),
       };
       const validatorsData = (
-        await this.commonUtil.fetchDataFromGraphQL(
-          ENV_CONFIG.INDEXER_V2.GRAPH_QL,
-          'POST',
-          graphqlQuery,
-        )
+        await this.commonUtil.fetchDataFromGraphQL(graphqlQuery)
       ).data[ENV_CONFIG.INDEXER_V2.CHAIN_DB]['validator'];
 
       // assign validators attributes
@@ -120,7 +116,7 @@ export class ValidatorProcessor {
         await this.processListValidator(listValidator);
       }
     } catch (error) {
-      const errorMsg = `Error while processing list validator ${error}`;
+      const errorMsg = `Error while processing list validator ${error.stack}`;
       this.logger.error(errorMsg);
       throw new Error(errorMsg);
     }

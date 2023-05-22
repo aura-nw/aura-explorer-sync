@@ -255,8 +255,8 @@ export class TransactionHelper {
   static getContractAddressInTX(transactions) {
     const addressInTx = [];
     transactions.forEach((transaction) => {
-      const messages = transaction.tx_response.tx.body.messages;
-      const events = transaction.tx_response.events;
+      const messages = transaction.data.tx.body.messages;
+      const events = transaction.data.tx_response.events;
       const type = TransactionHelper.getTransactionType(messages);
 
       // Transaction with contract address in message without instantiate type

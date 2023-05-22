@@ -1,17 +1,16 @@
 import {
   CONST_CHAR,
   CONST_DELEGATE_TYPE,
-  CONST_MSG_TYPE,
   CONTRACT_CODE_RESULT,
   CONTRACT_CODE_STATUS,
   CONTRACT_TYPE,
+  MAINNET_UPLOAD_STATUS,
+  SMART_CONTRACT_VERIFICATION,
   VALIDATOR_STATUSES,
 } from '../common/constants/app.constant';
 import {
   Block,
   TokenMarkets,
-  Delegation,
-  DelegatorReward,
   ProposalVote,
   SmartContract,
   SmartContractCode,
@@ -21,230 +20,17 @@ import { ENV_CONFIG } from '../shared/services/config.service';
 import { TokenCW20Dto } from '../dtos/token-cw20.dto';
 export class SyncDataHelpers {
   private static precision = ENV_CONFIG.CHAIN_INFO.PRECISION_DIV;
-  private static toDecimal = ENV_CONFIG.CHAIN_INFO.COIN_DECIMALS;
 
   static makeBlockData(blockData: any) {
     const newBlock = new Block();
-    newBlock.block_hash = blockData.block_id.hash;
-    newBlock.chainid = blockData.block.header.chain_id;
-    newBlock.height = blockData.block.header.height;
-    newBlock.num_txs = blockData.block.data.txs.length;
-    newBlock.timestamp = blockData.block.header.time;
-    newBlock.round = blockData.block.last_commit.round;
+    newBlock.block_hash = blockData.hash;
+    newBlock.chainid = blockData.data.block.header.chain_id;
+    newBlock.height = blockData.height;
+    newBlock.num_txs = blockData.transactions.length;
+    newBlock.timestamp = blockData.time;
+    newBlock.round = blockData.data.block.last_commit.round;
     newBlock.json_data = JSON.stringify(blockData);
     return newBlock;
-  }
-
-  static makeTxRawLogData(txData: any) {
-    let txType = 'FAILED',
-      txRawLogData,
-      txContractAddress;
-    if (txData.tx_response.code === 0) {
-      const txLog = JSON.parse(txData.tx_response.raw_log);
-
-      const txAttr = txLog[0].events.find(
-        ({ type }) => type === CONST_CHAR.MESSAGE,
-      );
-      const txAction = txAttr.attributes.find(
-        ({ key }) => key === CONST_CHAR.ACTION,
-      );
-      const regex = /_/gi;
-      txType = txAction.value.replace(regex, ' ');
-
-      const txMsgType = txType.substring(txType.lastIndexOf('.') + 1);
-      if (txMsgType == CONST_MSG_TYPE.MSG_WITHDRAW_DELEGATOR_REWARD) {
-        const amount = txData.tx_response.logs[0].events.find(
-          ({ type }) => type === CONST_CHAR.WITHDRAW_REWARDS,
-        );
-        amount.attributes = amount.attributes.filter(
-          (x) => x.key == CONST_CHAR.AMOUNT,
-        );
-        txRawLogData = JSON.stringify(amount);
-      } else if (
-        txMsgType == CONST_MSG_TYPE.MSG_DELEGATE ||
-        txMsgType == CONST_MSG_TYPE.MSG_REDELEGATE ||
-        txMsgType == CONST_MSG_TYPE.MSG_UNDELEGATE
-      ) {
-        const amount = txData.tx_response.tx.body.messages[0].amount;
-        let reward;
-        try {
-          reward = txData.tx_response.logs[0].events
-            .find(({ type }) => type === CONST_CHAR.TRANSFER)
-            .attributes.filter((x) => x.key == CONST_CHAR.AMOUNT);
-        } catch (error) {
-          reward = 0;
-        }
-        const rawData = {
-          amount,
-          reward,
-        };
-        txRawLogData = JSON.stringify(rawData);
-      } else if (txMsgType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
-        const contract_address = txData.tx_response.logs[0].events
-          .find(({ type }) => type === CONST_CHAR.INSTANTIATE)
-          .attributes.find(
-            ({ key }) => key === CONST_CHAR._CONTRACT_ADDRESS,
-          ).value;
-        txContractAddress = contract_address;
-      } else if (txMsgType == CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
-        txContractAddress = txData.tx.body.messages[0].contract;
-      }
-    } else {
-      const txBody = txData.tx_response.tx.body.messages[0];
-      txType = txBody['@type'];
-    }
-    return [txType, txRawLogData, txContractAddress];
-  }
-
-  static makeRedelegationData(txData: any, message: any) {
-    const delegation1 = new Delegation();
-    delegation1.tx_hash = txData.tx_response.txhash;
-    delegation1.delegator_address = message.delegator_address;
-    delegation1.validator_address = message.validator_src_address;
-    delegation1.amount = (Number(message.amount.amount) * -1) / this.precision;
-    delegation1.created_at = new Date(txData.tx_response.timestamp);
-    delegation1.type = CONST_DELEGATE_TYPE.REDELEGATE;
-    const delegation2 = new Delegation();
-    delegation2.tx_hash = txData.tx_response.txhash;
-    delegation2.delegator_address = message.delegator_address;
-    delegation2.validator_address = message.validator_dst_address;
-    delegation2.amount = Number(message.amount.amount) / this.precision;
-    delegation2.created_at = new Date(txData.tx_response.timestamp);
-    delegation2.type = CONST_DELEGATE_TYPE.REDELEGATE;
-
-    //save data to delegator_rewards table
-    let amount1 = 0;
-    let amount2 = 0;
-
-    const events = SyncDataHelpers.processEvent(txData);
-
-    if (events && events?.length > 0) {
-      const claimEvent = events.find((i) => i.type === 'transfer');
-      if (claimEvent) {
-        const attributes = claimEvent.attributes;
-        amount1 = Number(
-          attributes[2].value.replace(
-            ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
-            '',
-          ),
-        );
-        if (attributes.length > 3) {
-          amount2 = Number(
-            attributes[5].value.replace(
-              ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
-              '',
-            ),
-          );
-        }
-      }
-    }
-    const reward1 = new DelegatorReward();
-    reward1.delegator_address = message.delegator_address;
-    reward1.validator_address = message.validator_src_address;
-    reward1.amount = amount1;
-    reward1.tx_hash = txData.tx_response.txhash;
-    const reward2 = new DelegatorReward();
-    reward2.delegator_address = message.delegator_address;
-    reward2.validator_address = message.validator_dst_address;
-    reward2.amount = amount2;
-    reward2.tx_hash = txData.tx_response.txhash;
-    return [delegation1, delegation2, reward1, reward2];
-  }
-
-  static makeWithDrawDelegationData(txData: any, message: any) {
-    const reward = new DelegatorReward();
-    reward.delegator_address = message.delegator_address;
-    reward.validator_address = message.validator_address;
-    reward.amount = 0;
-
-    const events = SyncDataHelpers.processEvent(txData);
-
-    if (events && events?.length > 0) {
-      const rewardEvent = events.find((i) => i.type === 'withdraw_rewards');
-      const attributes = rewardEvent.attributes;
-      const amount = attributes[0].value;
-      reward.amount = Number(
-        amount.replace(ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM, ''),
-      );
-    }
-    reward.tx_hash = txData.tx_response.txhash;
-    reward.created_at = new Date(txData.tx_response.timestamp);
-    return reward;
-  }
-
-  static makeUndelegateData(txData: any, message: any) {
-    const delegation = new Delegation();
-    delegation.tx_hash = txData.tx_response.txhash;
-    delegation.delegator_address = message.delegator_address;
-    delegation.validator_address = message.validator_address;
-    delegation.amount = (Number(message.amount.amount) * -1) / this.precision;
-    delegation.created_at = new Date(txData.tx_response.timestamp);
-    delegation.type = CONST_DELEGATE_TYPE.UNDELEGATE;
-    //save data to delegator_rewards table
-    const reward = new DelegatorReward();
-    reward.delegator_address = message.delegator_address;
-    reward.validator_address = message.validator_address;
-    reward.amount = 0;
-
-    const events = SyncDataHelpers.processEvent(txData);
-
-    if (events && events?.length > 0) {
-      const claimEvent = events.find((i) => i.type === 'transfer');
-      if (claimEvent) {
-        const attributes = claimEvent.attributes;
-        reward.amount = Number(
-          attributes[2].value.replace(
-            ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
-            '',
-          ),
-        );
-        if (attributes.length > 3) {
-          delegation.amount =
-            (Number(
-              attributes[5].value.replace(
-                ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM,
-                '',
-              ),
-            ) *
-              -1) /
-            this.precision;
-        }
-      }
-    }
-    reward.tx_hash = txData.tx_response.txhash;
-    return [delegation, reward];
-  }
-
-  static makeDelegateData(txData: any, message: any) {
-    const delegation = new Delegation();
-    delegation.tx_hash = txData.tx_response.txhash;
-    delegation.delegator_address = message.delegator_address;
-    delegation.validator_address = message.validator_address;
-    delegation.amount = Number(message.amount.amount) / this.precision;
-    delegation.created_at = new Date(txData.tx_response.timestamp);
-    delegation.type = CONST_DELEGATE_TYPE.DELEGATE;
-    //save data to delegator_rewards table
-    const reward = new DelegatorReward();
-    reward.delegator_address = message.delegator_address;
-    reward.validator_address = message.validator_address;
-    reward.amount = 0;
-
-    const events = SyncDataHelpers.processEvent(txData);
-
-    if (events && events?.length > 0) {
-      const claimEvent = events.find((i) => i.type === 'transfer');
-      console.log(events[0].type);
-      if (claimEvent) {
-        const attributes = claimEvent.attributes;
-        const amount = attributes.find((f) => f.key === 'amount');
-        reward.amount =
-          Number(
-            amount?.value.replace(ENV_CONFIG.CHAIN_INFO.COIN_MINIMAL_DENOM, ''),
-          ) || 0;
-      }
-    }
-    reward.tx_hash = txData.tx_response.txhash;
-    return [delegation, reward];
   }
 
   static makeVoteData(txData, message: any) {
@@ -256,17 +42,6 @@ export class SyncDataHelpers {
     proposalVote.created_at = new Date(txData.tx_response.timestamp);
     proposalVote.updated_at = new Date(txData.tx_response.timestamp);
     return proposalVote;
-  }
-
-  static makeDelegationData(txData: any, message: any) {
-    const delegation = new Delegation();
-    delegation.tx_hash = txData.tx_response.txhash;
-    delegation.delegator_address = message.delegator_address;
-    delegation.validator_address = message.validator_address;
-    delegation.amount = Number(message.value.amount) / this.precision;
-    delegation.created_at = new Date(txData.tx_response.timestamp);
-    delegation.type = CONST_DELEGATE_TYPE.CREATE_VALIDATOR;
-    return delegation;
   }
 
   static makeValidatorData(data: any) {
@@ -443,5 +218,72 @@ export class SyncDataHelpers {
         events.push(...item.events);
       });
     return events;
+  }
+
+  static makeInstantiateContractData(contract: any) {
+    const smartContract = new SmartContract();
+    smartContract.id = 0;
+    smartContract.height = contract.instantiate_height;
+    smartContract.code_id = contract.code_id;
+    smartContract.contract_name = contract.name || '';
+    smartContract.contract_address = contract.address;
+    smartContract.creator_address = contract.creator;
+    smartContract.contract_hash = contract.contract_hash || '';
+    smartContract.tx_hash = contract.instantiate_hash;
+    smartContract.url = '';
+    smartContract.instantiate_msg_schema = '';
+    smartContract.query_msg_schema = '';
+    smartContract.execute_msg_schema = '';
+    smartContract.contract_match = '';
+    smartContract.contract_verification =
+      SMART_CONTRACT_VERIFICATION.UNVERIFIED;
+    smartContract.compiler_version = '';
+    smartContract.s3_location = '';
+    smartContract.reference_code_id = 0;
+    smartContract.mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED;
+    smartContract.verified_at = new Date();
+    smartContract.project_name = '';
+    smartContract.request_id = null;
+    smartContract.token_name = '';
+    smartContract.token_symbol = '';
+    smartContract.decimals = 0;
+    smartContract.description = '';
+    smartContract.image = '';
+    smartContract.num_tokens = Number(contract.num_tokens) || 0;
+    // Set total transaction with default instantiate transaction.
+    smartContract.total_tx = 1;
+
+    const tokenInfo = contract.token_info;
+    if (tokenInfo) {
+      smartContract.token_name = tokenInfo?.name || '';
+      smartContract.token_symbol = tokenInfo?.symbol || '';
+      smartContract.decimals = tokenInfo?.decimals || '';
+    }
+
+    const marketingInfo = contract.marketing_info;
+    if (marketingInfo) {
+      smartContract.description = marketingInfo?.description || '';
+      smartContract.image = marketingInfo.logo?.url || '';
+      smartContract.code_id = contract.code_id || 0;
+    }
+
+    const contractInfo = contract.contract_info;
+    if (contractInfo) {
+      smartContract.token_name = contractInfo?.name || '';
+      smartContract.token_symbol = contractInfo?.symbol || '';
+    }
+
+    const msg = contract.msg;
+    if (msg) {
+      smartContract.minter_address = msg.minter;
+      if (
+        smartContract.token_symbol.length === 0 ||
+        smartContract.token_name.length === 0
+      ) {
+        smartContract.token_symbol = msg.symbol;
+        smartContract.token_name = msg.name;
+      }
+    }
+    return smartContract;
   }
 }
