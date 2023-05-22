@@ -43,6 +43,7 @@ import { QUEUES } from './common/constants/app.constant';
 import { CoinProcessor } from './processor/coin.processor';
 import { BlockProcessor } from './processor/block.processor';
 import { ReSyncSmartContractProcessor } from './processor/resync/resync-smart-contract.processor';
+import { TransactionProcessor } from './processor/transaction.processor';
 
 const controllers = [];
 const entities = [
@@ -87,6 +88,7 @@ const processors = [
   CoinProcessor,
   BlockProcessor,
   ReSyncSmartContractProcessor,
+  TransactionProcessor,
 ];
 
 @Module({
@@ -125,6 +127,9 @@ const processors = [
       },
       {
         name: QUEUES.SYNC_BLOCK.QUEUE_NAME,
+      },
+      {
+        name: 'transaction',
       },
     ),
     CacheModule.register({ ttl: 10000 }),

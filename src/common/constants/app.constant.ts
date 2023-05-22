@@ -151,6 +151,7 @@ export const INDEXER_V2_API = {
                 }
               }
             }`,
+    LIST_TRANSACTION: `query Query($limit: Int, $fromHeight: Int) { ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} { transaction(limit: $limit, where: {height: {_gt: $fromHeight}}) { %s } } }`,
   },
 };
 
@@ -244,6 +245,8 @@ export const QUEUES = {
       },
     },
   },
+  SYNC_TRANSACTION: 'sync-transaction',
+  CLEAN_TRANSACTION: 'clean-transaction',
 };
 
 export enum CW4973_CONTRACT {
