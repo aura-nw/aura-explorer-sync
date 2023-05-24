@@ -282,3 +282,8 @@ export enum SYNC_COIN_INF_HOSTS {
 export const DEFAULT_HEADER = {
   'content-type': 'application/json',
 };
+
+export const COIN_MARKET_CAP_HEADER = {
+  'Content-Type': 'application/json',
+  'X-CMC_PRO_API_KEY': ENV_CONFIG.COIN_MARKET_CAP.API_KEY,
+};

@@ -4,6 +4,7 @@ import { Queue } from 'bull';
 import {
   COINGECKO_API,
   COIN_MARKET_CAP_API,
+  COIN_MARKET_CAP_HEADER,
   QUEUES,
   REDIS_KEY,
   SYNC_COIN_INF_HOSTS,
@@ -148,16 +149,11 @@ export class CoinProcessor extends BaseProcessor {
       coinIds,
     )}`;
 
-    const headersRequest = {
-      'Content-Type': 'application/json',
-      'X-CMC_PRO_API_KEY': ENV_CONFIG.COIN_MARKET_CAP.API_KEY,
-    };
-
     const [response, tokenInfos] = await Promise.all([
       this.commonUtil.getDataAPIWithHeader(
         coinMarketCap.API,
         para,
-        headersRequest,
+        COIN_MARKET_CAP_HEADER,
       ),
       this.tokenMarketsRepository.find({
         where: {
