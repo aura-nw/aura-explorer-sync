@@ -6,6 +6,7 @@ import {
 } from '@influxdata/influxdb-client';
 import { CONTRACT_TYPE } from '../common/constants/app.constant';
 import { TokenMarkets } from '../entities';
+import { ENV_CONFIG } from 'src/shared/services/config.service';
 
 export class InfluxDBClient {
   private client: InfluxDB;
@@ -13,13 +14,11 @@ export class InfluxDBClient {
   private writeApi: WriteApi;
 
   constructor(
-    public bucket: string,
-    public org: string,
-    public url: string,
-    public token: string,
-  ) {
-    this.client = new InfluxDB({ url, token });
-  }
+    public bucket: string = ENV_CONFIG.INFLUX_DB.BUCKET,
+    public org: string = ENV_CONFIG.INFLUX_DB.ORGANIZATION,
+    public url: string = ENV_CONFIG.INFLUX_DB.URL,
+    public token: string = ENV_CONFIG.INFLUX_DB.TOKEN,
+  ) {}
 
   initQueryApi(): void {
     this.queryApi = this.client.getQueryApi(this.org);
@@ -314,6 +313,22 @@ export class InfluxDBClient {
     if (points.length > 0) {
       this.writeApi.writePoints(points);
       await this.writeApi.flush();
+    }
+  }
+
+  connectInfluxDB(): void {
+    this.client = new InfluxDB({
+      url: ENV_CONFIG.INFLUX_DB.URL,
+      token: ENV_CONFIG.INFLUX_DB.TOKEN,
+    });
+
+    this.initWriteApi();
+  }
+
+  reConnectInfluxDB(error: any): void {
+    const errorCode = error?.code || '';
+    if (errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT') {
+      this.connectInfluxDB();
     }
   }
 }

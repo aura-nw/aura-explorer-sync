@@ -23,7 +23,6 @@ import { BaseProcessor } from './base.processor';
 @Processor(QUEUES.SYNC_BLOCK.QUEUE_NAME)
 export class BlockProcessor extends BaseProcessor {
   private threads = 0;
-  private influxDbClient: InfluxDBClient;
   private api = ENV_CONFIG.NODE.API;
 
   constructor(
@@ -32,6 +31,7 @@ export class BlockProcessor extends BaseProcessor {
     private statusRepository: SyncStatusRepository,
     private smartContractRepository: SmartContractRepository,
     private proposalVoteRepository: ProposalVoteRepository,
+    private influxDbClient: InfluxDBClient,
 
     @InjectQueue(QUEUES.SYNC_BLOCK.QUEUE_NAME)
     private readonly blockQueue: Queue,
@@ -41,7 +41,7 @@ export class BlockProcessor extends BaseProcessor {
     super();
 
     this.threads = ENV_CONFIG.THREADS;
-    this.influxDbClient = this.commonUtil.connectInfluxDB();
+    this.influxDbClient.connectInfluxDB();
 
     this.blockQueue.add(
       QUEUES.SYNC_BLOCK.JOBS.SYNC_BLOCK_HEIGHT,
@@ -210,10 +210,7 @@ export class BlockProcessor extends BaseProcessor {
         );
       }
     } catch (error) {
-      this.influxDbClient = this.commonUtil.reConnectInfluxDB(
-        error,
-        this.influxDbClient,
-      );
+      this.influxDbClient.reConnectInfluxDB(error);
 
       throw error;
     }

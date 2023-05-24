@@ -44,6 +44,7 @@ import { CoinProcessor } from './processor/coin.processor';
 import { BlockProcessor } from './processor/block.processor';
 import { ReSyncSmartContractProcessor } from './processor/resync/resync-smart-contract.processor';
 import { TransactionProcessor } from './processor/transaction.processor';
+import { InfluxDBClient } from './utils/influxdb-client';
 
 const controllers = [];
 const entities = [
@@ -143,6 +144,6 @@ const processors = [
   ],
   exports: [BullModule, ...processors],
   controllers: [...controllers],
-  providers: [...repositories, ...processors],
+  providers: [...repositories, ...processors, InfluxDBClient],
 })
 export class AppModule {}

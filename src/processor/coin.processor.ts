@@ -22,18 +22,17 @@ import { BaseProcessor } from './base.processor';
 
 @Processor(QUEUES.SYNC_COIN.QUEUE_NAME)
 export class CoinProcessor extends BaseProcessor {
-  private influxDbClient: InfluxDBClient;
-
   constructor(
     private readonly commonUtil: CommonUtil,
     private readonly tokenMarketsRepository: TokenMarketsRepository,
     private readonly redisUtil: RedisUtil,
+    private influxDbClient: InfluxDBClient,
+
     @InjectQueue(QUEUES.SYNC_COIN.QUEUE_NAME) private readonly coinQueue: Queue,
   ) {
     super();
 
-    this.influxDbClient = this.commonUtil.connectInfluxDB();
-    this.influxDbClient.initWriteApi();
+    this.influxDbClient.connectInfluxDB();
 
     this.coinQueue.add(
       QUEUES.SYNC_COIN.JOBS.SYNC_ID,
@@ -129,10 +128,7 @@ export class CoinProcessor extends BaseProcessor {
           await this.syncCoingeckoPrice(tokenHavingCoinID);
         }
       } catch (err) {
-        this.influxDbClient = this.commonUtil.reConnectInfluxDB(
-          err,
-          this.influxDbClient,
-        );
+        this.influxDbClient.reConnectInfluxDB(err);
         throw err;
       }
     }
