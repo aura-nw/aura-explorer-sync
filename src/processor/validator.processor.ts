@@ -1,11 +1,4 @@
-import {
-  InjectQueue,
-  OnQueueError,
-  OnQueueFailed,
-  Process,
-  Processor,
-} from '@nestjs/bull';
-import { Logger } from '@nestjs/common';
+import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Job, Queue } from 'bull';
 import {
   CONST_CHAR,
@@ -19,22 +12,20 @@ import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import * as util from 'util';
 import { CronExpression } from '@nestjs/schedule';
+import { BaseProcessor } from './base.processor';
 
-@Processor('validator')
-export class ValidatorProcessor {
-  private readonly logger = new Logger(ValidatorProcessor.name);
-
+@Processor(QUEUES.SYNC_VALIDATOR.QUEUE_NAME)
+export class ValidatorProcessor extends BaseProcessor {
   constructor(
     private commonUtil: CommonUtil,
     private validatorRepository: ValidatorRepository,
-    @InjectQueue('validator') private readonly validatorQueue: Queue,
+    @InjectQueue(QUEUES.SYNC_VALIDATOR.QUEUE_NAME)
+    private readonly validatorQueue: Queue,
   ) {
-    this.logger.log(
-      '============== Constructor Validator Processor Service ==============',
-    );
+    super();
 
     this.validatorQueue.add(
-      QUEUES.SYNC_LIST_VALIDATOR,
+      QUEUES.SYNC_VALIDATOR.JOBS.SYNC_LIST_VALIDATOR,
       {},
       {
         removeOnFail: false,
@@ -43,7 +34,7 @@ export class ValidatorProcessor {
     );
 
     this.validatorQueue.add(
-      QUEUES.SYNC_VALIDATOR_IMAGE,
+      QUEUES.SYNC_VALIDATOR.JOBS.SYNC_VALIDATOR_IMAGE,
       {},
       {
         removeOnFail: false,
@@ -58,7 +49,7 @@ export class ValidatorProcessor {
     })();
   }
 
-  @Process(QUEUES.SYNC_LIST_VALIDATOR)
+  @Process(QUEUES.SYNC_VALIDATOR.JOBS.SYNC_LIST_VALIDATOR)
   async syncListValidator(job) {
     this.logger.log(
       `${this.syncListValidator.name} is processing job: ${job.id}`,
@@ -122,7 +113,7 @@ export class ValidatorProcessor {
     }
   }
 
-  @Process(QUEUES.SYNC_VALIDATOR_IMAGE)
+  @Process(QUEUES.SYNC_VALIDATOR.JOBS.SYNC_VALIDATOR_IMAGE)
   async syncValidatorImage(job: Job) {
     this.logger.log(
       `${this.syncListValidator.name} is processing job: ${job.id}`,
@@ -139,17 +130,6 @@ export class ValidatorProcessor {
       this.logger.error(errorMsg);
       throw new Error(errorMsg);
     }
-  }
-
-  @OnQueueError()
-  onError(error: Error) {
-    this.logger.error(`Queue Error: ${error.stack}`);
-  }
-
-  @OnQueueFailed()
-  async onFailed(job: Job, error: Error) {
-    this.logger.error(`Failed job ${job.id} of type ${job.name}`);
-    this.logger.error(`Error: ${error}`);
   }
 
   /**

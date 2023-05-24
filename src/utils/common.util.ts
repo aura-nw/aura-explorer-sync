@@ -11,6 +11,7 @@ import {
   CONST_CHAR,
   CONTRACT_TYPE,
   CW4973_CONTRACT,
+  DEFAULT_HEADER,
   NODE_API,
 } from '../common/constants/app.constant';
 import axios from 'axios';
@@ -18,6 +19,7 @@ import * as util from 'util';
 import { SmartContract } from '../entities';
 import { sha256 } from 'js-sha256';
 import { ENV_CONFIG } from '../shared/services/config.service';
+import { InfluxDBClient } from './influxdb-client';
 
 @Injectable()
 export class CommonUtil {
@@ -57,10 +59,7 @@ export class CommonUtil {
   }
 
   async fetchDataFromGraphQL(query, endpoint?, method?, headers?) {
-    const defaultHeaders = {
-      'content-type': 'application/json',
-    };
-    headers = headers ? headers : defaultHeaders;
+    headers = headers ? headers : DEFAULT_HEADER;
     endpoint = endpoint ? endpoint : ENV_CONFIG.INDEXER_V2.GRAPH_QL;
     method = method ? method : 'POST';
     try {
@@ -322,5 +321,29 @@ export class CommonUtil {
       return primary?.url || '';
     }
     return '';
+  }
+
+  connectInfluxDB(): InfluxDBClient {
+    const client: InfluxDBClient = new InfluxDBClient(
+      ENV_CONFIG.INFLUX_DB.BUCKET,
+      ENV_CONFIG.INFLUX_DB.ORGANIZATION,
+      ENV_CONFIG.INFLUX_DB.URL,
+      ENV_CONFIG.INFLUX_DB.TOKEN,
+    );
+
+    client.initWriteApi();
+
+    return client;
+  }
+
+  reConnectInfluxDB(error: any, client: InfluxDBClient): InfluxDBClient {
+    const errorCode = error?.code || '';
+    if (
+      errorCode === 'ECONNREFUSED' ||
+      errorCode === 'ETIMEDOUT' ||
+      client === undefined
+    ) {
+      return this.connectInfluxDB();
+    }
   }
 }

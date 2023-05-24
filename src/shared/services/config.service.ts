@@ -72,7 +72,7 @@ export class ConfigService {
       },
       INFLUX_DB: {
         BUCKET: process.env.INFLUXDB_BUCKET,
-        ORGANIZTION: process.env.INFLUXDB_ORG,
+        ORGANIZATION: process.env.INFLUXDB_ORG,
         URL: process.env.INFLUXDB_URL,
         TOKEN: process.env.INFLUXDB_TOKEN,
       },

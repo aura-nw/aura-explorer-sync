@@ -32,10 +32,10 @@ import { SoulboundTokenRepository } from '../repositories/soulbound-token.reposi
 import { SoulboundToken } from '../entities/soulbound-token.entity';
 import { lastValueFrom, timeout, retry } from 'rxjs';
 import { CronExpression } from '@nestjs/schedule';
+import { BaseProcessor } from './base.processor';
 
 @Processor(QUEUES.SYNC_CONTRACT.QUEUE_NAME)
-export class SmartContractsProcessor {
-  private readonly logger = new Logger(SmartContractsProcessor.name);
+export class SmartContractsProcessor extends BaseProcessor {
   private indexerUrl;
   private indexerChainId;
 
@@ -49,9 +49,8 @@ export class SmartContractsProcessor {
     @InjectQueue(QUEUES.SYNC_CONTRACT.QUEUE_NAME)
     private readonly contractQueue: Queue,
   ) {
-    this.logger.log(
-      '============== Constructor Smart Contracts Processor Service ==============',
-    );
+    super();
+
     this.indexerUrl = this.configService.get('INDEXER_URL');
     this.indexerChainId = this.configService.get('INDEXER_CHAIN_ID');
 
@@ -92,7 +91,11 @@ export class SmartContractsProcessor {
                               creator
                               instantiate_hash
                               instantiate_height
-                              name`;
+                              name
+                              version
+                              cw721_contract {
+                                minter
+                              }`;
       const queryListContract = {
         query: util.format(
           INDEXER_V2_API.GRAPH_QL.SMART_CONTRACT,
@@ -166,7 +169,7 @@ export class SmartContractsProcessor {
             const tokenInfo = SyncDataHelpers.makeTokenMarket(contractInfo);
             await this.tokenMarketsRepository.insertOnDuplicate(
               [tokenInfo],
-              ['id'],
+              ['contract_address'],
             );
           }
         }
@@ -315,8 +318,9 @@ export class SmartContractsProcessor {
 
   async updateNumTokenContract(contractAddress: []) {
     this.logger.log(
-      `Call contract lcd api to query num_tokens with parameter: contract_address: ${contractAddress}`,
+      `Call contract horoscope api to query num_tokens with parameter: contract_address: ${contractAddress}`,
     );
+    // FIXME: migrate to horoscope v2.
     let urlRequest = `${this.indexerUrl}${util.format(
       INDEXER_API.GET_SMART_CONTRACT_BT_LIST_CONTRACT_ADDRESS,
       this.indexerChainId,

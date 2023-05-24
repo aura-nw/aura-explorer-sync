@@ -1,13 +1,5 @@
-import {
-  InjectQueue,
-  OnQueueActive,
-  OnQueueCompleted,
-  OnQueueError,
-  OnQueueFailed,
-  Process,
-  Processor,
-} from '@nestjs/bull';
-import { BackoffOptions, Job, JobOptions, Queue } from 'bull';
+import { InjectQueue, Process, Processor } from '@nestjs/bull';
+import { BackoffOptions, JobOptions, Queue } from 'bull';
 import * as util from 'util';
 import {
   CONST_MSG_TYPE,
@@ -26,11 +18,10 @@ import { CommonUtil } from 'src/utils/common.util';
 import { InfluxDBClient } from 'src/utils/influxdb-client';
 import { In } from 'typeorm';
 import { ProposalVoteRepository } from 'src/repositories/proposal-vote.repository';
-import { Logger } from '@nestjs/common';
+import { BaseProcessor } from './base.processor';
 
 @Processor(QUEUES.SYNC_BLOCK.QUEUE_NAME)
-export class BlockProcessor {
-  private readonly logger = new Logger(BlockProcessor.name);
+export class BlockProcessor extends BaseProcessor {
   private threads = 0;
   private influxDbClient: InfluxDBClient;
   private api = ENV_CONFIG.NODE.API;
@@ -47,11 +38,10 @@ export class BlockProcessor {
     @InjectQueue(QUEUES.SYNC_CONTRACT.QUEUE_NAME)
     private readonly contractQueue: Queue,
   ) {
-    this.logger.log(
-      '============== Constructor Block Processor ==============',
-    );
+    super();
 
-    this.threads = 100;
+    this.threads = ENV_CONFIG.THREADS;
+    this.influxDbClient = this.commonUtil.connectInfluxDB();
 
     this.blockQueue.add(
       QUEUES.SYNC_BLOCK.JOBS.SYNC_BLOCK_HEIGHT,
@@ -64,8 +54,6 @@ export class BlockProcessor {
       {},
       { removeOnFail: false, repeat: { every: 3000 } },
     );
-
-    this.connectInfluxDB();
   }
 
   @Process(QUEUES.SYNC_BLOCK.JOBS.SYNC_BLOCK_HEIGHT)
@@ -74,7 +62,6 @@ export class BlockProcessor {
     const blockErrors = [];
     try {
       let currentHeight = 0;
-      this.logger.log('start cron generate block sync error');
       const [blockLatest, currentBlock, blockStatus] = await Promise.all([
         this.getBlockLatest(),
         this.blockSyncErrorRepository.max('height'),
@@ -93,23 +80,20 @@ export class BlockProcessor {
         currentHeight = Number(blockStatus.current_block) || 0;
       }
 
-      let latestBlk = Number(blockLatest?.block?.header?.height || 0);
+      let latestBlockNumber = Number(blockLatest?.block?.header?.height || 0);
 
-      if (latestBlk > currentHeight) {
-        if (latestBlk - currentHeight > this.threads) {
-          latestBlk = currentHeight + this.threads;
+      if (latestBlockNumber > currentHeight) {
+        if (latestBlockNumber - currentHeight > this.threads) {
+          latestBlockNumber = currentHeight + this.threads;
         }
-        for (let i = currentHeight + 1; i < latestBlk; i++) {
+        for (let i = currentHeight + 1; i < latestBlockNumber; i++) {
           const blockSyncError = new BlockSyncError();
           blockSyncError.height = i;
           blockErrors.push(blockSyncError);
         }
       }
       if (blockErrors.length > 0) {
-        this.logger.log(`Insert data to database`);
-        await this.blockSyncErrorRepository.insertOnDuplicate(blockErrors, [
-          'id',
-        ]);
+        await this.blockSyncErrorRepository.upsert(blockErrors, ['height']);
       }
     } catch (error) {
       const heights = blockErrors.map((m) => m.height);
@@ -141,7 +125,6 @@ export class BlockProcessor {
     this.logger.log(`handleSyncData called with: {syncBlock: ${syncBlocks}}`);
 
     try {
-      this.influxDbClient.initWriteApi();
       const blockAttrs = `height
                           time
                           hash
@@ -227,7 +210,10 @@ export class BlockProcessor {
         );
       }
     } catch (error) {
-      this.reconnectInfluxdb(error);
+      this.influxDbClient = this.commonUtil.reConnectInfluxDB(
+        error,
+        this.influxDbClient,
+      );
 
       throw error;
     }
@@ -258,13 +244,11 @@ export class BlockProcessor {
             txTypeReturn.lastIndexOf('.') + 1,
           );
           if (txType === CONST_MSG_TYPE.MSG_VOTE) {
-            this.logger.error('Make vote data');
             const proposalVote = SyncDataHelpers.makeVoteData(
               txData.data,
               message,
             );
             proposalVotes.push(proposalVote);
-            this.logger.error(JSON.stringify(message));
           } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
             const lstContract: any = [];
             const logs = txData.data.tx_response.logs;
@@ -316,7 +300,6 @@ export class BlockProcessor {
       }
     }
     if (proposalVotes.length > 0) {
-      this.logger.error(JSON.stringify(proposalVotes));
       await this.proposalVoteRepository.insertOnDuplicate(proposalVotes, [
         'id',
       ]);
@@ -348,43 +331,5 @@ export class BlockProcessor {
       paramsBlockLatest,
     );
     return results;
-  }
-
-  reconnectInfluxdb(error: any) {
-    const errorCode = error?.code || '';
-    if (errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT') {
-      this.connectInfluxDB();
-    }
-  }
-
-  connectInfluxDB() {
-    this.influxDbClient = new InfluxDBClient(
-      ENV_CONFIG.INFLUX_DB.BUCKET,
-      ENV_CONFIG.INFLUX_DB.ORGANIZTION,
-      ENV_CONFIG.INFLUX_DB.URL,
-      ENV_CONFIG.INFLUX_DB.TOKEN,
-    );
-  }
-
-  @OnQueueActive()
-  onActive(job: Job) {
-    this.logger.log(`Processing job ${job.id} of type ${job.name}...`);
-  }
-
-  @OnQueueCompleted()
-  async onComplete(job: Job) {
-    this.logger.log(`Completed job ${job.id} of type ${job.name}`);
-  }
-
-  @OnQueueError()
-  onError(job: Job, error: Error) {
-    this.logger.error(`Error job ${job.id} of type ${job.name}`);
-    this.logger.error(error.stack);
-  }
-
-  @OnQueueFailed()
-  async onFailed(job: Job, error: Error) {
-    this.logger.error(`Failed job ${job.id} of type ${job.name}`);
-    this.logger.error(error.stack);
   }
 }

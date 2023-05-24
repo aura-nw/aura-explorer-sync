@@ -120,7 +120,7 @@ const processors = [
         name: QUEUES.RESYNC.CONTRACT.QUEUE_NAME,
       },
       {
-        name: 'validator',
+        name: QUEUES.SYNC_VALIDATOR.QUEUE_NAME,
       },
       {
         name: QUEUES.SYNC_COIN.QUEUE_NAME,
@@ -129,7 +129,7 @@ const processors = [
         name: QUEUES.SYNC_BLOCK.QUEUE_NAME,
       },
       {
-        name: 'transaction',
+        name: QUEUES.SYNC_TRANSACTION.QUEUE_NAME,
       },
     ),
     CacheModule.register({ ttl: 10000 }),

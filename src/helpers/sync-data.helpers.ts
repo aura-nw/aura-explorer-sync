@@ -253,36 +253,24 @@ export class SyncDataHelpers {
     // Set total transaction with default instantiate transaction.
     smartContract.total_tx = 1;
 
-    const tokenInfo = contract.token_info;
-    if (tokenInfo) {
-      smartContract.token_name = tokenInfo?.name || '';
-      smartContract.token_symbol = tokenInfo?.symbol || '';
-      smartContract.decimals = tokenInfo?.decimals || '';
-    }
+    const cw20Contract = contract.cw20_contract;
+    if (cw20Contract) {
+      smartContract.token_name = cw20Contract.name || '';
+      smartContract.token_symbol = cw20Contract.symbol || '';
+      smartContract.decimals = Number(cw20Contract.decimals);
 
-    const marketingInfo = contract.marketing_info;
-    if (marketingInfo) {
-      smartContract.description = marketingInfo?.description || '';
-      smartContract.image = marketingInfo.logo?.url || '';
-      smartContract.code_id = contract.code_id || 0;
-    }
-
-    const contractInfo = contract.contract_info;
-    if (contractInfo) {
-      smartContract.token_name = contractInfo?.name || '';
-      smartContract.token_symbol = contractInfo?.symbol || '';
-    }
-
-    const msg = contract.msg;
-    if (msg) {
-      smartContract.minter_address = msg.minter;
-      if (
-        smartContract.token_symbol.length === 0 ||
-        smartContract.token_name.length === 0
-      ) {
-        smartContract.token_symbol = msg.symbol;
-        smartContract.token_name = msg.name;
+      const cw20Marketing = cw20Contract.marketing_info;
+      if (cw20Marketing) {
+        smartContract.description = cw20Marketing.description || '';
+        smartContract.image = cw20Contract.logo.url || '';
       }
+    }
+
+    const cw721Contract = contract.cw721_contract;
+    if (cw721Contract) {
+      smartContract.minter_address = cw721Contract.minter;
+      smartContract.token_symbol = cw721Contract.symbol;
+      smartContract.token_name = cw721Contract.name;
     }
     return smartContract;
   }

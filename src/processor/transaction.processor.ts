@@ -8,23 +8,22 @@ import { TransactionHelper } from '../helpers/transaction.helper';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CronExpression } from '@nestjs/schedule';
 import * as util from 'util';
-
-@Processor('transaction')
-export class TransactionProcessor {
+import { BaseProcessor } from './base.processor';
+@Processor(QUEUES.SYNC_TRANSACTION.QUEUE_NAME)
+export class TransactionProcessor extends BaseProcessor {
   private readonly _logger = new Logger(TransactionProcessor.name);
   private isBlocked = false;
 
   constructor(
     private commonUtil: CommonUtil,
     private txsRepository: TransactionRepository,
-    @InjectQueue('transaction') private readonly transactionQueue: Queue,
+    @InjectQueue(QUEUES.SYNC_TRANSACTION.QUEUE_NAME)
+    private readonly transactionQueue: Queue,
   ) {
-    this._logger.log(
-      '============== Constructor Sync Transaction Service ==============',
-    );
+    super();
 
     this.transactionQueue.add(
-      QUEUES.SYNC_TRANSACTION,
+      QUEUES.SYNC_TRANSACTION.JOBS.SYNC_TRANSACTION,
       {},
       {
         removeOnFail: false,
@@ -33,7 +32,7 @@ export class TransactionProcessor {
     );
 
     this.transactionQueue.add(
-      QUEUES.CLEAN_TRANSACTION,
+      QUEUES.SYNC_TRANSACTION.JOBS.CLEAN_TRANSACTION,
       {},
       {
         removeOnFail: false,
@@ -45,7 +44,7 @@ export class TransactionProcessor {
   /**
    * crawl transaction from indexer
    */
-  @Process(QUEUES.SYNC_TRANSACTION)
+  @Process(QUEUES.SYNC_TRANSACTION.JOBS.SYNC_TRANSACTION)
   async syncTransactions() {
     if (this.isBlocked) return;
     this.isBlocked = true;
@@ -68,7 +67,7 @@ export class TransactionProcessor {
    * Cleanup transactions after 7 days
    * Daily at 00:00
    */
-  @Process(QUEUES.CLEAN_TRANSACTION)
+  @Process(QUEUES.SYNC_TRANSACTION.JOBS.CLEAN_TRANSACTION)
   async cleanupTransactions() {
     this._logger.log('Start cleanup transactions ...');
 
@@ -115,13 +114,8 @@ export class TransactionProcessor {
           fromHeight: fromHeight,
         },
       };
-      transactions = (
-        await this.commonUtil.fetchDataFromGraphQL(
-          ENV_CONFIG.INDEXER_V2.GRAPH_QL,
-          'POST',
-          graphqlQuery,
-        )
-      ).data[ENV_CONFIG.INDEXER_V2.CHAIN_DB]['transaction'];
+      transactions = (await this.commonUtil.fetchDataFromGraphQL(graphqlQuery))
+        .data[ENV_CONFIG.INDEXER_V2.CHAIN_DB]['transaction'];
     } catch (e) {
       this._logger.log(`crawl transactions got error ${e.message}`);
     }

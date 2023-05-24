@@ -208,15 +208,15 @@ export const SOULBOUND_PICKED_TOKEN = {
 };
 
 export const QUEUES = {
-  SYNC_PRICE_VOLUME: 'sync-price-volume',
-  SYNC_COIN_ID: 'sync-coin-id',
-  SYNC_CONTRACT_FROM_HEIGHT: 'sync-contract-from-height',
-  SYNC_VALIDATOR: 'sync-validator',
-  SYNC_VALIDATOR_IMAGE: 'sync-validator-image',
-  SYNC_LIST_VALIDATOR: 'sync-list-validator',
-  SYNC_CONTRACT_CODE: 'sync-contract-code',
+  SYNC_VALIDATOR: {
+    QUEUE_NAME: 'validator',
+    JOBS: {
+      SYNC_VALIDATOR_IMAGE: 'sync-validator-image',
+      SYNC_LIST_VALIDATOR: 'sync-list-validator',
+    },
+  },
   SYNC_CONTRACT: {
-    QUEUE_NAME: 'sync-contracts',
+    QUEUE_NAME: 'smart-contracts',
     JOBS: {
       SYNC_EXECUTE_CONTRACTS: 'sync-execute-contracts',
       SYNC_CW4973_NFT_STATUS: 'sync-cw4973-nft-status',
@@ -237,16 +237,21 @@ export const QUEUES = {
       PROCESS_BLOCK: 'process-block',
     },
   },
+  SYNC_TRANSACTION: {
+    QUEUE_NAME: 'transaction',
+    JOBS: {
+      SYNC_TRANSACTION: 'sync-transaction',
+      CLEAN_TRANSACTION: 'clean-transaction',
+    },
+  },
   RESYNC: {
     CONTRACT: {
-      QUEUE_NAME: 'resync-contract',
+      QUEUE_NAME: 'resync-smart-contracts',
       JOBS: {
         RESYNC_CONTRACT_FROM_HEIGHT: 'resync-contract-from-height',
       },
     },
   },
-  SYNC_TRANSACTION: 'sync-transaction',
-  CLEAN_TRANSACTION: 'clean-transaction',
 };
 
 export enum CW4973_CONTRACT {
@@ -274,9 +279,6 @@ export enum SYNC_COIN_INF_HOSTS {
   COIN_MARKET_CAP = 'COIN_MARKET_CAP',
 }
 
-export const VOTE_OPTIONS = {
-  0: 'VOTE_OPTION_UNSPECIFIED',
-  1: 'VOTE_OPTION_YES',
-  2: 'VOTE_OPTION_NO',
-  3: 'VOTE_OPTION_NO_WITH_VETO',
+export const DEFAULT_HEADER = {
+  'content-type': 'application/json',
 };

@@ -1,6 +1,5 @@
 //FIXME: delete this file when admin panel release this feature.
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
-import { Logger } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import { Queue } from 'bull';
 import {
@@ -16,10 +15,10 @@ import { ConfigService, ENV_CONFIG } from 'src/shared/services/config.service';
 import { CommonUtil } from 'src/utils/common.util';
 import { In } from 'typeorm';
 import * as util from 'util';
+import { BaseProcessor } from '../base.processor';
 
 @Processor(QUEUES.RESYNC.CONTRACT.QUEUE_NAME)
-export class ReSyncSmartContractProcessor {
-  private readonly logger = new Logger(ReSyncSmartContractProcessor.name);
+export class ReSyncSmartContractProcessor extends BaseProcessor {
   private indexerUrl = '';
   private indexerChainId = '';
   private contractNextKey = '';
@@ -38,9 +37,8 @@ export class ReSyncSmartContractProcessor {
     @InjectQueue(QUEUES.RESYNC.CONTRACT.QUEUE_NAME)
     private readonly resyncContractQueue: Queue,
   ) {
-    this.logger.log(
-      '============== Constructor Sync Smart Contract Service ==============',
-    );
+    super();
+
     this.indexerUrl = this.configService.get('INDEXER_URL');
     this.indexerChainId = this.configService.get('INDEXER_CHAIN_ID');
     const config = ENV_CONFIG.SYNC_SMART_CONTRACT;

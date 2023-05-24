@@ -26,7 +26,7 @@ export class SmartContractRepository extends BaseRepository<SmartContract> {
     const query = this.repos
       .createQueryBuilder('smart_contracts')
       .select('smart_contracts.height as height')
-      .orderBy('smart_contracts.id', 'DESC');
+      .orderBy('smart_contracts.height', 'DESC');
     const res = await query.getRawOne();
     if (res) {
       return res.height;

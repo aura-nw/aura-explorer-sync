@@ -1,15 +1,6 @@
-import {
-  InjectQueue,
-  OnQueueActive,
-  OnQueueCompleted,
-  OnQueueError,
-  OnQueueFailed,
-  Process,
-  Processor,
-} from '@nestjs/bull';
-import { Logger } from '@nestjs/common';
+import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { CronExpression } from '@nestjs/schedule';
-import { Job, Queue } from 'bull';
+import { Queue } from 'bull';
 import {
   COINGECKO_API,
   COIN_MARKET_CAP_API,
@@ -26,10 +17,10 @@ import { InfluxDBClient } from 'src/utils/influxdb-client';
 import { RedisUtil } from 'src/utils/redis.util';
 import { Equal, In } from 'typeorm';
 import * as util from 'util';
+import { BaseProcessor } from './base.processor';
 
 @Processor(QUEUES.SYNC_COIN.QUEUE_NAME)
-export class CoinProcessor {
-  private readonly logger = new Logger(CoinProcessor.name);
+export class CoinProcessor extends BaseProcessor {
   private influxDbClient: InfluxDBClient;
 
   constructor(
@@ -38,8 +29,10 @@ export class CoinProcessor {
     private readonly redisUtil: RedisUtil,
     @InjectQueue(QUEUES.SYNC_COIN.QUEUE_NAME) private readonly coinQueue: Queue,
   ) {
-    this.logger.log('============== Constructor Coin Processor ==============');
-    this.connectInfluxdb();
+    super();
+
+    this.influxDbClient = this.commonUtil.connectInfluxDB();
+    this.influxDbClient.initWriteApi();
 
     this.coinQueue.add(
       QUEUES.SYNC_COIN.JOBS.SYNC_ID,
@@ -135,11 +128,11 @@ export class CoinProcessor {
           await this.syncCoingeckoPrice(tokenHavingCoinID);
         }
       } catch (err) {
-        // Reconnect influxDb
-        const errorCode = err?.code || '';
-        if (errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT') {
-          this.connectInfluxdb();
-        }
+        this.influxDbClient = this.commonUtil.reConnectInfluxDB(
+          err,
+          this.influxDbClient,
+        );
+        throw err;
       }
     }
   }
@@ -232,49 +225,5 @@ export class CoinProcessor {
     this.logger.log(
       `============== Write data to Influxdb  successfully ==============`,
     );
-  }
-
-  connectInfluxdb() {
-    this.logger.log(
-      `============== call connectInfluxdb method ==============`,
-    );
-    try {
-      this.influxDbClient = new InfluxDBClient(
-        ENV_CONFIG.INFLUX_DB.BUCKET,
-        ENV_CONFIG.INFLUX_DB.ORGANIZTION,
-        ENV_CONFIG.INFLUX_DB.URL,
-        ENV_CONFIG.INFLUX_DB.TOKEN,
-      );
-      if (this.influxDbClient) {
-        this.influxDbClient.initWriteApi();
-      }
-    } catch (err) {
-      this.logger.log(
-        `call connectInfluxdb method has error: ${err.message}`,
-        err.stack,
-      );
-    }
-  }
-
-  @OnQueueActive()
-  onActive(job: Job) {
-    this.logger.log(`Processing job ${job.id} of type ${job.name}`);
-  }
-
-  @OnQueueCompleted()
-  onCompleted(job: Job) {
-    this.logger.log(`Completed job ${job.id} of type ${job.name}`);
-  }
-
-  @OnQueueFailed()
-  onFailed(job: Job, error: Error) {
-    this.logger.error(`Error job ${job.id} of type ${job.name}`);
-    this.logger.error(error.stack);
-  }
-
-  @OnQueueError()
-  onErr(job: Job, error: Error) {
-    this.logger.error(`Failed job ${job.id} of type ${job.name}`);
-    this.logger.error(error.stack);
   }
 }
