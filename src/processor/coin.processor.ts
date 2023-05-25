@@ -39,7 +39,7 @@ export class CoinProcessor extends BaseProcessor {
       {},
       {
         removeOnFail: false,
-        repeat: { cron: CronExpression.EVERY_10_HOURS },
+        repeat: { cron: CronExpression.EVERY_3_HOURS },
       },
     );
 

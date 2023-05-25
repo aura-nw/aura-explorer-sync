@@ -4,6 +4,7 @@ import * as util from 'util';
 import {
   CONST_MSG_TYPE,
   INDEXER_V2_API,
+  JOB_OPTIONS,
   NODE_API,
   QUEUES,
 } from 'src/common/constants/app.constant';
@@ -52,7 +53,10 @@ export class BlockProcessor extends BaseProcessor {
     this.blockQueue.add(
       QUEUES.SYNC_BLOCK.JOBS.PROCESS_BLOCK,
       {},
-      { removeOnFail: false, repeat: { every: 3000 } },
+      {
+        removeOnFail: false,
+        repeat: { every: JOB_OPTIONS.TIME_REPEAT.EVERY_3_SECONDS },
+      },
     );
   }
 
@@ -122,6 +126,10 @@ export class BlockProcessor extends BaseProcessor {
   }
 
   async handleSyncData(syncBlocks: number[]): Promise<any> {
+    if (syncBlocks.length === 0) {
+      return;
+    }
+
     this.logger.log(`handleSyncData called with: {syncBlock: ${syncBlocks}}`);
 
     try {
@@ -144,7 +152,7 @@ export class BlockProcessor extends BaseProcessor {
 
       for await (const blockData of blocksData) {
         const listTxToProcess = [];
-        blockData.time = this.influxDbClient.convertDate(blockData.time);
+        blockData.time = this.commonUtil.convertDate(blockData.time);
         const newBlock = SyncDataHelpers.makeBlockData(blockData);
 
         if (blockData.transactions?.length > 0) {
@@ -223,7 +231,10 @@ export class BlockProcessor extends BaseProcessor {
       removeOnComplete: true,
       attempts: 3,
       // repeat: this.everyRepeatOptions,
-      backoff: { type: 'fixed', delay: 3000 } as BackoffOptions,
+      backoff: {
+        type: JOB_OPTIONS.REPEAT_TYPE.FIXED,
+        delay: JOB_OPTIONS.TIME_DELAY.AFTER_3_SECONDS,
+      } as BackoffOptions,
     };
     for (let k = 0; k < listTransactions.length; k++) {
       const txData = listTransactions[k];
@@ -267,7 +278,10 @@ export class BlockProcessor extends BaseProcessor {
                 contractAddress,
                 contractArr,
               },
-              { ...optionQueue, timeout: 10000 },
+              {
+                ...optionQueue,
+                timeout: JOB_OPTIONS.TIME_OUT.AFTER_10_SECONDS,
+              },
             );
 
             let takeMessage;

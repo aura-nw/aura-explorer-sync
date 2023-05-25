@@ -321,4 +321,12 @@ export class CommonUtil {
     }
     return '';
   }
+
+  convertDate(timestamp: any): Date {
+    const strTime = String(timestamp);
+    const idx = strTime.lastIndexOf('.');
+    const dateConvert =
+      idx > -1 ? strTime.substring(0, idx) + '.000Z' : strTime;
+    return new Date(dateConvert);
+  }
 }

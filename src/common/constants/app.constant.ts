@@ -287,3 +287,20 @@ export const COIN_MARKET_CAP_HEADER = {
   'Content-Type': 'application/json',
   'X-CMC_PRO_API_KEY': ENV_CONFIG.COIN_MARKET_CAP.API_KEY,
 };
+
+export const JOB_OPTIONS = {
+  TIME_REPEAT: {
+    EVERY_3_SECONDS: 3000,
+    EVERY_10_SECONDS: 10000,
+  },
+  REPEAT_TYPE: {
+    FIXED: 'fixed',
+    EXPONENTIAL: 'exponential',
+  },
+  TIME_OUT: {
+    AFTER_10_SECONDS: 10000,
+  },
+  TIME_DELAY: {
+    AFTER_3_SECONDS: 30000,
+  },
+};
