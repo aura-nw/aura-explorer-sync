@@ -87,6 +87,7 @@ export class SmartContractsProcessor extends BaseProcessor {
                               version
                               cw721_contract {
                                 minter
+                                symbol
                               }`;
       const queryListContract = {
         query: util.format(
@@ -102,10 +103,8 @@ export class SmartContractsProcessor extends BaseProcessor {
         await this._commonUtil.fetchDataFromGraphQL(queryListContract)
       ).data[ENV_CONFIG.INDEXER_V2.CHAIN_DB]['smart_contract'];
       if (contractsData.length > 1) {
-        const newContracts = await Promise.all(
-          contractsData.map((contractData) =>
-            SyncDataHelpers.makeInstantiateContractData(contractData),
-          ),
+        const newContracts = contractsData.map((contractData) =>
+          SyncDataHelpers.makeInstantiateContractData(contractData),
         );
 
         await this.smartContractRepository.upsert(newContracts, [

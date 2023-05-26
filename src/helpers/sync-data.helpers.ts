@@ -241,7 +241,7 @@ export class SyncDataHelpers {
     smartContract.s3_location = '';
     smartContract.reference_code_id = 0;
     smartContract.mainnet_upload_status = MAINNET_UPLOAD_STATUS.UNVERIFIED;
-    smartContract.verified_at = new Date();
+    smartContract.verified_at = null;
     smartContract.project_name = '';
     smartContract.request_id = null;
     smartContract.token_name = '';
@@ -268,9 +268,9 @@ export class SyncDataHelpers {
 
     const cw721Contract = contract.cw721_contract;
     if (cw721Contract) {
-      smartContract.minter_address = cw721Contract.minter;
-      smartContract.token_symbol = cw721Contract.symbol;
-      smartContract.token_name = cw721Contract.name;
+      smartContract.minter_address = cw721Contract.minter || '';
+      smartContract.token_symbol = cw721Contract.symbol || '';
+      smartContract.token_name = cw721Contract.name || '';
     }
     return smartContract;
   }
