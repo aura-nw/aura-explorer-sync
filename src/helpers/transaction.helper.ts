@@ -6,7 +6,7 @@ import {
   TRANSACTION_EVENT,
   TRANSACTION_TYPE,
 } from 'src/common/constants/transaction-type.enum';
-import { CONST_CHAR } from '../common/constants/app.constant';
+import { CONST_CHAR, TS_TYPES } from '../common/constants/app.constant';
 import { Transaction } from '../entities';
 import { ENV_CONFIG } from '../shared/services/config.service';
 
@@ -274,13 +274,17 @@ export class TransactionHelper {
           !!message?.contract
         ) {
           addressInTx.push(message.contract);
+          const messageMsg =
+            typeof message.msg === TS_TYPES.STRING
+              ? JSON.parse(message.msg)
+              : message.msg;
           const contractAddress =
-            message?.msg?.buy?.contract_address ||
-            message?.msg?.accept_nft_offer?.nft?.contract_address;
+            messageMsg?.buy?.contract_address ||
+            messageMsg?.accept_nft_offer?.nft?.contract_address;
           if (!!contractAddress) {
             addressInTx.push(contractAddress);
           }
-          const method = Object.keys(message.msg || {})[0] || '';
+          const method = Object.keys(messageMsg || {})[0] || '';
           if (
             type === TRANSACTION_TYPE.EXECUTE_CONTRACT &&
             method === MODE_EXECUTE_TRANSACTION.MINT

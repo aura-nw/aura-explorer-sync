@@ -1,13 +1,4 @@
-import {
-  InjectQueue,
-  OnQueueActive,
-  OnQueueCompleted,
-  OnQueueError,
-  OnQueueFailed,
-  Process,
-  Processor,
-} from '@nestjs/bull';
-import { Logger } from '@nestjs/common';
+import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Job, Queue } from 'bull';
 import * as util from 'util';
 import {
@@ -19,6 +10,7 @@ import {
   QUEUES,
   INDEXER_V2_API,
   LIMIT_NUMBS,
+  TS_TYPES,
 } from '../common/constants/app.constant';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { SmartContractRepository } from '../repositories/smart-contract.repository';
@@ -145,7 +137,11 @@ export class SmartContractsProcessor extends BaseProcessor {
       );
       if (contractInfo && contractInfo.type === CONTRACT_TYPE.CW20) {
         // Update market info of contract
-        const marketing = message?.msg?.update_marketing || undefined;
+        const messageMsg =
+          typeof message?.msg === TS_TYPES.STRING
+            ? JSON.parse(message?.msg)
+            : message?.msg;
+        const marketing = messageMsg?.update_marketing || undefined;
 
         if (marketing) {
           //FIXME: migrate to horoscope v2.
@@ -196,17 +192,17 @@ export class SmartContractsProcessor extends BaseProcessor {
     try {
       const takeContracts: any = job.data.takeMessage;
       const unequipContracts: any = job.data.unequipMessage;
-      const takes = takeContracts?.msg?.take?.signature.signature;
-      const unequips = unequipContracts?.msg?.unequip?.token_id;
+      const takes = takeContracts?.take?.signature.signature;
+      const unequips = unequipContracts?.unequip?.token_id;
       const contractAddress = job.data.contractAddress;
-      const tokenUri = takeContracts?.msg?.take?.uri;
+      const tokenUri = takeContracts?.take?.uri;
       const receiverAddress = job.data.receiverAddress;
 
       if (takeContracts) {
         const tokenId = this._commonUtil.createTokenId(
           this.indexerChainId,
           receiverAddress,
-          takeContracts?.msg?.take?.from,
+          takeContracts?.take?.from,
           tokenUri,
         );
 
@@ -245,8 +241,8 @@ export class SmartContractsProcessor extends BaseProcessor {
           entity.contract_address = contractAddress;
           entity.receiver_address = receiverAddress;
           entity.token_uri = tokenUri;
-          entity.signature = takeContracts?.msg?.take?.signature.signature;
-          entity.pub_key = takeContracts?.msg?.take?.signature.pub_key;
+          entity.signature = takeContracts?.take?.signature.signature;
+          entity.pub_key = takeContracts?.take?.signature.pub_key;
           entity.token_img = ipfs?.image;
           entity.token_name = ipfs?.name;
           entity.img_type = contentType;
@@ -275,17 +271,15 @@ export class SmartContractsProcessor extends BaseProcessor {
         });
         soulboundTokens.forEach((item) => {
           let token;
-          if (
-            item.signature === takeContracts?.msg?.take?.signature.signature
-          ) {
+          if (item.signature === takeContracts?.take?.signature.signature) {
             token = takeContracts;
           }
 
-          if (item.token_id === unequipContracts?.msg?.unequip?.token_id) {
+          if (item.token_id === unequipContracts?.unequip?.token_id) {
             token = unequipContracts;
           }
 
-          if (token?.msg?.take) {
+          if (token?.take) {
             const numOfTokens = soulboundTokenInfos?.filter(
               (f) =>
                 f.receiver_address === item.receiver_address &&
@@ -355,27 +349,5 @@ export class SmartContractsProcessor extends BaseProcessor {
         `${this.handleExecuteContract.name} execute complete: contract_address: ${contractAddress}`,
       );
     }
-  }
-
-  @OnQueueActive()
-  onActive(job: Job) {
-    this.logger.log(`Processing job ${job.id} of type ${job.name}...`);
-  }
-
-  @OnQueueCompleted()
-  async onComplete(job: Job) {
-    this.logger.log(`Completed job ${job.id} of type ${job.name}`);
-  }
-
-  @OnQueueError()
-  onError(job: Job, error: Error) {
-    this.logger.error(`Error job ${job.id} of type ${job.name}`);
-    this.logger.error(error.stack);
-  }
-
-  @OnQueueFailed()
-  async onFailed(job: Job, error: Error) {
-    this.logger.error(`Failed job ${job.id} of type ${job.name}`);
-    this.logger.error(error.stack);
   }
 }
