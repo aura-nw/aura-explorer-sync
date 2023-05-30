@@ -113,7 +113,8 @@ const processors = [
       },
       prefix: ENV_CONFIG.REDIS.PREFIX,
       defaultJobOptions: {
-        removeOnComplete: 100,
+        removeOnFail: { count: ENV_CONFIG.KEEP_JOB_COUNT },
+        removeOnComplete: { count: ENV_CONFIG.KEEP_JOB_COUNT },
       },
     }),
     BullModule.registerQueue(

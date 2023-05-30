@@ -27,8 +27,6 @@ export class TransactionProcessor {
       QUEUES.SYNC_TRANSACTION,
       {},
       {
-        removeOnFail: false,
-        removeOnComplete: true,
         repeat: { cron: CronExpression.EVERY_5_SECONDS },
       },
     );
@@ -37,8 +35,6 @@ export class TransactionProcessor {
       QUEUES.CLEAN_TRANSACTION,
       {},
       {
-        removeOnFail: false,
-        removeOnComplete: true,
         repeat: { cron: CronExpression.EVERY_DAY_AT_MIDNIGHT },
       },
     );
