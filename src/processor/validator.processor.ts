@@ -37,7 +37,6 @@ export class ValidatorProcessor {
       QUEUES.SYNC_LIST_VALIDATOR,
       {},
       {
-        removeOnFail: false,
         repeat: { cron: CronExpression.EVERY_10_SECONDS },
       },
     );
@@ -46,7 +45,6 @@ export class ValidatorProcessor {
       QUEUES.SYNC_VALIDATOR_IMAGE,
       {},
       {
-        removeOnFail: false,
         repeat: { cron: CronExpression.EVERY_DAY_AT_MIDNIGHT },
       },
     );
