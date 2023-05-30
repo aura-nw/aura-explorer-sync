@@ -28,6 +28,7 @@ export class TransactionProcessor {
       {},
       {
         removeOnFail: false,
+        removeOnComplete: true,
         repeat: { cron: CronExpression.EVERY_5_SECONDS },
       },
     );
@@ -37,6 +38,7 @@ export class TransactionProcessor {
       {},
       {
         removeOnFail: false,
+        removeOnComplete: true,
         repeat: { cron: CronExpression.EVERY_DAY_AT_MIDNIGHT },
       },
     );

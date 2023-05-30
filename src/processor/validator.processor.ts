@@ -38,6 +38,7 @@ export class ValidatorProcessor {
       {},
       {
         removeOnFail: false,
+        removeOnComplete: true,
         repeat: { cron: CronExpression.EVERY_10_SECONDS },
       },
     );
@@ -47,6 +48,7 @@ export class ValidatorProcessor {
       {},
       {
         removeOnFail: false,
+        removeOnComplete: true,
         repeat: { cron: CronExpression.EVERY_DAY_AT_MIDNIGHT },
       },
     );
