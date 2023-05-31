@@ -113,7 +113,7 @@ const processors = [
       },
       prefix: ENV_CONFIG.REDIS.PREFIX,
       defaultJobOptions: {
-        removeOnFail: { count: ENV_CONFIG.KEEP_JOB_COUNT },
+        removeOnFail: ENV_CONFIG.KEEP_JOB_COUNT,
         removeOnComplete: { count: ENV_CONFIG.KEEP_JOB_COUNT },
       },
     }),
