@@ -111,6 +111,7 @@ export class ConfigService {
         CHAIN_DB: process.env.INDEXER_V2_DB,
         SECRET: process.env.INDEXER_V2_SECRET,
       },
+      KEEP_JOB_COUNT: Number(process.env.KEEP_JOB_COUNT) || 10,
     };
   }
 

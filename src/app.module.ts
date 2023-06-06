@@ -36,7 +36,6 @@ import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
 import { SyncTaskService } from './services/sync-task.service';
 import { SyncTokenService } from './services/sync-token.service';
-import { SyncTransactionService } from './services/sync-transaction.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { TokenMarketsRepository } from './repositories/token-markets.repository';
@@ -44,6 +43,7 @@ import { SoulboundTokenRepository } from './repositories/soulbound-token.reposit
 import { SoulboundToken } from './entities/soulbound-token.entity';
 import { SyncSmartContractService } from './services/sync-smart-contract.service';
 import { ValidatorProcessor } from './processor/validator.processor';
+import { TransactionProcessor } from './processor/transaction.processor';
 
 const controllers = [];
 const entities = [
@@ -86,11 +86,14 @@ const services = [
   SyncTaskService,
   SyncContractCodeService,
   SyncTokenService,
-  SyncTransactionService,
   SyncSmartContractService,
 ];
 
-const processors = [SmartContractsProcessor, ValidatorProcessor];
+const processors = [
+  SmartContractsProcessor,
+  ValidatorProcessor,
+  TransactionProcessor,
+];
 
 @Module({
   imports: [
@@ -110,7 +113,8 @@ const processors = [SmartContractsProcessor, ValidatorProcessor];
       },
       prefix: ENV_CONFIG.REDIS.PREFIX,
       defaultJobOptions: {
-        removeOnComplete: 100,
+        removeOnFail: ENV_CONFIG.KEEP_JOB_COUNT,
+        removeOnComplete: { count: ENV_CONFIG.KEEP_JOB_COUNT },
       },
     }),
     BullModule.registerQueue(
@@ -119,6 +123,9 @@ const processors = [SmartContractsProcessor, ValidatorProcessor];
       },
       {
         name: 'validator',
+      },
+      {
+        name: 'transaction',
       },
     ),
     CacheModule.register({ ttl: 10000 }),
