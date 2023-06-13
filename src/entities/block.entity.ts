@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, Unique } from 'typeorm';
+import { Column, Entity, Unique } from 'typeorm';
 
 import { BaseEntityIncrementId } from './base/base.entity';
 

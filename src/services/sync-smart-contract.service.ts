@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { INDEXER_API, QUEUES } from '../common/constants/app.constant';
-import { Cron, CronExpression, Interval } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectSchedule, Schedule } from 'nest-schedule';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';

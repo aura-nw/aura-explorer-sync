@@ -1,4 +1,4 @@
-export class TokenHolderRequest{
-    coinId: string;
-    address: string;
+export class TokenHolderRequest {
+  coinId: string;
+  address: string;
 }

@@ -1,12 +1,6 @@
 import { Logger } from '@nestjs/common';
-import {
-  DeleteResult,
-  FindManyOptions,
-  OrderByCondition,
-  Repository,
-} from 'typeorm';
+import { DeleteResult, OrderByCondition, Repository } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
-import { UpsertOptions } from 'typeorm/repository/UpsertOptions';
 import { PaginatorResponse } from '../dtos/responses/paginator.response';
 
 export class BaseRepository<T> {
