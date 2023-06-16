@@ -7,7 +7,7 @@ import {
   Processor,
 } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
-import { Job, Queue } from 'bull';
+import { Job } from 'bull';
 import * as util from 'util';
 import {
   COINGECKO_API,
@@ -791,6 +791,7 @@ export class SmartContractsProcessor {
     ]);
 
     if (response?.status?.error_code == 0 && response?.data) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const [key, value] of Object.entries(response?.data)) {
         const data = response?.data[key];
         let tokenInfo = tokenInfos?.find((f) => f.coin_id === data.slug);
@@ -851,15 +852,5 @@ export class SmartContractsProcessor {
         `============== Write data to Influxdb  successfully ==============`,
       );
     }
-  }
-  /**
-   * Restart job fail
-   * @param queue
-   */
-  async retryJobs(queue: Queue) {
-    // const jobs = await queue.getFailed();
-    // jobs.forEach(async (job) => {
-    //   await job.retry();
-    // });
   }
 }

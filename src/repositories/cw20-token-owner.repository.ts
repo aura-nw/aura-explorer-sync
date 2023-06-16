@@ -1,8 +1,8 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { Cw20TokenOwner } from "../entities/cw20-token-owner.entity";
-import { BaseRepository } from "./base.repository";
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Cw20TokenOwner } from '../entities/cw20-token-owner.entity';
+import { BaseRepository } from './base.repository';
 
 @Injectable()
 export class Cw20TokenOwnerRepository extends BaseRepository<Cw20TokenOwner> {

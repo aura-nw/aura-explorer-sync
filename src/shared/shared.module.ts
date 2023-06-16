@@ -1,4 +1,4 @@
-import { HttpModule, HttpService } from '@nestjs/axios';
+import { HttpModule } from '@nestjs/axios';
 import { Module, Global } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CommonUtil } from '../utils/common.util';

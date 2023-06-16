@@ -109,6 +109,7 @@ export class ValidatorProcessor {
           equalPT = Number((100 / numOfValidators).toFixed(2));
         }
         listValidator = Object.entries(validatorsData).map(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           ([key, validatorData]) =>
             this.assignAttrsForValidator(validatorData, equalPT),
         );
