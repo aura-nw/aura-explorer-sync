@@ -559,14 +559,6 @@ export class SmartContractsProcessor {
   async onFailed(job: Job, error: Error) {
     this.logger.error(`Failed job ${job.id} of type ${job.name}`);
     this.logger.error(`Error: ${error}`);
-
-    // Resart queue
-    const queue = await job.queue;
-    if (queue) {
-      if (job.name === QUEUES.SYNC_INSTANTIATE_CONTRACTS) {
-        await this.retryJobs(queue);
-      }
-    }
   }
 
   /**
