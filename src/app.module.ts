@@ -35,7 +35,6 @@ import { TransactionRepository } from './repositories/transaction.repository';
 import { ValidatorRepository } from './repositories/validator.repository';
 import { SyncContractCodeService } from './services/sync-contract-code.service';
 import { SyncTaskService } from './services/sync-task.service';
-import { SyncTokenService } from './services/sync-token.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { TokenMarketsRepository } from './repositories/token-markets.repository';
@@ -44,6 +43,8 @@ import { SoulboundToken } from './entities/soulbound-token.entity';
 import { SyncSmartContractService } from './services/sync-smart-contract.service';
 import { ValidatorProcessor } from './processor/validator.processor';
 import { TransactionProcessor } from './processor/transaction.processor';
+import { CoinProcessor } from './processor/coin.processor';
+import { QUEUES } from './common/constants/app.constant';
 
 const controllers = [];
 const entities = [
@@ -85,7 +86,6 @@ const repositories = [
 const services = [
   SyncTaskService,
   SyncContractCodeService,
-  SyncTokenService,
   SyncSmartContractService,
 ];
 
@@ -93,6 +93,7 @@ const processors = [
   SmartContractsProcessor,
   ValidatorProcessor,
   TransactionProcessor,
+  CoinProcessor,
 ];
 
 @Module({
@@ -126,6 +127,9 @@ const processors = [
       },
       {
         name: 'transaction',
+      },
+      {
+        name: QUEUES.SYNC_COIN.QUEUE_NAME,
       },
     ),
     CacheModule.register({ ttl: 10000 }),

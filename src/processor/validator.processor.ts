@@ -145,7 +145,7 @@ export class ValidatorProcessor {
   }
 
   @OnQueueError()
-  onError(error: Error) {
+  async onError(error: Error) {
     this.logger.error(`Queue Error: ${error.stack}`);
   }
 

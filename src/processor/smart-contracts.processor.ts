@@ -266,59 +266,6 @@ export class SmartContractsProcessor {
     }
   }
 
-  @Process(QUEUES.SYNC_PRICE_VOLUME)
-  async handleSyncPriceVolume(job: Job) {
-    try {
-      const listTokens = job.data.listTokens;
-      if (ENV_CONFIG.PRICE_HOST_SYNC === 'COIN_MARKET_CAP') {
-        this.syncCoinMarketCapPrice(listTokens);
-      } else {
-        this.syncCoingeckoPrice(listTokens);
-      }
-    } catch (err) {
-      this.logger.log(`sync-price-volume has error: ${err.message}`, err.stack);
-      // Reconnect influxDb
-      const errorCode = err?.code || '';
-      if (errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT') {
-        this.connectInfluxdb();
-      }
-    }
-  }
-
-  @Process(QUEUES.SYNC_COIN_ID)
-  async handleSyncCoinId(job: Job) {
-    try {
-      this.logger.log(
-        `============== sync-coin-id from coingecko start ==============`,
-      );
-      const tokens = job.data.tokens;
-
-      await this.redisUtil.connect();
-      const coingeckoCoins = await this.redisUtil.getValue(
-        REDIS_KEY.COINGECKO_COINS,
-      );
-      const coinList = JSON.parse(coingeckoCoins);
-      const platform = ENV_CONFIG.COINGECKO.COINGEKO_PLATFORM;
-      const updatingTokens: TokenMarkets[] = [];
-
-      tokens.forEach((item: TokenMarkets) => {
-        const coinInfo = coinList.find(
-          (f) => f.platforms?.[`${platform}`] === item.contract_address,
-        );
-        if (coinInfo) {
-          item.coin_id = coinInfo.id;
-          updatingTokens.push(item);
-        }
-      });
-
-      if (updatingTokens.length > 0) {
-        await this.tokenMarketsRepository.update(updatingTokens);
-      }
-    } catch (err) {
-      this.logger.error(`sync-coin-id has error: ${err.message}`, err.stack);
-    }
-  }
-
   @Process(QUEUES.SYNC_CONTRACT_FROM_HEIGHT)
   async syncSmartContractFromHeight(job: Job) {
     this.logger.log(`${this.syncSmartContractFromHeight.name} was called!`);

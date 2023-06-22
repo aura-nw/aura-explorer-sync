@@ -206,6 +206,13 @@ export const QUEUES = {
   SYNC_CONTRACT_CODE: 'sync-contract-code',
   SYNC_TRANSACTION: 'sync-transaction',
   CLEAN_TRANSACTION: 'clean-transaction',
+  SYNC_COIN: {
+    QUEUE_NAME: 'sync-coin',
+    JOBS: {
+      SYNC_PRICE: 'sync-coin-price',
+      TIME_SYNC: '0 */3 * * * *',
+    },
+  },
 };
 
 export enum CW4973_CONTRACT {
