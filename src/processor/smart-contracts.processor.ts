@@ -271,9 +271,9 @@ export class SmartContractsProcessor {
     try {
       const listTokens = job.data.listTokens;
       if (ENV_CONFIG.PRICE_HOST_SYNC === 'COIN_MARKET_CAP') {
-        this.syncCoinMarketCapPrice(listTokens);
+        await this.syncCoinMarketCapPrice(listTokens);
       } else {
-        this.syncCoingeckoPrice(listTokens);
+        await this.syncCoingeckoPrice(listTokens);
       }
     } catch (err) {
       this.logger.log(`sync-price-volume has error: ${err.message}`, err.stack);
