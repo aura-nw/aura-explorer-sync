@@ -4,96 +4,30 @@ import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from 'nest-schedule';
 import { SmartContractsProcessor } from './processor/smart-contracts.processor';
-import {
-  Block,
-  BlockSyncError,
-  TokenMarkets,
-  Delegation,
-  DelegatorReward,
-  MissedBlock,
-  ProposalVote,
-  SmartContract,
-  SmartContractCode,
-  SyncStatus,
-  Transaction,
-  Validator,
-} from './entities';
-import { Cw20TokenOwner } from './entities/cw20-token-owner.entity';
-import { DeploymentRequests } from './entities/deployment-requests.entity';
+import { BlockSyncError, TokenMarkets, SyncStatus } from './entities';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
-import { BlockRepository } from './repositories/block.repository';
-import { Cw20TokenOwnerRepository } from './repositories/cw20-token-owner.repository';
-import { DelegationRepository } from './repositories/delegation.repository';
-import { DelegatorRewardRepository } from './repositories/delegator-reward.repository';
-import { DeploymentRequestsRepository } from './repositories/deployment-requests.repository';
-import { MissedBlockRepository } from './repositories/missed-block.repository';
-import { ProposalVoteRepository } from './repositories/proposal-vote.repository';
-import { SmartContractCodeRepository } from './repositories/smart-contract-code.repository';
-import { SmartContractRepository } from './repositories/smart-contract.repository';
-import { SyncStatusRepository } from './repositories/sync-status.repository';
-import { TransactionRepository } from './repositories/transaction.repository';
-import { ValidatorRepository } from './repositories/validator.repository';
-import { SyncContractCodeService } from './services/sync-contract-code.service';
-import { SyncTaskService } from './services/sync-task.service';
 import { SyncTokenService } from './services/sync-token.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { TokenMarketsRepository } from './repositories/token-markets.repository';
 import { SoulboundTokenRepository } from './repositories/soulbound-token.repository';
 import { SoulboundToken } from './entities/soulbound-token.entity';
-import { SyncSmartContractService } from './services/sync-smart-contract.service';
-import { ValidatorProcessor } from './processor/validator.processor';
-import { TransactionProcessor } from './processor/transaction.processor';
+import { SyncStatusRepository } from './repositories/sync-status.repository';
+import { SyncTaskService } from './services/sync-task.service';
 
 const controllers = [];
-const entities = [
-  BlockSyncError,
-  MissedBlock,
-  Validator,
-  Block,
-  DeploymentRequests,
-  Delegation,
-  DelegatorReward,
-  ProposalVote,
-  SyncStatus,
-  SmartContract,
-  SmartContractCode,
-  Cw20TokenOwner,
-  TokenMarkets,
-  Transaction,
-  SoulboundToken,
-];
+const entities = [BlockSyncError, SyncStatus, TokenMarkets, SoulboundToken];
 
 const repositories = [
   BlockSyncErrorRepository,
-  MissedBlockRepository,
-  ValidatorRepository,
-  BlockRepository,
-  DeploymentRequestsRepository,
-  DelegationRepository,
-  DelegatorRewardRepository,
-  ProposalVoteRepository,
   SyncStatusRepository,
-  SmartContractRepository,
-  SmartContractCodeRepository,
-  Cw20TokenOwnerRepository,
   TokenMarketsRepository,
-  TransactionRepository,
   SoulboundTokenRepository,
 ];
 
-const services = [
-  SyncTaskService,
-  SyncContractCodeService,
-  SyncTokenService,
-  SyncSmartContractService,
-];
+const services = [SyncTaskService, SyncTokenService];
 
-const processors = [
-  SmartContractsProcessor,
-  ValidatorProcessor,
-  TransactionProcessor,
-];
+const processors = [SmartContractsProcessor];
 
 @Module({
   imports: [
@@ -117,17 +51,9 @@ const processors = [
         removeOnComplete: { count: ENV_CONFIG.KEEP_JOB_COUNT },
       },
     }),
-    BullModule.registerQueue(
-      {
-        name: 'smart-contracts',
-      },
-      {
-        name: 'validator',
-      },
-      {
-        name: 'transaction',
-      },
-    ),
+    BullModule.registerQueue({
+      name: 'smart-contracts',
+    }),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
     TypeOrmModule.forFeature([...entities]),

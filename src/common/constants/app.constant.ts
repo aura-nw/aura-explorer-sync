@@ -1,20 +1,6 @@
-import { ENV_CONFIG } from 'src/shared/services/config.service';
-
-export enum ORDER_BY {
-  DESC = 'DESC',
-  ASC = 'ASC',
-}
 export enum DATABASE_TYPE {
   POSTGRES = 'postgres',
   MYSQL = 'mysql',
-}
-
-export enum MESSAGE_ACTION {
-  MSG_SEND = '/cosmos.bank.v1beta1.MsgSend',
-  MSG_INSTANTIATE_CONTRACT = '/cosmwasm.wasm.v1.MsgInstantiateContract',
-  MSG_EXECUTE_CONTRACT = '/cosmwasm.wasm.v1.MsgExecuteContract',
-  MSG_MIGRATE_CONTRACT = '/cosmwasm.wasm.v1.MsgMigrateContract',
-  MSG_STORE_CODE = '/cosmwasm.wasm.v1.MsgStoreCode',
 }
 
 export enum NODE_API {
@@ -31,11 +17,6 @@ export enum NODE_API {
   CONTRACT_INFO = `cosmwasm/wasm/v1/contract/%s/smart/%s`,
   CONTRACT_CODE = `cosmwasm/wasm/v1/code?pagination.key=%s`,
   CONTRACT_CODE_DETAIL = `cosmwasm/wasm/v1/code/%s`,
-}
-
-export enum CONST_PUBKEY_ADDR {
-  AURAVALCONS = 'auravalcons',
-  AURA = 'aura',
 }
 
 export enum CONST_CHAR {
@@ -75,71 +56,11 @@ export enum CONST_MSG_TYPE {
   MSG_STORE_CODE = 'MsgStoreCode',
 }
 
-export enum CONST_PROPOSAL_TYPE {
-  SOFTWARE_UPGRADE_PROPOSAL = 'SoftwareUpgradeProposal',
-  COMMUNITY_POOL_SPEND_PROPOSAL = 'CommunityPoolSpendProposal',
-  PARAMETER_CHANGE_PROPOSAL = 'ParameterChangeProposal',
-}
-
-export enum CONST_DELEGATE_TYPE {
-  DELEGATE = 'Delegate',
-  UNDELEGATE = 'Undelegate',
-  REDELEGATE = 'Redelegate',
-  CREATE_VALIDATOR = 'CreateValidator',
-}
-
-export enum CONST_PROPOSAL_STATUS {
-  PROPOSAL_STATUS_UNSPECIFIED = 'PROPOSAL_STATUS_UNSPECIFIED',
-  PROPOSAL_STATUS_DEPOSIT_PERIOD = 'PROPOSAL_STATUS_DEPOSIT_PERIOD',
-  PROPOSAL_STATUS_VOTING_PERIOD = 'PROPOSAL_STATUS_VOTING_PERIOD',
-  PROPOSAL_STATUS_PASSED = 'PROPOSAL_STATUS_PASSED',
-  PROPOSAL_STATUS_REJECTED = 'PROPOSAL_STATUS_REJECTED',
-  PROPOSAL_STATUS_FAILED = 'PROPOSAL_STATUS_FAILED',
-}
-
-export enum SMART_CONTRACT_VERIFICATION {
-  UNVERIFIED = 'UNVERIFIED',
-  VERIFIED = 'VERIFIED',
-}
-
 export enum CONTRACT_TYPE {
   CW20 = 'CW20',
   CW721 = 'CW721',
   CW4973 = 'CW4973',
 }
-
-export enum CONTRACT_CODE_RESULT {
-  TBD = 'TBD',
-  CORRECT = 'Correct',
-  INCORRECT = 'Incorrect',
-}
-
-export enum CONTRACT_CODE_STATUS {
-  TBD = 'TBD',
-  WAITING = 'WAITING',
-  COMPLETED = 'COMPLETED',
-  REJECTED = 'REJECTED',
-  NOT_FOUND = 'NotFound',
-}
-
-export enum INDEXER_API {
-  CHECK_STATUS_CODE_ID = 'api/v1/codeid/%s/%s/checkStatus',
-  GET_LIST_TOKENS = 'api/v1/asset/getByContractType?contractType=%s&chainid=%s&pageLimit=100&pageOffset=0&countTotal=true',
-  GET_HOLDER_TOKEN = 'api/v1/asset/holder?chainid=%s&contractType=CW20&contractAddress=%s&countTotal=true',
-  TRANSACTION = 'api/v1/transaction?chainid=%s&pageLimit=%s&fromHeight=%s&reverse=true&needFullLog=true',
-  GET_HOLDER_INFO_CW20 = 'api/v1/daily-cw20-holder',
-  GET_SMART_CONTRACTS = 'api/v1/smart-contracts?chainId=%s&limit=%s&fromHeight=%s&toHeight=%s',
-  GET_SMART_CONTRACT_BY_NEXT_KEY = 'api/v1/smart-contracts?chainId=%s&limit=%s&nextKey=%s',
-  GET_SMART_CONTRACT_BT_CONTRACT_ADDRESS = 'api/v1/smart-contracts?chainId=%s&contract_addresses[]=%s',
-  GET_SMART_CONTRACT_BT_LIST_CONTRACT_ADDRESS = 'api/v1/smart-contracts?chainId=%s',
-}
-
-export const INDEXER_V2_API = {
-  GRAPH_QL: {
-    LIST_VALIDATOR: `query Query { ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} { validator { %s } } }`,
-    LIST_TRANSACTION: `query Query($limit: Int, $fromHeight: Int) { ${ENV_CONFIG.INDEXER_V2.CHAIN_DB} { transaction(limit: $limit, where: {height: {_gt: $fromHeight}}) { %s } } }`,
-  },
-};
 
 export enum COINGECKO_API {
   GET_PRICE_VOLUME = 'simple/price?ids=%s&vs_currencies=usd&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true',
@@ -149,33 +70,6 @@ export enum COINGECKO_API {
 
 export enum COIN_MARKET_CAP_API {
   GET_COINS_MARKET = 'cryptocurrency/quotes/latest?slug=%s',
-}
-
-export enum AURA_INFO {
-  TYPE = 'AURA',
-  IMAGE = 'https://nft-ipfs.s3.amazonaws.com/assets/imgs/icons/color/aura.svg',
-  CONNTRACT_ADDRESS = 'aura',
-  COIN_ID = 'aura-network',
-}
-
-export enum CONTRACT_TRANSACTION_EXECUTE_TYPE {
-  MINT = 'mint',
-  BURN = 'burn',
-  APPROVE = 'approve',
-  REVOKE = 'revoke',
-  TRANSFER_NFT = 'transfer_nft',
-}
-
-export enum KEYWORD_SEARCH_TRANSACTION {
-  MINT_CONTRACT_CW721 = '%"mint"%"token_id"%',
-}
-
-export enum MAINNET_UPLOAD_STATUS {
-  UNVERIFIED = 'Unverified',
-  NOT_REGISTERED = 'Not registered',
-  TBD = 'TBD',
-  DEPLOYED = 'Deployed',
-  REJECTED = 'Rejected',
 }
 
 export enum REDIS_KEY {
@@ -194,33 +88,11 @@ export const SOULBOUND_PICKED_TOKEN = {
 };
 
 export const QUEUES = {
-  SYNC_EXECUTE_CONTRACTS: 'sync-execute-contracts',
   SYNC_CW4973_NFT_STATUS: 'sync-cw4973-nft-status',
-  SYNC_INSTANTIATE_CONTRACTS: 'sync-instantiate-contracts',
   SYNC_PRICE_VOLUME: 'sync-price-volume',
   SYNC_COIN_ID: 'sync-coin-id',
-  SYNC_CONTRACT_FROM_HEIGHT: 'sync-contract-from-height',
-  SYNC_VALIDATOR: 'sync-validator',
-  SYNC_VALIDATOR_IMAGE: 'sync-validator-image',
-  SYNC_LIST_VALIDATOR: 'sync-list-validator',
-  SYNC_CONTRACT_CODE: 'sync-contract-code',
-  SYNC_TRANSACTION: 'sync-transaction',
-  CLEAN_TRANSACTION: 'clean-transaction',
 };
 
 export enum CW4973_CONTRACT {
   AGREEMENT = 'Agreement(string chain_id,address active,address passive,string tokenURI)',
-}
-
-export enum VOTING_POWER_LEVEL {
-  GREEN = '1',
-  YELLOW = '2',
-  RED = '3',
-}
-
-export enum VALIDATOR_STATUSES {
-  BOND_STATUS_UNSPECIFIED,
-  BOND_STATUS_UNBONDED,
-  BOND_STATUS_UNBONDING,
-  BOND_STATUS_BONDED,
 }
