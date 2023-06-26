@@ -7,7 +7,7 @@ import {
   Processor,
 } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
-import { Job, Queue } from 'bull';
+import { Job } from 'bull';
 import * as util from 'util';
 import {
   COINGECKO_API,
@@ -271,9 +271,9 @@ export class SmartContractsProcessor {
     try {
       const listTokens = job.data.listTokens;
       if (ENV_CONFIG.PRICE_HOST_SYNC === 'COIN_MARKET_CAP') {
-        this.syncCoinMarketCapPrice(listTokens);
+        await this.syncCoinMarketCapPrice(listTokens);
       } else {
-        this.syncCoingeckoPrice(listTokens);
+        await this.syncCoingeckoPrice(listTokens);
       }
     } catch (err) {
       this.logger.log(`sync-price-volume has error: ${err.message}`, err.stack);
@@ -559,14 +559,6 @@ export class SmartContractsProcessor {
   async onFailed(job: Job, error: Error) {
     this.logger.error(`Failed job ${job.id} of type ${job.name}`);
     this.logger.error(`Error: ${error}`);
-
-    // Resart queue
-    const queue = await job.queue;
-    if (queue) {
-      if (job.name === QUEUES.SYNC_INSTANTIATE_CONTRACTS) {
-        await this.retryJobs(queue);
-      }
-    }
   }
 
   /**
@@ -791,6 +783,7 @@ export class SmartContractsProcessor {
     ]);
 
     if (response?.status?.error_code == 0 && response?.data) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const [key, value] of Object.entries(response?.data)) {
         const data = response?.data[key];
         let tokenInfo = tokenInfos?.find((f) => f.coin_id === data.slug);
@@ -851,15 +844,5 @@ export class SmartContractsProcessor {
         `============== Write data to Influxdb  successfully ==============`,
       );
     }
-  }
-  /**
-   * Restart job fail
-   * @param queue
-   */
-  async retryJobs(queue: Queue) {
-    // const jobs = await queue.getFailed();
-    // jobs.forEach(async (job) => {
-    //   await job.retry();
-    // });
   }
 }

@@ -1,4 +1,3 @@
-import { CONTRACT_TYPE } from '../common/constants/app.constant';
 import { Column, Entity } from 'typeorm';
 import { BaseEntityIncrementId } from './base/base.entity';
 
