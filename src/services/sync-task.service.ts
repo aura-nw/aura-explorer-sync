@@ -1,63 +1,36 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CronExpression, Interval } from '@nestjs/schedule';
+import { Interval } from '@nestjs/schedule';
 import { sha256 } from 'js-sha256';
 import { InjectSchedule, Schedule } from 'nest-schedule';
 import {
-  CONST_CHAR,
   CONST_MSG_TYPE,
   NODE_API,
   QUEUES,
-  SMART_CONTRACT_VERIFICATION,
 } from '../common/constants/app.constant';
 import { BlockSyncError } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { BlockSyncErrorRepository } from '../repositories/block-sync-error.repository';
-import { MissedBlockRepository } from '../repositories/missed-block.repository';
-import { ProposalVoteRepository } from '../repositories/proposal-vote.repository';
-import { SyncStatusRepository } from '../repositories/sync-status.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
-import { InfluxDBClient } from '../utils/influxdb-client';
 import { InjectQueue } from '@nestjs/bull';
-import { BackoffOptions, CronRepeatOptions, JobOptions, Queue } from 'bull';
-import { SmartContractCodeRepository } from '../repositories/smart-contract-code.repository';
-import { TRANSACTION_TYPE } from '../common/constants/transaction-type.enum';
-import * as util from 'util';
-import { DelegationRepository } from '../repositories/delegation.repository';
-import { DelegatorRewardRepository } from '../repositories/delegator-reward.repository';
-import { TransactionHelper } from '../helpers/transaction.helper';
-import { SmartContractRepository } from '../repositories/smart-contract.repository';
-import { In } from 'typeorm';
+import { BackoffOptions, JobOptions, Queue } from 'bull';
+import { SyncStatusRepository } from 'src/repositories/sync-status.repository';
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
   private rpc;
   private api;
-  private influxDbClient: InfluxDBClient;
-  // private isSyncMissBlock = false;
   private threads = 0;
   private schedulesSync: Array<number> = [];
-  private smartContractService;
 
   isCompleteWrite = false;
-  private nodeEnv = ENV_CONFIG.NODE_ENV;
-  private everyRepeatOptions: CronRepeatOptions = {
-    cron: CronExpression.EVERY_30_SECONDS,
-  };
 
   constructor(
     private _commonUtil: CommonUtil,
-    private missedBlockRepository: MissedBlockRepository,
     private blockSyncErrorRepository: BlockSyncErrorRepository,
     private statusRepository: SyncStatusRepository,
-    private proposalVoteRepository: ProposalVoteRepository,
-    private smartContractCodeRepository: SmartContractCodeRepository,
-    private delegationRepository: DelegationRepository,
-    private delegatorRewardRepository: DelegatorRewardRepository,
-    private smartContractRepository: SmartContractRepository,
     @InjectSchedule() private readonly schedule: Schedule,
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
-    @InjectQueue('validator') private readonly validatorQueue: Queue,
   ) {
     this._logger.log(
       '============== Constructor Sync Task Service ==============',
@@ -66,10 +39,7 @@ export class SyncTaskService {
     this.rpc = ENV_CONFIG.NODE.RPC;
     this.api = ENV_CONFIG.NODE.API;
 
-    this.smartContractService = ENV_CONFIG.SMART_CONTRACT_SERVICE;
     this.threads = ENV_CONFIG.THREADS;
-
-    this.connectInfluxDB();
   }
 
   /**
@@ -177,19 +147,12 @@ export class SyncTaskService {
     );
 
     try {
-      this.influxDbClient.initWriteApi();
       // fetching block from node
       const paramsBlock = `block?height=${syncBlock}`;
       const blockData = await this._commonUtil.getDataRPC(
         this.rpc,
         paramsBlock,
       );
-
-      // make block object from block data
-      blockData.block.header.time = this.influxDbClient.convertDate(
-        blockData.block.header.time,
-      );
-      const newBlock = SyncDataHelpers.makeBlockData(blockData);
 
       //Insert block error table
       if (!recallSync) {
@@ -229,50 +192,9 @@ export class SyncTaskService {
 
         //sync data with transactions
         if (listTransactions.length > 0) {
-          await this.syncDataWithTransactions(listTransactions);
-        }
-
-        // Get list address in transaction
-        const addressInTx = TransactionHelper.getContractAddressInTX(txDatas);
-        if (addressInTx?.length > 0) {
-          this._logger.log(
-            `============== count total transacntion addressInTx: ${addressInTx} ===============`,
-          );
-          const contracts = await this.smartContractRepository.find({
-            where: { contract_address: In(addressInTx) },
-          });
-          if (contracts?.length > 0) {
-            const result = [];
-            contracts?.forEach((item) => {
-              // count num of total transaction
-              const count = addressInTx.filter(
-                (addr) => addr === item.contract_address,
-              ).length;
-              result.push({
-                id: item.id,
-                contract_address: item.contract_address,
-                total_tx: item.total_tx + count,
-              });
-            });
-            // update num of total transaction to DB
-            await this.smartContractRepository.update(result);
-            this._logger.log(
-              `============== Update total Tx with data: ${result} ===============`,
-            );
-          }
+          await this.syncCW4973Status(listTransactions);
         }
       }
-
-      // Write block to influxdb
-      this.influxDbClient.writeBlock(
-        newBlock.height,
-        newBlock.block_hash,
-        newBlock.num_txs,
-        newBlock.chainid,
-        newBlock.timestamp,
-        newBlock.proposer,
-      );
-      await this.influxDbClient.flushData();
 
       // Update current block
       await this.updateStatus(syncBlock);
@@ -294,9 +216,6 @@ export class SyncTaskService {
       );
       this._logger.error(null, `${error.stack}`);
 
-      // Reconnect influxDb
-      this.reconnectInfluxdb(error);
-
       const idxSync = this.schedulesSync.indexOf(syncBlock);
       if (idxSync > -1) {
         this.schedulesSync.splice(idxSync, 1);
@@ -309,12 +228,7 @@ export class SyncTaskService {
    * Sync data with transaction
    * @param listTransactions
    */
-  async syncDataWithTransactions(listTransactions) {
-    const proposalVotes = [];
-    const delegations = [];
-    const delegatorRewards = [];
-    const smartContractCodes = [];
-
+  async syncCW4973Status(listTransactions) {
     const optionQueue: JobOptions = {
       removeOnComplete: true,
       attempts: 3,
@@ -330,41 +244,12 @@ export class SyncTaskService {
       ) {
         for (let i = 0; i < txData.tx.body.messages.length; i++) {
           const message: any = txData.tx.body.messages[i];
-          //check type to sync data
           const txTypeReturn = message['@type'];
           const txType = txTypeReturn.substring(
             txTypeReturn.lastIndexOf('.') + 1,
           );
-          if (txType === CONST_MSG_TYPE.MSG_VOTE) {
-            const proposalVote = SyncDataHelpers.makeVoteData(txData, message);
-            proposalVotes.push(proposalVote);
-          } else if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
-            const height = Number(txData.tx_response.height);
-            const lstContract: any = [];
-            const logs = txData.tx_response.logs;
-            logs?.forEach((log) => {
-              log.events?.forEach((evt) => {
-                evt.attributes?.forEach((att) => {
-                  if (att.key === '_contract_address') {
-                    lstContract.push(att.value);
-                  }
-                });
-              });
-            });
-            const contractArr = [...new Set(lstContract)];
-            const contractInstantiate = txData.tx_response.logs?.filter((f) =>
-              f.events.find((x) => x.type == CONST_CHAR.INSTANTIATE),
-            );
+          if (txType === CONST_MSG_TYPE.MSG_EXECUTE_CONTRACT) {
             const contractAddress = message.contract;
-            this.contractQueue.add(
-              QUEUES.SYNC_EXECUTE_CONTRACTS,
-              {
-                message,
-                contractAddress,
-                contractArr,
-              },
-              { ...optionQueue, timeout: 10000 },
-            );
 
             let takeMessage;
             let unequipMessage;
@@ -388,133 +273,9 @@ export class SyncTaskService {
                 { ...optionQueue },
               );
             }
-
-            // Instantiate contract
-            const instantiate = contractInstantiate?.length > 0 ? true : false;
-            if (instantiate) {
-              this.contractQueue.add(
-                QUEUES.SYNC_INSTANTIATE_CONTRACTS,
-                {
-                  height,
-                },
-                { ...optionQueue, delay: 7000 },
-              );
-            }
-          } else if (txType == CONST_MSG_TYPE.MSG_INSTANTIATE_CONTRACT) {
-            const height = Number(txData.tx_response.height);
-            this.contractQueue.add(
-              QUEUES.SYNC_INSTANTIATE_CONTRACTS,
-              {
-                height,
-              },
-              { ...optionQueue, delay: 7000 },
-            );
-          } else if (txType === TRANSACTION_TYPE.DELEGATE) {
-            const [delegation, reward] = SyncDataHelpers.makeDelegateData(
-              txData,
-              message,
-            );
-            delegations.push(delegation);
-            delegatorRewards.push(reward);
-          } else if (txType === TRANSACTION_TYPE.UNDELEGATE) {
-            const [delegation, reward] = SyncDataHelpers.makeUndelegateData(
-              txData,
-              message,
-            );
-            delegations.push(delegation);
-            delegatorRewards.push(reward);
-          } else if (txType === TRANSACTION_TYPE.REDELEGATE) {
-            const [delegation1, delegation2, reward1, reward2] =
-              SyncDataHelpers.makeRedelegationData(txData, message);
-            delegations.push(delegation1);
-            delegations.push(delegation2);
-            delegatorRewards.push(reward1);
-            delegatorRewards.push(reward2);
-          } else if (txType === TRANSACTION_TYPE.GET_REWARD) {
-            const reward = SyncDataHelpers.makeWithDrawDelegationData(
-              txData,
-              message,
-            );
-            if (reward.amount) {
-              delegatorRewards.push(reward);
-            }
-          } else if (txType === TRANSACTION_TYPE.CREATE_VALIDATOR) {
-            const delegation = SyncDataHelpers.makeDelegationData(
-              txData,
-              message,
-            );
-            delegations.push(delegation);
-          } else if (txType === CONST_MSG_TYPE.MSG_STORE_CODE) {
-            const smartContractCode = SyncDataHelpers.makeStoreCodeData(
-              txData,
-              message,
-              i,
-            );
-            // Generate request URL
-            const urlRequest = `${this.api}${util.format(
-              NODE_API.CONTRACT_CODE_DETAIL,
-              smartContractCode.code_id,
-            )}`;
-            // Call lcd to get data
-            const responses = await this._commonUtil.getDataAPI(urlRequest, '');
-            const dataHash = responses?.code_info?.data_hash;
-            // sync contract code verification info with same data hash
-            if (dataHash) {
-              const contractCode =
-                await this.smartContractCodeRepository.findOne({
-                  contract_hash: dataHash.toLowerCase(),
-                });
-              smartContractCode.contract_hash = dataHash.toLowerCase();
-              smartContractCode.created_at = new Date(
-                txData.tx_response.timestamp,
-              );
-              if (
-                !!contractCode &&
-                contractCode.contract_verification ===
-                  SMART_CONTRACT_VERIFICATION.VERIFIED
-              ) {
-                smartContractCode.contract_verification =
-                  contractCode.contract_verification;
-                smartContractCode.compiler_version =
-                  contractCode.compiler_version;
-                smartContractCode.execute_msg_schema =
-                  contractCode.execute_msg_schema;
-                smartContractCode.instantiate_msg_schema =
-                  contractCode.instantiate_msg_schema;
-                smartContractCode.query_msg_schema =
-                  contractCode.query_msg_schema;
-                smartContractCode.s3_location = contractCode.s3_location;
-                smartContractCode.verified_at = new Date();
-                smartContractCode.url = contractCode.url;
-              }
-            }
-            smartContractCodes.push(smartContractCode);
           }
         }
       }
-    }
-    if (proposalVotes.length > 0) {
-      await this.proposalVoteRepository.insertOnDuplicate(proposalVotes, [
-        'id',
-      ]);
-    }
-
-    if (delegations.length > 0) {
-      await this.delegationRepository.insertOnDuplicate(delegations, ['id']);
-    }
-
-    if (delegatorRewards.length > 0) {
-      await this.delegatorRewardRepository.insertOnDuplicate(delegatorRewards, [
-        'id',
-      ]);
-    }
-
-    // Create or update smart contract
-    if (smartContractCodes.length > 0) {
-      await this.smartContractCodeRepository.insertOnDuplicate(
-        smartContractCodes,
-        ['id'],
-      );
     }
   }
 
@@ -564,28 +325,5 @@ export class SyncTaskService {
       paramsBlockLatest,
     );
     return results;
-  }
-
-  /**
-   * Reconnect Influxdb
-   * @param error
-   */
-  reconnectInfluxdb(error: any) {
-    const errorCode = error?.code || '';
-    if (errorCode === 'ECONNREFUSED' || errorCode === 'ETIMEDOUT') {
-      this.connectInfluxDB();
-    }
-  }
-
-  /**
-   * Create connecttion to InfluxDB
-   */
-  connectInfluxDB() {
-    this.influxDbClient = new InfluxDBClient(
-      ENV_CONFIG.INFLUX_DB.BUCKET,
-      ENV_CONFIG.INFLUX_DB.ORGANIZTION,
-      ENV_CONFIG.INFLUX_DB.URL,
-      ENV_CONFIG.INFLUX_DB.TOKEN,
-    );
   }
 }
