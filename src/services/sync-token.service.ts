@@ -10,7 +10,6 @@ import {
 } from '../common/constants/app.constant';
 
 import { TokenMarketsRepository } from '../repositories/token-markets.repository';
-import { SmartContractRepository } from '../repositories/smart-contract.repository';
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { RedisUtil } from '../utils/redis.util';
@@ -21,13 +20,11 @@ import { TokenMarkets } from '../entities';
 export class SyncTokenService {
   private readonly _logger = new Logger(SyncTokenService.name);
   private isSyncTokenIds = false;
-  private isTokenContract = false;
 
   constructor(
     private _commonUtil: CommonUtil,
     private tokenMarketsRepository: TokenMarketsRepository,
     private redisUtil: RedisUtil,
-    private smartContractRepository: SmartContractRepository,
 
     @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
   ) {
@@ -141,44 +138,6 @@ export class SyncTokenService {
       );
       this._logger.error(`${error.stack}`);
       this.isSyncTokenIds = false;
-      throw error;
-    }
-  }
-
-  async syncCW20Token() {
-    this._logger.log(null, 'syncCW20Token start...');
-    try {
-      const cw20Info = await this.smartContractRepository.getCW20Info();
-      const listAddress = cw20Info.map((i) => i.contract_address);
-      const tokens = await this.tokenMarketsRepository.find({
-        where: { contract_address: In(listAddress) },
-      });
-      const insetingTokens: TokenMarkets[] = [];
-      cw20Info.forEach((item) => {
-        const existing = tokens.find(
-          (f) => f.contract_address === item.contract_address,
-        );
-        if (!existing) {
-          const tokenInfo = new TokenMarkets();
-          tokenInfo.coin_id = '';
-          tokenInfo.code_id = item.code_id;
-          tokenInfo.contract_address = item.contract_address;
-          tokenInfo.name = item.token_name || '';
-          tokenInfo.symbol = item.token_symbol || '';
-          tokenInfo.description = item.description || '';
-          tokenInfo.image = item.image || '';
-          insetingTokens.push(tokenInfo);
-        }
-      });
-      if (insetingTokens.length > 0) {
-        await this.tokenMarketsRepository.update(insetingTokens);
-      }
-    } catch (error) {
-      this._logger.error(
-        `syncCW20Token was error, ${error.name}: ${error.message}`,
-      );
-      this._logger.error(`${error.stack}`);
-
       throw error;
     }
   }
