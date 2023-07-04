@@ -20,7 +20,7 @@ import {
 import { TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
 import { TokenMarketsRepository } from '../repositories/token-markets.repository';
-import { ENV_CONFIG } from '../shared/services/config.service';
+import { ConfigService, ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { RedisUtil } from '../utils/redis.util';
 
@@ -41,12 +41,15 @@ export class SmartContractsProcessor {
     private _commonUtil: CommonUtil,
     private tokenMarketsRepository: TokenMarketsRepository,
     private redisUtil: RedisUtil,
+    private configService: ConfigService,
     private httpService: HttpService,
     private soulboundTokenRepos: SoulboundTokenRepository,
   ) {
     this.logger.log(
       '============== Constructor Smart Contracts Processor Service ==============',
     );
+
+    this.indexerChainId = this.configService.get('INDEXER_CHAIN_ID');
 
     // Connect influxdb
     this.connectInfluxdb();
