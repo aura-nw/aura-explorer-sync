@@ -59,7 +59,6 @@ export class CommonUtil {
       ? headers
       : {
           'content-type': 'application/json',
-          'x-hasura-admin-secret': ENV_CONFIG.INDEXER_V2.SECRET,
         };
 
     try {

@@ -14,7 +14,7 @@ import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { InjectQueue } from '@nestjs/bull';
 import { BackoffOptions, JobOptions, Queue } from 'bull';
-import { SyncStatusRepository } from 'src/repositories/sync-status.repository';
+import { SyncStatusRepository } from '../repositories/sync-status.repository';
 @Injectable()
 export class SyncTaskService {
   private readonly _logger = new Logger(SyncTaskService.name);
