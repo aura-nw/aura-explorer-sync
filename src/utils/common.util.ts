@@ -9,13 +9,11 @@ import { tmhash } from 'tendermint/lib/hash';
 import { bech32 } from 'bech32';
 import {
   CONST_CHAR,
-  CONTRACT_TYPE,
   CW4973_CONTRACT,
   NODE_API,
 } from '../common/constants/app.constant';
 import axios from 'axios';
 import * as util from 'util';
-import { SmartContract } from '../entities';
 import { sha256 } from 'js-sha256';
 import { ENV_CONFIG } from '../shared/services/config.service';
 
@@ -56,6 +54,33 @@ export class CommonUtil {
     return data;
   }
 
+  async fetchDataFromGraphQL(endpoint, method, query, headers?) {
+    headers = headers
+      ? headers
+      : {
+          'content-type': 'application/json',
+        };
+
+    try {
+      const response = await axios({
+        url: endpoint,
+        method: method,
+        headers: headers,
+        data: query,
+        timeout: 30000,
+      });
+
+      if (response.data?.errors?.length > 0) {
+        throw new Error(JSON.stringify(response.data.errors));
+      }
+
+      return response.data;
+    } catch (error) {
+      const errorMsg = `Error while querying from graphql! ${error}`;
+      this._logger.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }
   getAddressFromPubkey(pubkey) {
     const bytes = Buffer.from(pubkey, 'base64');
     return tmhash(bytes).slice(0, 20).toString('hex').toUpperCase();
@@ -134,86 +159,6 @@ export class CommonUtil {
     return null;
   }
 
-  async queryMoreInfoFromCosmwasm(
-    api: string,
-    contractAddress: string,
-    smartContract: SmartContract,
-    type: CONTRACT_TYPE,
-  ): Promise<any> {
-    try {
-      const base64Encode = 'base64';
-      const updatedSmartContract = { ...smartContract };
-      if (type === CONTRACT_TYPE.CW20) {
-        const tokenInfoQuery =
-          Buffer.from(`{ "token_info": {} }`).toString(base64Encode);
-        const marketingInfoQuery = Buffer.from(
-          `{ "marketing_info": {} }`,
-        ).toString(base64Encode);
-
-        const [tokenInfo, marketingInfo] = await Promise.all([
-          this.getDataContractFromBase64Query(
-            api,
-            contractAddress,
-            tokenInfoQuery,
-          ),
-          this.getDataContractFromBase64Query(
-            api,
-            contractAddress,
-            marketingInfoQuery,
-          ),
-        ]);
-        if (marketingInfo?.data) {
-          updatedSmartContract.image = marketingInfo.data?.logo?.url ?? '';
-          updatedSmartContract.description =
-            marketingInfo.data?.description ?? '';
-        }
-        if (tokenInfo?.data) {
-          updatedSmartContract.token_name = tokenInfo.data.name;
-          updatedSmartContract.token_symbol = tokenInfo.data.symbol;
-          updatedSmartContract.decimals = tokenInfo.data.decimals || 0;
-        }
-      } else {
-        const base64RequestToken = Buffer.from(
-          `{ "contract_info": {} }`,
-        ).toString(base64Encode);
-
-        const base64Minter =
-          Buffer.from(`{ "minter": {} }`).toString(base64Encode);
-
-        const [tokenInfo, minter] = await Promise.all([
-          this.getDataContractFromBase64Query(
-            api,
-            contractAddress,
-            base64RequestToken,
-          ),
-          type === CONTRACT_TYPE.CW4973
-            ? this.getDataContractFromBase64Query(
-                api,
-                contractAddress,
-                base64Minter,
-              )
-            : null,
-        ]);
-
-        if (tokenInfo?.data) {
-          updatedSmartContract.token_name = tokenInfo.data.name;
-          updatedSmartContract.token_symbol = tokenInfo.data.symbol;
-        }
-        if (minter?.data) {
-          smartContract.minter_address = minter.data.minter;
-        }
-      }
-
-      return updatedSmartContract;
-    } catch (err) {
-      this._logger.log(
-        `${CommonUtil.name} call ${this.queryMoreInfoFromCosmwasm.name} method has error: ${err.message}`,
-        err.stack,
-      );
-      return null;
-    }
-  }
-
   /**
    * Create token Id
    * @param chainID
@@ -281,9 +226,9 @@ export class CommonUtil {
 
   transform(value: string): string {
     if (!value.includes('https://ipfs.io/')) {
-      return 'https://ipfs.io/' + value.replace('://', '/');
+      return ENV_CONFIG.IPFS_URL + value.replace('://', '/');
     } else {
-      return value;
+      return value.replace('https://ipfs.io/', ENV_CONFIG.IPFS_URL);
     }
   }
 
