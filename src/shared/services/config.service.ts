@@ -85,6 +85,9 @@ export class ConfigService {
         MAX_REQUEST: Number(process.env.MAX_REQUEST) || 250,
         COINGEKO_PLATFORM: process.env.PLATFORM || 'ethereum',
       },
+      GECKOTERMINAL: {
+        API: process.env.GECKOTERMINAL_API,
+      },
       COIN_MARKET_CAP: {
         API: process.env.COIN_MARKET_CAP_API_EP,
         API_KEY: process.env.COIN_MARKET_CAP_API_KEY,

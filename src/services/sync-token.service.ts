@@ -5,6 +5,7 @@ import { Queue } from 'bull';
 
 import {
   COINGECKO_API,
+  PROCESSOR,
   QUEUES,
   REDIS_KEY,
 } from '../common/constants/app.constant';
@@ -13,9 +14,7 @@ import { TokenMarketsRepository } from '../repositories/token-markets.repository
 import { ENV_CONFIG } from '../shared/services/config.service';
 import { CommonUtil } from '../utils/common.util';
 import { RedisUtil } from '../utils/redis.util';
-import { Equal, In } from 'typeorm';
-import { TokenMarkets } from '../entities';
-
+import { Equal } from 'typeorm';
 @Injectable()
 export class SyncTokenService {
   private readonly _logger = new Logger(SyncTokenService.name);
@@ -26,7 +25,9 @@ export class SyncTokenService {
     private tokenMarketsRepository: TokenMarketsRepository,
     private redisUtil: RedisUtil,
 
-    @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
+    @InjectQueue(PROCESSOR.SMART_CONTRACT)
+    private readonly contractQueue: Queue,
+    @InjectQueue(PROCESSOR.TOKEN_PRICE) private readonly tokenQueue: Queue,
   ) {
     this._logger.log(
       '============== Constructor Sync Token Service ==============',
@@ -41,7 +42,7 @@ export class SyncTokenService {
   async syncCW20TokensPrice() {
     const numberCW20Tokens =
       await this.tokenMarketsRepository.countCw20TokensHavingCoinId();
-    const defaultTokens: string[] = ['aura-network', 'bitcoin'];
+    const defaultTokens: string[] = ['bitcoin'];
     const countData = numberCW20Tokens + defaultTokens.length;
 
     const limit = ENV_CONFIG.COINGECKO.MAX_REQUEST;
@@ -140,5 +141,18 @@ export class SyncTokenService {
       this.isSyncTokenIds = false;
       throw error;
     }
+  }
+
+  @Cron(ENV_CONFIG.PRICE_TIME_SYNC)
+  async syncAuraTokensPrice() {
+    this.tokenQueue.add(
+      QUEUES.SYNC_AURA_TOKEN,
+      {},
+      {
+        removeOnComplete: true,
+        removeOnFail: true,
+        timeout: 10000,
+      },
+    );
   }
 }

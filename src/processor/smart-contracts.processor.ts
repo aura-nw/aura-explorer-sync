@@ -16,6 +16,7 @@ import {
   QUEUES,
   COIN_MARKET_CAP_API,
   REDIS_KEY,
+  PROCESSOR,
 } from '../common/constants/app.constant';
 import { TokenMarkets } from '../entities';
 import { SyncDataHelpers } from '../helpers/sync-data.helpers';
@@ -31,7 +32,7 @@ import { SoulboundTokenRepository } from '../repositories/soulbound-token.reposi
 import { SoulboundToken } from '../entities/soulbound-token.entity';
 import { lastValueFrom, timeout, retry } from 'rxjs';
 
-@Processor('smart-contracts')
+@Processor(PROCESSOR.SMART_CONTRACT)
 export class SmartContractsProcessor {
   private readonly logger = new Logger(SmartContractsProcessor.name);
   private indexerChainId;
