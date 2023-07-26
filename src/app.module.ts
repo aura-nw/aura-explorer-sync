@@ -6,7 +6,6 @@ import { ScheduleModule } from 'nest-schedule';
 import { SmartContractsProcessor } from './processor/smart-contracts.processor';
 import { BlockSyncError, TokenMarkets, SyncStatus } from './entities';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
-import { SyncTokenService } from './services/sync-token.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { TokenMarketsRepository } from './repositories/token-markets.repository';
@@ -27,7 +26,7 @@ const repositories = [
   SoulboundTokenRepository,
 ];
 
-const services = [SyncTaskService, SyncTokenService];
+const services = [SyncTaskService];
 
 const processors = [SmartContractsProcessor, TokenProcessor];
 
