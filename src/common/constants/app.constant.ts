@@ -95,7 +95,7 @@ export const QUEUES = {
   SYNC_CW4973_NFT_STATUS: 'sync-cw4973-nft-status',
   SYNC_CW20_PRICE: 'sync-cw20-price',
   SYNC_COIN_ID: 'sync-coin-id',
-  SYNC_AURA_PRICE: 'sync-aura-price',
+  SYNC_TOKEN_PRICE: 'sync-token-price',
 };
 
 export enum CW4973_CONTRACT {

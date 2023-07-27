@@ -32,10 +32,9 @@ export class TokenProcessor {
     );
 
     this.tokenQueue.add(
-      QUEUES.SYNC_AURA_PRICE,
+      QUEUES.SYNC_TOKEN_PRICE,
       {},
       {
-        removeOnFail: false,
         repeat: { cron: ENV_CONFIG.PRICE_TIME_SYNC },
       },
     );
@@ -44,7 +43,6 @@ export class TokenProcessor {
       QUEUES.SYNC_CW20_PRICE,
       {},
       {
-        removeOnFail: false,
         repeat: { cron: ENV_CONFIG.PRICE_TIME_SYNC },
       },
     );
@@ -53,7 +51,7 @@ export class TokenProcessor {
     this.connectInfluxdb();
   }
 
-  @Process(QUEUES.SYNC_AURA_PRICE)
+  @Process(QUEUES.SYNC_TOKEN_PRICE)
   async syncAuraTokenPrice(): Promise<void> {
     try {
       const geckoTerminal = ENV_CONFIG.GECKOTERMINAL;
