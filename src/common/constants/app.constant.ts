@@ -73,7 +73,7 @@ export enum COIN_MARKET_CAP_API {
 }
 
 export enum GECKOTERMINAL_API {
-  GET_AURA_PRICE = '/networks/bsc/pools/0x9f1a332c0657ce3f90666ad38dbe2e92793abf5c',
+  GET_TOKEN_PRICE = '/networks/%s/pools/%s',
 }
 
 export enum REDIS_KEY {

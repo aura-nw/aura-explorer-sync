@@ -62,9 +62,15 @@ export class TokenProcessor {
         },
       });
 
+      const para = `${util.format(
+        GECKOTERMINAL_API.GET_TOKEN_PRICE,
+        ENV_CONFIG.GECKOTERMINAL.PLATFORM,
+        ENV_CONFIG.GECKOTERMINAL.COIN_ADDRESS,
+      )}`;
+
       const response = await this._commonUtil.getDataAPI(
         geckoTerminal.API,
-        GECKOTERMINAL_API.GET_AURA_PRICE,
+        para,
       );
       if (response?.data?.attributes && token) {
         const attributes = response.data.attributes;

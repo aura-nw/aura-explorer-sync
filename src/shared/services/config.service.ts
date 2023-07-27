@@ -80,6 +80,10 @@ export class ConfigService {
       },
       GECKOTERMINAL: {
         API: process.env.GECKOTERMINAL_API,
+        PLATFORM: process.env.GECKOTERMINAL_PLATFORM || 'bsc',
+        COIN_ADDRESS:
+          process.env.COIN_ADDRESS ||
+          '0x9f1a332c0657ce3f90666ad38dbe2e92793abf5c',
       },
       COIN_MARKET_CAP: {
         API: process.env.COIN_MARKET_CAP_API_EP,
