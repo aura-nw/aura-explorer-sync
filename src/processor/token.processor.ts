@@ -82,6 +82,14 @@ export class TokenProcessor {
         token.total_volume = attributes?.volume_usd.h24;
 
         await this.tokenMarketsRepository.update(token);
+
+        const coinMarkets: TokenMarkets[] = [];
+        coinMarkets.push(token);
+        this.logger.log(`============== Write data to Influxdb ==============`);
+        await this.influxDbClient.writeBlockTokenPriceAndVolume(coinMarkets);
+        this.logger.log(
+          `============== Write data to Influxdb  successfully ==============`,
+        );
       }
     } catch (err) {
       this.logger.error(`sync-aura-token has error: ${err.message}`, err.stack);
