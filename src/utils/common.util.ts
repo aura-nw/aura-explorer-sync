@@ -232,14 +232,4 @@ export class CommonUtil {
       return value.replace('https://ipfs.io/', ENV_CONFIG.IPFS_URL);
     }
   }
-
-  async getImageFromKeyBase(suffix: string): Promise<string> {
-    const keyBaseUrl = `user/lookup.json?key_suffix=${suffix}&fields=pictures`;
-    const respones = await this.getDataAPI(ENV_CONFIG.KEY_BASE_URL, keyBaseUrl);
-    if (respones?.them?.length > 0) {
-      const primary = respones.them[0]?.pictures?.primary;
-      return primary?.url || '';
-    }
-    return '';
-  }
 }

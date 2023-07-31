@@ -6,7 +6,6 @@ import { ScheduleModule } from 'nest-schedule';
 import { SmartContractsProcessor } from './processor/smart-contracts.processor';
 import { BlockSyncError, TokenMarkets, SyncStatus } from './entities';
 import { BlockSyncErrorRepository } from './repositories/block-sync-error.repository';
-import { SyncTokenService } from './services/sync-token.service';
 import { ConfigService, ENV_CONFIG } from './shared/services/config.service';
 import { SharedModule } from './shared/shared.module';
 import { TokenMarketsRepository } from './repositories/token-markets.repository';
@@ -14,6 +13,8 @@ import { SoulboundTokenRepository } from './repositories/soulbound-token.reposit
 import { SoulboundToken } from './entities/soulbound-token.entity';
 import { SyncStatusRepository } from './repositories/sync-status.repository';
 import { SyncTaskService } from './services/sync-task.service';
+import { TokenProcessor } from './processor/token.processor';
+import { PROCESSOR } from './common/constants/app.constant';
 
 const controllers = [];
 const entities = [BlockSyncError, SyncStatus, TokenMarkets, SoulboundToken];
@@ -25,9 +26,9 @@ const repositories = [
   SoulboundTokenRepository,
 ];
 
-const services = [SyncTaskService, SyncTokenService];
+const services = [SyncTaskService];
 
-const processors = [SmartContractsProcessor];
+const processors = [SmartContractsProcessor, TokenProcessor];
 
 @Module({
   imports: [
@@ -51,9 +52,14 @@ const processors = [SmartContractsProcessor];
         removeOnComplete: { count: ENV_CONFIG.KEEP_JOB_COUNT },
       },
     }),
-    BullModule.registerQueue({
-      name: 'smart-contracts',
-    }),
+    BullModule.registerQueue(
+      {
+        name: PROCESSOR.SMART_CONTRACT,
+      },
+      {
+        name: PROCESSOR.TOKEN_PRICE,
+      },
+    ),
     CacheModule.register({ ttl: 10000 }),
     SharedModule,
     TypeOrmModule.forFeature([...entities]),

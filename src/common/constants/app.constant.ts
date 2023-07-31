@@ -72,6 +72,10 @@ export enum COIN_MARKET_CAP_API {
   GET_COINS_MARKET = 'cryptocurrency/quotes/latest?slug=%s',
 }
 
+export enum GECKOTERMINAL_API {
+  GET_TOKEN_PRICE = '/networks/%s/pools/%s',
+}
+
 export enum REDIS_KEY {
   COINGECKO_COINS = 'COINGECKO_COINS',
 }
@@ -89,10 +93,16 @@ export const SOULBOUND_PICKED_TOKEN = {
 
 export const QUEUES = {
   SYNC_CW4973_NFT_STATUS: 'sync-cw4973-nft-status',
-  SYNC_PRICE_VOLUME: 'sync-price-volume',
+  SYNC_CW20_PRICE: 'sync-cw20-price',
   SYNC_COIN_ID: 'sync-coin-id',
+  SYNC_TOKEN_PRICE: 'sync-token-price',
 };
 
 export enum CW4973_CONTRACT {
   AGREEMENT = 'Agreement(string chain_id,address active,address passive,string tokenURI)',
+}
+
+export enum PROCESSOR {
+  SMART_CONTRACT = 'smart-contracts',
+  TOKEN_PRICE = 'token-price',
 }
