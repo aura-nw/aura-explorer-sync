@@ -37,15 +37,8 @@ export class ConfigService {
 
   get ENV_CONFIG() {
     return {
-      WEBSOCKET_URL: process.env.WEBSOCKET_URL,
       THREADS: Number(process.env.THREADS),
-      SMART_CONTRACT_SERVICE: process.env.SMART_CONTRACT_SERVICE,
-      START_HEIGHT: process.env.START_HEIGHT,
       TIMES_SYNC: Number(process.env.TIMES_SYNC) || 3000,
-      SYNC_TRANSACTIONS_CLEAN_UP_DAY: Number(
-        process.env.SYNC_TRANSACTIONS_CLEAN_UP_DAY || 8,
-      ),
-      KEY_BASE_URL: process.env.KEY_BASE_URL,
       PRICE_HOST_SYNC: process.env.PRICE_HOST_SYNC || 'COINGECKO',
       PRICE_TIME_SYNC: process.env.PRICE_TIME_SYNC || '0 */3 * * * *',
       REDIS: {
@@ -85,6 +78,13 @@ export class ConfigService {
         MAX_REQUEST: Number(process.env.MAX_REQUEST) || 250,
         COINGEKO_PLATFORM: process.env.PLATFORM || 'ethereum',
       },
+      GECKOTERMINAL: {
+        API: process.env.GECKOTERMINAL_API,
+        PLATFORM: process.env.GECKOTERMINAL_PLATFORM || 'bsc',
+        COIN_ADDRESS:
+          process.env.COIN_ADDRESS ||
+          '0x9f1a332c0657ce3f90666ad38dbe2e92793abf5c',
+      },
       COIN_MARKET_CAP: {
         API: process.env.COIN_MARKET_CAP_API_EP,
         API_KEY: process.env.COIN_MARKET_CAP_API_KEY,
@@ -95,16 +95,8 @@ export class ConfigService {
         MAX_REQUEST: Number(process.env.MAX_REQUEST) || 250,
         COIN_MARKET_CAP_PLATFORM: process.env.PLATFORM || 'ethereum',
       },
-      SYNC_SMART_CONTRACT: {
-        FROM_HEIGHT: Number(process.env.SYNC_SMART_CONTRACT_FROM_HEIGHT) || 0,
-        TO_HEIGHT: Number(process.env.SYNC_SMART_CONTRACT_TO_HEIGHT) || 0,
-        SYNC_DATA:
-          process.env.SYNC_SMART_CONTRACT_SYNC_DATA === 'true' ? true : false,
-      },
       NODE_ENV: process.env.NODE_ENV,
       IPFS_URL: process.env.IPFS_URL || 'https://ipfs.io/',
-      SYNC_MISSING_CONTRACT_CODE:
-        process.env.SYNC_MISSING_CONTRACT_CODE === 'true' ? true : false,
       INDEXER_V2: {
         URL: process.env.INDEXER_V2_URL,
         GRAPH_QL: `${process.env.INDEXER_V2_URL}v1/graphql`,
