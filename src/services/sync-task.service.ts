@@ -5,6 +5,7 @@ import { InjectSchedule, Schedule } from 'nest-schedule';
 import {
   CONST_MSG_TYPE,
   NODE_API,
+  PROCESSOR,
   QUEUES,
 } from '../common/constants/app.constant';
 import { BlockSyncError } from '../entities';
@@ -30,7 +31,8 @@ export class SyncTaskService {
     private blockSyncErrorRepository: BlockSyncErrorRepository,
     private statusRepository: SyncStatusRepository,
     @InjectSchedule() private readonly schedule: Schedule,
-    @InjectQueue('smart-contracts') private readonly contractQueue: Queue,
+    @InjectQueue(PROCESSOR.SMART_CONTRACT)
+    private readonly contractQueue: Queue,
   ) {
     this._logger.log(
       '============== Constructor Sync Task Service ==============',

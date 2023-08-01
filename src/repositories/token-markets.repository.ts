@@ -23,7 +23,8 @@ export class TokenMarketsRepository extends BaseRepository<TokenMarkets> {
     const queryBuilder = this.repos
       .createQueryBuilder('tm')
       .select(sqlSelect)
-      .where("tm.coin_id <> '' ");
+      .where("tm.coin_id <> '' ")
+      .andWhere("tm.coin_id <> 'aura-network' ");
 
     return await queryBuilder.getCount();
   }
@@ -35,6 +36,7 @@ export class TokenMarketsRepository extends BaseRepository<TokenMarkets> {
       .createQueryBuilder('tm')
       .select(sqlSelect)
       .where("tm.coin_id <> '' ")
+      .andWhere("tm.coin_id <> 'aura-network' ")
       .limit(limit)
       .offset(pageIndex * limit);
 
